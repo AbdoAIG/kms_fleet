@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, type ComponentType } from 'react'
+import { useState, useMemo, useEffect, type ComponentType } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useTheme } from 'next-themes'
 import {
@@ -12,6 +12,8 @@ import {
   Sun,
   Moon,
   Truck,
+  Settings,
+  LogOut,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,11 +26,14 @@ import {
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { useAppStore, type Page } from '@/lib/store'
+import LoginScreen from '@/components/LoginScreen'
+import NotificationBell from '@/components/NotificationBell'
 
 import DashboardView from '@/components/views/DashboardView'
 import VehiclesView from '@/components/views/VehiclesView'
 import MaintenanceView from '@/components/views/MaintenanceView'
 import ReportsView from '@/components/views/ReportsView'
+import SettingsView from '@/components/views/SettingsView'
 
 /* ─── Navigation Config ─── */
 const navItems: {
@@ -40,6 +45,7 @@ const navItems: {
   { label: 'إدارة السيارات', icon: Car, page: 'vehicles' },
   { label: 'سجلات الصيانة', icon: Wrench, page: 'maintenance' },
   { label: 'التقارير', icon: BarChart3, page: 'reports' },
+  { label: 'الإعدادات', icon: Settings, page: 'settings' },
 ]
 
 const pageTitles: Record<Page, string> = {
@@ -47,6 +53,7 @@ const pageTitles: Record<Page, string> = {
   vehicles: 'إدارة السيارات',
   maintenance: 'سجلات الصيانة',
   reports: 'التقارير',
+  settings: 'إعدادات النظام',
 }
 
 const pageDescriptions: Record<Page, string> = {
@@ -54,6 +61,7 @@ const pageDescriptions: Record<Page, string> = {
   vehicles: 'إدارة وتتبع سيارات الأسطول',
   maintenance: 'سجلات وجداول الصيانة',
   reports: 'تقارير وتحليلات مفصلة',
+  settings: 'تخصيص وإدارة إعدادات النظام',
 }
 
 /* ─── Sidebar Content (shared between desktop & mobile) ─── */
@@ -61,10 +69,16 @@ function SidebarContent({
   currentPage,
   onPageSelect,
   isSheet = false,
+  userName,
+  userEmail,
+  onLogout,
 }: {
   currentPage: Page
   onPageSelect: (page: Page) => void
   isSheet?: boolean
+  userName: string
+  userEmail: string
+  onLogout: () => void
 }) {
   return (
     <div className="flex flex-col h-full">
@@ -113,14 +127,21 @@ function SidebarContent({
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center gap-3 px-3 py-2">
           <div className="w-9 h-9 rounded-full bg-emerald-500/30 flex items-center justify-center text-sm font-bold text-white shrink-0">
-            م
+            {userName.charAt(0)}
           </div>
-          <div className="min-w-0">
-            <p className="text-white text-sm font-medium truncate">مدير النظام</p>
-            <p className="text-emerald-300/70 text-xs truncate">
-              admin@fleet.com
-            </p>
+          <div className="min-w-0 flex-1">
+            <p className="text-white text-sm font-medium truncate">{userName}</p>
+            <p className="text-emerald-300/70 text-xs truncate">{userEmail}</p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10 shrink-0"
+            onClick={onLogout}
+            title="تسجيل الخروج"
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </div>
@@ -129,7 +150,7 @@ function SidebarContent({
 
 /* ─── Main Page Component ─── */
 export default function Home() {
-  const { currentPage, setCurrentPage } = useAppStore()
+  const { currentPage, setCurrentPage, isAuthenticated, currentUser, setAuth } = useAppStore()
   const { theme, setTheme } = useTheme()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -152,6 +173,22 @@ export default function Home() {
     setSidebarOpen(false)
   }
 
+  const handleLogout = () => {
+    setAuth(null)
+  }
+
+  const userName = currentUser?.name || 'مدير النظام'
+  const userEmail = currentUser?.email || 'admin@fleet.com'
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <LoginScreen />
+      </QueryClientProvider>
+    )
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen flex bg-background">
@@ -160,6 +197,9 @@ export default function Home() {
           <SidebarContent
             currentPage={currentPage}
             onPageSelect={handlePageSelect}
+            userName={userName}
+            userEmail={userEmail}
+            onLogout={handleLogout}
           />
         </aside>
 
@@ -191,6 +231,9 @@ export default function Home() {
                       currentPage={currentPage}
                       onPageSelect={handlePageSelect}
                       isSheet
+                      userName={userName}
+                      userEmail={userEmail}
+                      onLogout={handleLogout}
                     />
                   </SheetContent>
                 </Sheet>
@@ -207,6 +250,9 @@ export default function Home() {
 
               {/* Left side: actions */}
               <div className="flex items-center gap-1">
+                {/* Notification Bell */}
+                <NotificationBell />
+
                 {/* Theme toggle */}
                 <Button
                   variant="ghost"
@@ -228,6 +274,7 @@ export default function Home() {
             {currentPage === 'vehicles' && <VehiclesView />}
             {currentPage === 'maintenance' && <MaintenanceView />}
             {currentPage === 'reports' && <ReportsView />}
+            {currentPage === 'settings' && <SettingsView />}
           </main>
 
           {/* Footer */}

@@ -49,3 +49,43 @@ model MaintenanceRecord {
 
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 }
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("VIEWER") // ADMIN, MANAGER, TECHNICIAN, VIEWER
+  avatar    String?
+  isActive  Boolean  @default(true)
+  lastLogin DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activityLogs ActivityLog[]
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, EXPORT, SEED
+  entity    String   // VEHICLE, MAINTENANCE, USER, SETTINGS
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+model CompanySettings {
+  id           String @id @default(cuid())
+  companyName  String @default("شركة صيانة السيارات")
+  companyLogo  String?
+  address      String?
+  phone        String?
+  email        String?
+  website      String?
+  currency     String @default("EGP")
+  language     String @default("ar")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

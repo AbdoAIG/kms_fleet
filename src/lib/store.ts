@@ -1,6 +1,25 @@
 import { create } from 'zustand'
 
-export type Page = 'dashboard' | 'vehicles' | 'maintenance' | 'reports'
+export type Page = 'dashboard' | 'vehicles' | 'maintenance' | 'reports' | 'settings'
+
+interface Notification {
+  id: string
+  type: string
+  title: string
+  message: string
+  date: string
+  read: boolean
+  entity?: string
+  entityId?: string
+}
+
+interface CurrentUser {
+  id: string
+  name: string
+  email: string
+  role: string
+  avatar?: string
+}
 
 interface AppState {
   currentPage: Page
@@ -15,6 +34,17 @@ interface AppState {
   setShowVehicleDialog: (show: boolean) => void
   showMaintenanceDialog: boolean
   setShowMaintenanceDialog: (show: boolean) => void
+
+  // Auth state
+  isAuthenticated: boolean
+  currentUser: CurrentUser | null
+  setAuth: (user: CurrentUser | null) => void
+
+  // Notifications
+  notifications: Notification[]
+  setNotifications: (notifications: Notification[]) => void
+  unreadCount: number
+  setUnreadCount: (count: number) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -30,4 +60,22 @@ export const useAppStore = create<AppState>((set) => ({
   setShowVehicleDialog: (show) => set({ showVehicleDialog: show }),
   showMaintenanceDialog: false,
   setShowMaintenanceDialog: (show) => set({ showMaintenanceDialog: show }),
+
+  // Auth
+  isAuthenticated: false,
+  currentUser: null,
+  setAuth: (user) =>
+    set({
+      isAuthenticated: !!user,
+      currentUser: user,
+    }),
+
+  // Notifications
+  notifications: [],
+  setNotifications: (notifications) => {
+    const unreadCount = notifications.filter((n) => !n.read).length
+    set({ notifications, unreadCount })
+  },
+  unreadCount: 0,
+  setUnreadCount: (count) => set({ unreadCount: count }),
 }))
