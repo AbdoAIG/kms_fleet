@@ -81,26 +81,30 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
           ? const MainScreen()
           : _SplashScreen(error: _error, onRetry: _retry),
       onGenerateRoute: (settings) {
-        if (settings.name == '/add-vehicle') {
-          return MaterialPageRoute(
-            builder: (_) => AddVehicleScreen(vehicle: settings.arguments as Vehicle?),
-          );
+        try {
+          if (settings.name == '/add-vehicle') {
+            return MaterialPageRoute(
+              builder: (_) => AddVehicleScreen(vehicle: settings.arguments as Vehicle?),
+            );
+          }
+          if (settings.name == '/add-maintenance') {
+            final args = settings.arguments;
+            return MaterialPageRoute(
+              builder: (_) => AddMaintenanceScreen(
+                record: args is MaintenanceRecord ? args : null,
+                vehicle: args is Vehicle ? args : null,
+              ),
+            );
+          }
+          if (settings.name == '/vehicle-details' && settings.arguments is Vehicle) {
+            return MaterialPageRoute(
+              builder: (_) => VehicleDetailsScreen(vehicle: settings.arguments as Vehicle),
+            );
+          }
+          return MaterialPageRoute(builder: (_) => const MainScreen());
+        } catch (e) {
+          return MaterialPageRoute(builder: (_) => const MainScreen());
         }
-        if (settings.name == '/add-maintenance') {
-          final args = settings.arguments;
-          return MaterialPageRoute(
-            builder: (_) => AddMaintenanceScreen(
-              record: args is MaintenanceRecord ? args : null,
-              vehicle: args is Vehicle ? args : null,
-            ),
-          );
-        }
-        if (settings.name == '/vehicle-details' && settings.arguments is Vehicle) {
-          return MaterialPageRoute(
-            builder: (_) => VehicleDetailsScreen(vehicle: settings.arguments as Vehicle),
-          );
-        }
-        return MaterialPageRoute(builder: (_) => const MainScreen());
       },
     );
   }
