@@ -1,8 +1,7 @@
+# MUST be set before cmake_minimum_required to propagate to all subdirectories (including Firebase C++ SDK)
+set(CMAKE_POLICY_VERSION_MINIMUM "3.5" CACHE STRING "" FORCE)
+
 cmake_minimum_required(VERSION 3.14)
-
-# Fix Firebase C++ SDK CMake compatibility
-set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-
 project(runner LANGUAGES CXX)
 
 set(BINARY_NAME "kms_fleet")
