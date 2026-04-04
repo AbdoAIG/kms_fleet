@@ -2,12 +2,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../utils/app_colors.dart';
 
-/// Animated developer credit widget.
-/// Each name appears separately with fade in/out effect.
 class DeveloperCredit extends StatefulWidget {
   final bool compact;
+  final bool darkBackground;
+  final double? fontSize;
 
-  const DeveloperCredit({super.key, this.compact = true});
+  const DeveloperCredit({
+    super.key,
+    this.compact = true,
+    this.darkBackground = false,
+    this.fontSize,
+  });
 
   @override
   State<DeveloperCredit> createState() => _DeveloperCreditState();
@@ -19,15 +24,9 @@ class _DeveloperCreditState extends State<DeveloperCredit>
   int _currentIndex = 0;
   Timer? _switchTimer;
 
-  final List<_CreditItem> _credits = const [
-    _CreditItem(
-      text: '\u062A\u0637\u0648\u064A\u0631: \u0639\u0628\u062F\u0627\u0644\u0631\u062D\u0645\u0646 \u0625\u0628\u0631\u0627\u0647\u064A\u0645',
-      icon: Icons.code_rounded,
-    ),
-    _CreditItem(
-      text: '\u062A\u0635\u0645\u064A\u0645: \u0634\u0647\u062F \u0646\u0627\u062C\u062D',
-      icon: Icons.palette_rounded,
-    ),
+  final List<Map<String, IconData>> _credits = const [
+    {'تطوير: عبدالرحمن إبراهيم': Icons.code_rounded},
+    {'تصميم: شهد ناجح': Icons.palette_rounded},
   ];
 
   @override
@@ -64,9 +63,14 @@ class _DeveloperCreditState extends State<DeveloperCredit>
   @override
   Widget build(BuildContext context) {
     final credit = _credits[_currentIndex];
-    final fontSize = widget.compact ? 10.0 : 13.0;
+    final text = credit.keys.first;
+    final icon = credit.values.first;
+    final useFontSize = widget.fontSize ?? (widget.compact ? 10.0 : 13.0);
     final iconSize = widget.compact ? 12.0 : 16.0;
     final verticalPadding = widget.compact ? 8.0 : 16.0;
+    final textColor = widget.darkBackground
+        ? Colors.white.withOpacity(0.7)
+        : AppColors.primary.withOpacity(0.6);
 
     return FadeTransition(
       opacity: _fadeController,
@@ -75,18 +79,14 @@ class _DeveloperCreditState extends State<DeveloperCredit>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              credit.icon,
-              size: iconSize,
-              color: AppColors.primary.withOpacity(0.6),
-            ),
+            Icon(icon, size: iconSize, color: textColor),
             const SizedBox(width: 6),
             Text(
-              credit.text,
+              text,
               style: TextStyle(
-                fontSize: fontSize,
+                fontSize: useFontSize,
                 fontWeight: FontWeight.w500,
-                color: AppColors.primary.withOpacity(0.6),
+                color: textColor,
                 letterSpacing: 0.3,
               ),
             ),
@@ -95,11 +95,4 @@ class _DeveloperCreditState extends State<DeveloperCredit>
       ),
     );
   }
-}
-
-class _CreditItem {
-  final String text;
-  final IconData icon;
-
-  const _CreditItem({required this.text, required this.icon});
 }
