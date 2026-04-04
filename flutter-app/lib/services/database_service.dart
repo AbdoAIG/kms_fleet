@@ -4,6 +4,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
+import '../models/checklist.dart';
+import '../models/fuel_record.dart';
 import '../utils/constants.dart';
 
 class DatabaseService {
@@ -11,8 +13,12 @@ class DatabaseService {
   static bool _useMemory = true;
   static List<Vehicle> _memVehicles = [];
   static List<MaintenanceRecord> _memRecords = [];
+  static List<Checklist> _memChecklists = [];
+  static List<FuelRecord> _memFuelRecords = [];
   static const _vt = 'vehicles';
   static const _mt = 'maintenance_records';
+  static const _ct = 'checklists';
+  static const _ft = 'fuel_records';
 
   DatabaseService._();
 
@@ -37,6 +43,8 @@ class DatabaseService {
   static Future<void> _onCreate(Database db, int v) async {
     await db.execute('CREATE TABLE $_vt(id INTEGER PRIMARY KEY AUTOINCREMENT,plate_number TEXT NOT NULL,make TEXT NOT NULL,model TEXT NOT NULL,year INTEGER NOT NULL,color TEXT DEFAULT white,fuel_type TEXT DEFAULT petrol,current_odometer INTEGER DEFAULT 0,status TEXT DEFAULT active,notes TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)');
     await db.execute('CREATE TABLE $_mt(id INTEGER PRIMARY KEY AUTOINCREMENT,vehicle_id INTEGER NOT NULL,maintenance_date TEXT NOT NULL,description TEXT NOT NULL,type TEXT NOT NULL,odometer_reading INTEGER DEFAULT 0,cost REAL DEFAULT 0,labor_cost REAL,service_provider TEXT,invoice_number TEXT,priority TEXT DEFAULT medium,status TEXT DEFAULT pending,parts_used TEXT,next_maintenance_date TEXT,next_maintenance_km INTEGER,notes TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)');
+    await db.execute('CREATE TABLE $_ct(id INTEGER PRIMARY KEY AUTOINCREMENT,vehicle_id INTEGER NOT NULL,type TEXT NOT NULL,inspection_date TEXT NOT NULL,odometer_reading INTEGER DEFAULT 0,items TEXT NOT NULL,inspector_name TEXT,signature_path TEXT,notes TEXT,status TEXT DEFAULT pending,overall_score REAL DEFAULT 0,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)');
+    await db.execute('CREATE TABLE $_ft(id INTEGER PRIMARY KEY AUTOINCREMENT,vehicle_id INTEGER NOT NULL,fill_date TEXT NOT NULL,odometer_reading INTEGER DEFAULT 0,liters REAL DEFAULT 0,cost_per_liter REAL DEFAULT 0,fuel_type TEXT DEFAULT petrol,station_name TEXT,station_location TEXT,full_tank INTEGER DEFAULT 1,notes TEXT,consumption_rate REAL,is_abnormal INTEGER DEFAULT 0,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)');
     final now = DateTime.now().toIso8601String();
     for (final v in _seedVehicles()) {
       await db.rawInsert("INSERT INTO $_vt(plate_number,make,model,year,color,fuel_type,current_odometer,status,notes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
@@ -46,11 +54,21 @@ class DatabaseService {
       await db.rawInsert("INSERT INTO $_mt(vehicle_id,maintenance_date,description,type,odometer_reading,cost,labor_cost,service_provider,invoice_number,priority,status,parts_used,notes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
           [r.vehicleId, now, r.description, r.type, r.odometerReading, r.cost, r.laborCost, r.serviceProvider, r.invoiceNumber, r.priority, r.status, r.partsUsed, r.notes ?? '', now, now]);
     }
+    for (final c in _seedChecklists()) {
+      await db.rawInsert("INSERT INTO $_ct(vehicle_id,type,inspection_date,odometer_reading,items,inspector_name,notes,status,overall_score,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+          [c.vehicleId, c.type, now, c.odometerReading, c.items.map((i) => i.toMap()).toList().toString(), c.inspectorName ?? '', c.notes ?? '', c.status, c.overallScore, now, now]);
+    }
+    for (final f in _seedFuelRecords()) {
+      await db.rawInsert("INSERT INTO $_ft(vehicle_id,fill_date,odometer_reading,liters,cost_per_liter,fuel_type,station_name,station_location,full_tank,notes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+          [f.vehicleId, now, f.odometerReading, f.liters, f.costPerLiter, f.fuelType, f.stationName ?? '', f.stationLocation ?? '', f.fullTank ? 1 : 0, f.notes ?? '', now, now]);
+    }
   }
 
   static void _seedMemory() {
     _memVehicles = _seedVehicles();
     _memRecords = _seedRecords();
+    _memChecklists = _seedChecklists();
+    _memFuelRecords = _seedFuelRecords();
   }
 
   static List<Vehicle> _seedVehicles() {
@@ -90,6 +108,58 @@ class DatabaseService {
       MaintenanceRecord(id: 14, vehicleId: 10, maintenanceDate: n, description: 'تغيير زيت وفلاتر', type: 'oil_change', odometerReading: 54000, cost: 600, laborCost: 100, serviceProvider: 'مركز تويوتا', invoiceNumber: 'INV-014', priority: 'medium', status: 'completed', createdAt: n, updatedAt: n),
       MaintenanceRecord(id: 15, vehicleId: 11, maintenanceDate: n, description: 'إصلاح كهرباء', type: 'electrical', odometerReading: 91000, cost: 950, laborCost: 250, serviceProvider: 'مركز بي إم دبليو', invoiceNumber: 'INV-016', priority: 'high', status: 'completed', createdAt: n, updatedAt: n),
       MaintenanceRecord(id: 16, vehicleId: 12, maintenanceDate: n, description: 'صيانة أولى', type: 'inspection', odometerReading: 15000, cost: 0, status: 'completed', serviceProvider: 'وكالة أودي', invoiceNumber: 'INV-017', priority: 'low', createdAt: n, updatedAt: n),
+    ];
+  }
+
+  static List<Checklist> _seedChecklists() {
+    final n = DateTime.now();
+    return [
+      Checklist(id: 1, vehicleId: 1, type: 'pre_trip', inspectionDate: n, odometerReading: 44800, items: [
+        ChecklistItem(title: 'الإطارات', description: 'فحص حالة الإطارات', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'الأضواء', description: 'فحص جميع الأضواء', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'الزيت', description: 'فحص مستوى الزيت', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'الفرامل', description: 'فحص الفرامل', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'الرياح', description: 'فحص زجاج الرياح', isChecked: false, hasDefect: true, defectNotes: 'شرخ صغير في الزجاج الأمامي'),
+      ], inspectorName: 'أحمد محمد', status: 'completed', overallScore: 85.0, createdAt: n, updatedAt: n),
+      Checklist(id: 2, vehicleId: 2, type: 'post_trip', inspectionDate: n, odometerReading: 61800, items: [
+        ChecklistItem(title: 'الإطارات', description: 'فحص حالة الإطارات', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'الأضواء', description: 'فحص جميع الأضواء', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'المقصورة', description: 'فحص نظافة المقصورة', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'الوقود', description: 'فحص مستوى الوقود', isChecked: true, hasDefect: false),
+      ], inspectorName: 'خالد علي', status: 'completed', overallScore: 100.0, createdAt: n, updatedAt: n),
+      Checklist(id: 3, vehicleId: 3, type: 'weekly', inspectionDate: n, odometerReading: 88200, items: [
+        ChecklistItem(title: 'المحرك', description: 'فحص حالة المحرك', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'البطارية', description: 'فحص البطارية', isChecked: true, hasDefect: true, defectNotes: 'البطارية ضعيفة تحتاج تبديل'),
+        ChecklistItem(title: 'ال冷却器', description: 'فحص المبرد', isChecked: false, hasDefect: false),
+        ChecklistItem(title: 'السوائل', description: 'فحص مستوى السوائل', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'الحزام', description: 'فحص أحزمة المحرك', isChecked: true, hasDefect: false),
+      ], inspectorName: 'سعيد حسن', status: 'pending', overallScore: 75.0, createdAt: n, updatedAt: n),
+      Checklist(id: 4, vehicleId: 4, type: 'pre_trip', inspectionDate: n, odometerReading: 27600, items: [
+        ChecklistItem(title: 'الإطارات', description: 'فحص حالة الإطارات', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'الأضواء', description: 'فحص جميع الأضواء', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'الزيت', description: 'فحص مستوى الزيت', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'الفرامل', description: 'فحص الفرامل', isChecked: false, hasDefect: false),
+        ChecklistItem(title: 'الرياح', description: 'فحص زجاج الرياح', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'المرايا', description: 'فحص المرايا', isChecked: true, hasDefect: false),
+      ], inspectorName: 'أحمد محمد', status: 'completed', overallScore: 92.0, createdAt: n, updatedAt: n),
+      Checklist(id: 5, vehicleId: 6, type: 'pre_trip', inspectionDate: n, odometerReading: 119500, items: [
+        ChecklistItem(title: 'الإطارات', description: 'فحص حالة الإطارات', isChecked: true, hasDefect: true, defectNotes: 'إطار خلفي أيمن يحتاج تبديل'),
+        ChecklistItem(title: 'الأضواء', description: 'فحص جميع الأضواء', isChecked: true, hasDefect: false),
+        ChecklistItem(title: 'الزيت', description: 'فحص مستوى الزيت', isChecked: false, hasDefect: false),
+        ChecklistItem(title: 'الفرامل', description: 'فحص الفرامل', isChecked: true, hasDefect: true, defectNotes: 'صوت الفرامل غير طبيعي'),
+      ], inspectorName: 'فهد سالم', status: 'pending', overallScore: 60.0, createdAt: n, updatedAt: n),
+    ];
+  }
+
+  static List<FuelRecord> _seedFuelRecords() {
+    final n = DateTime.now();
+    return [
+      FuelRecord(id: 1, vehicleId: 1, fillDate: n, odometerReading: 43000, liters: 55.0, costPerLiter: 2.33, fuelType: 'petrol', stationName: 'محطة الأفق', stationLocation: 'الرياض', fullTank: true, notes: 'تعبئة كاملة', createdAt: n, updatedAt: n),
+      FuelRecord(id: 2, vehicleId: 1, fillDate: n, odometerReading: 44500, liters: 50.0, costPerLiter: 2.33, fuelType: 'petrol', stationName: 'محطة النور', stationLocation: 'الرياض', fullTank: true, createdAt: n, updatedAt: n),
+      FuelRecord(id: 3, vehicleId: 2, fillDate: n, odometerReading: 60000, liters: 60.0, costPerLiter: 2.33, fuelType: 'petrol', stationName: 'محطة الوادي', stationLocation: 'جدة', fullTank: true, createdAt: n, updatedAt: n),
+      FuelRecord(id: 4, vehicleId: 2, fillDate: n, odometerReading: 61500, liters: 58.0, costPerLiter: 2.33, fuelType: 'petrol', stationName: 'محطة النور', stationLocation: 'جدة', fullTank: true, createdAt: n, updatedAt: n),
+      FuelRecord(id: 5, vehicleId: 3, fillDate: n, odometerReading: 87000, liters: 45.0, costPerLiter: 2.33, fuelType: 'petrol', stationName: 'محطة السلام', stationLocation: 'الدمام', fullTank: true, createdAt: n, updatedAt: n),
+      FuelRecord(id: 6, vehicleId: 3, fillDate: n, odometerReading: 88500, liters: 55.0, costPerLiter: 2.33, fuelType: 'petrol', stationName: 'محطة الأفق', stationLocation: 'الدمام', fullTank: true, notes: 'استهلاك مرتفع', consumptionRate: 18.3, isAbnormal: true, createdAt: n, updatedAt: n),
     ];
   }
 
@@ -248,6 +318,283 @@ class DatabaseService {
       if (db == null) return 0;
       return db.delete(_mt, where: 'id = ?', whereArgs: [id]);
     } catch (e) { return 0; }
+  }
+
+  // ===== Checklist CRUD =====
+  static Future<List<Checklist>> getAllChecklists() async {
+    final vehicles = await getAllVehicles();
+    if (_useMemory) {
+      return _memChecklists.map((c) {
+        for (final v in vehicles) {
+          if (v.id == c.vehicleId) return c.copyWith(vehicle: v);
+        }
+        return c;
+      }).toList();
+    }
+    try {
+      final db = _database;
+      if (db == null) return List.from(_memChecklists);
+      final maps = await db.query(_ct, orderBy: 'inspection_date DESC');
+      return maps.map((m) {
+        final vid = (m['vehicle_id'] as int?) ?? 0;
+        Vehicle? veh;
+        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
+        return Checklist.fromMap(m).copyWith(vehicle: veh);
+      }).toList();
+    } catch (e) {
+      return List.from(_memChecklists);
+    }
+  }
+
+  static Future<Checklist?> getChecklistById(int id) async {
+    final vehicles = await getAllVehicles();
+    if (_useMemory) {
+      for (final c in _memChecklists) {
+        if (c.id == id) {
+          for (final v in vehicles) {
+            if (v.id == c.vehicleId) return c.copyWith(vehicle: v);
+          }
+          return c;
+        }
+      }
+      return null;
+    }
+    try {
+      final db = _database;
+      if (db == null) return null;
+      final maps = await db.query(_ct, where: 'id = ?', whereArgs: [id]);
+      if (maps.isEmpty) return null;
+      final vid = (maps.first['vehicle_id'] as int?) ?? 0;
+      Vehicle? veh;
+      for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
+      return Checklist.fromMap(maps.first).copyWith(vehicle: veh);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<List<Checklist>> getChecklistsByVehicleId(int vid) async {
+    final v = await getVehicleById(vid);
+    if (_useMemory) {
+      return _memChecklists.where((c) => c.vehicleId == vid).map((c) => c.copyWith(vehicle: v)).toList();
+    }
+    try {
+      final db = _database;
+      if (db == null) return [];
+      final maps = await db.query(_ct, where: 'vehicle_id = ?', whereArgs: [vid], orderBy: 'inspection_date DESC');
+      return maps.map((m) => Checklist.fromMap(m).copyWith(vehicle: v)).toList();
+    } catch (e) { return []; }
+  }
+
+  static Future<int> insertChecklist(Checklist c) async {
+    if (_useMemory) {
+      final maxId = _memChecklists.isEmpty ? 0 : _memChecklists.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+      _memChecklists.insert(0, c.copyWith(id: maxId + 1));
+      return maxId + 1;
+    }
+    try {
+      final db = _database;
+      if (db == null) return -1;
+      return db.insert(_ct, c.toMap());
+    } catch (e) { return -1; }
+  }
+
+  static Future<int> updateChecklist(Checklist c) async {
+    if (_useMemory) {
+      for (int i = 0; i < _memChecklists.length; i++) {
+        if (_memChecklists[i].id == c.id) { _memChecklists[i] = c; return 1; }
+      }
+      return 0;
+    }
+    try {
+      final db = _database;
+      if (db == null) return 0;
+      return db.update(_ct, c.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [c.id]);
+    } catch (e) { return 0; }
+  }
+
+  static Future<int> deleteChecklist(int id) async {
+    if (_useMemory) {
+      _memChecklists.removeWhere((c) => c.id == id);
+      return 1;
+    }
+    try {
+      final db = _database;
+      if (db == null) return 0;
+      return db.delete(_ct, where: 'id = ?', whereArgs: [id]);
+    } catch (e) { return 0; }
+  }
+
+  // ===== FuelRecord CRUD =====
+  static Future<List<FuelRecord>> getAllFuelRecords() async {
+    final vehicles = await getAllVehicles();
+    if (_useMemory) {
+      return _memFuelRecords.map((f) {
+        for (final v in vehicles) {
+          if (v.id == f.vehicleId) return f.copyWith(vehicle: v);
+        }
+        return f;
+      }).toList();
+    }
+    try {
+      final db = _database;
+      if (db == null) return List.from(_memFuelRecords);
+      final maps = await db.query(_ft, orderBy: 'fill_date DESC');
+      return maps.map((m) {
+        final vid = (m['vehicle_id'] as int?) ?? 0;
+        Vehicle? veh;
+        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
+        return FuelRecord.fromMap(m).copyWith(vehicle: veh);
+      }).toList();
+    } catch (e) {
+      return List.from(_memFuelRecords);
+    }
+  }
+
+  static Future<FuelRecord?> getFuelRecordById(int id) async {
+    final vehicles = await getAllVehicles();
+    if (_useMemory) {
+      for (final f in _memFuelRecords) {
+        if (f.id == id) {
+          for (final v in vehicles) {
+            if (v.id == f.vehicleId) return f.copyWith(vehicle: v);
+          }
+          return f;
+        }
+      }
+      return null;
+    }
+    try {
+      final db = _database;
+      if (db == null) return null;
+      final maps = await db.query(_ft, where: 'id = ?', whereArgs: [id]);
+      if (maps.isEmpty) return null;
+      final vid = (maps.first['vehicle_id'] as int?) ?? 0;
+      Vehicle? veh;
+      for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
+      return FuelRecord.fromMap(maps.first).copyWith(vehicle: veh);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<List<FuelRecord>> getFuelRecordsByVehicleId(int vid) async {
+    final v = await getVehicleById(vid);
+    if (_useMemory) {
+      return _memFuelRecords.where((f) => f.vehicleId == vid).map((f) => f.copyWith(vehicle: v)).toList();
+    }
+    try {
+      final db = _database;
+      if (db == null) return [];
+      final maps = await db.query(_ft, where: 'vehicle_id = ?', whereArgs: [vid], orderBy: 'fill_date DESC');
+      return maps.map((m) => FuelRecord.fromMap(m).copyWith(vehicle: v)).toList();
+    } catch (e) { return []; }
+  }
+
+  static Future<int> insertFuelRecord(FuelRecord f) async {
+    if (_useMemory) {
+      final maxId = _memFuelRecords.isEmpty ? 0 : _memFuelRecords.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+      _memFuelRecords.insert(0, f.copyWith(id: maxId + 1));
+      return maxId + 1;
+    }
+    try {
+      final db = _database;
+      if (db == null) return -1;
+      return db.insert(_ft, f.toMap());
+    } catch (e) { return -1; }
+  }
+
+  static Future<int> updateFuelRecord(FuelRecord f) async {
+    if (_useMemory) {
+      for (int i = 0; i < _memFuelRecords.length; i++) {
+        if (_memFuelRecords[i].id == f.id) { _memFuelRecords[i] = f; return 1; }
+      }
+      return 0;
+    }
+    try {
+      final db = _database;
+      if (db == null) return 0;
+      return db.update(_ft, f.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [f.id]);
+    } catch (e) { return 0; }
+  }
+
+  static Future<int> deleteFuelRecord(int id) async {
+    if (_useMemory) {
+      _memFuelRecords.removeWhere((f) => f.id == id);
+      return 1;
+    }
+    try {
+      final db = _database;
+      if (db == null) return 0;
+      return db.delete(_ft, where: 'id = ?', whereArgs: [id]);
+    } catch (e) { return 0; }
+  }
+
+  // ===== Fuel Consumption Stats =====
+  static Future<Map<int, Map<String, dynamic>>> getFuelConsumptionStats() async {
+    final records = await getAllFuelRecords();
+    final Map<int, List<FuelRecord>> byVehicle = {};
+    for (final r in records) {
+      byVehicle.putIfAbsent(r.vehicleId, () => []);
+      byVehicle[r.vehicleId]!.add(r);
+    }
+
+    final Map<int, Map<String, dynamic>> stats = {};
+    byVehicle.forEach((vid, recs) {
+      // Sort by odometer ascending for consecutive fill-up calculation
+      recs.sort((a, b) => a.odometerReading.compareTo(b.odometerReading));
+
+      final List<double> consumptionRates = [];
+      double totalLiters = 0;
+      double totalCost = 0;
+      int abnormalCount = 0;
+
+      for (final r in recs) {
+        totalLiters += r.liters;
+        totalCost += r.totalCost;
+      }
+
+      // Calculate consumption rate between consecutive full-tank fill-ups
+      for (int i = 1; i < recs.length; i++) {
+        final prev = recs[i - 1];
+        final curr = recs[i];
+        if (prev.fullTank && curr.fullTank && curr.liters > 0) {
+          final distance = curr.odometerReading - prev.odometerReading;
+          if (distance > 0) {
+            final rate = distance / curr.liters; // km per liter
+            consumptionRates.add(rate);
+          }
+        }
+      }
+
+      // Calculate average consumption rate
+      double avgRate = 0;
+      if (consumptionRates.isNotEmpty) {
+        double sum = 0;
+        for (final r in consumptionRates) { sum += r; }
+        avgRate = sum / consumptionRates.length;
+
+        // Detect abnormal consumption (>20% above average)
+        for (final r in consumptionRates) {
+          if (r > 0 && (avgRate - r) / r > 0.20) {
+            abnormalCount++;
+          }
+        }
+      }
+
+      stats[vid] = {
+        'vehicleId': vid,
+        'totalFillUps': recs.length,
+        'totalLiters': totalLiters,
+        'totalCost': totalCost,
+        'avgConsumptionRate': avgRate, // km per liter (higher is better)
+        'consumptionRates': consumptionRates,
+        'abnormalCount': abnormalCount,
+        'fullTankFillUps': recs.where((r) => r.fullTank).length,
+      };
+    });
+
+    return stats;
   }
 
   // ===== Statistics (pure Dart, no SQL) =====
