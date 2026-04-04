@@ -38,7 +38,7 @@ class _AddChecklistScreenState extends State<AddChecklistScreen> {
   static const List<_InspectionDef> _preTripItems = [
     _InspectionDef('الإطارات', 'حالة الهواء والتآكل', Icons.tire_repair),
     _InspectionDef('الأضواء', 'أمامية، خلفية، فرامل، إشارات', Icons.lightbulb),
-    _InspectionDef('الفرامل', 'pedals and handbrake', Icons.dangerous),
+    _InspectionDef('الفرامل', 'بدواسات وفرامل يدوية', Icons.dangerous),
     _InspectionDef('الزيوت والسوائل', 'مستوى الزيوت والسوائل', Icons.oil_barrel),
     _InspectionDef('المرايا والزجاج', 'حالة المرايا والنوافذ', Icons.remove_red_eye),
     _InspectionDef('مقود وتوجيه', 'المقود ونظام التوجيه', Icons.settings),

@@ -184,7 +184,13 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () {},
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            '/add-checklist',
+            arguments: checklist,
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(

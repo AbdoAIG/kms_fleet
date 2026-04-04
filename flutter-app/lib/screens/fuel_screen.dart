@@ -36,7 +36,7 @@ class _FuelScreenState extends State<FuelScreen> {
     if (vehicleProvider.allVehicles.isEmpty) {
       await vehicleProvider.loadVehicles();
     }
-    await fuelProvider.loadRecords();
+    await fuelProvider.loadFuelRecords();
   }
 
   @override
@@ -119,7 +119,7 @@ class _FuelScreenState extends State<FuelScreen> {
             );
           }
 
-          if (provider.records.isEmpty) {
+          if (provider.fuelRecords.isEmpty) {
             return EmptyStateWidget(
               icon: Icons.local_gas_station_outlined,
               title: 'لا توجد سجلات وقود',
@@ -132,7 +132,7 @@ class _FuelScreenState extends State<FuelScreen> {
           }
 
           return RefreshIndicator(
-            onRefresh: () => provider.loadRecords(),
+            onRefresh: () => provider.loadFuelRecords(),
             color: AppColors.primary,
             child: CustomScrollView(
               slivers: [
@@ -161,7 +161,7 @@ class _FuelScreenState extends State<FuelScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '(${provider.records.length} سجل)',
+                          '(${provider.fuelRecords.length} سجل)',
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
@@ -177,14 +177,14 @@ class _FuelScreenState extends State<FuelScreen> {
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        final record = provider.records[index];
+                        final record = provider.fuelRecords[index];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: _buildFuelRecordCard(
                               record, provider),
                         );
                       },
-                      childCount: provider.records.length,
+                      childCount: provider.fuelRecords.length;
                     ),
                   ),
                 ),
@@ -205,10 +205,10 @@ class _FuelScreenState extends State<FuelScreen> {
   // ──────────────────────────── Summary Cards ────────────────────────────
 
   Widget _buildSummaryCards(FuelProvider provider) {
-    final totalCost = provider.records.fold<double>(
+    final totalCost = provider.fuelRecords.fold<double>(
         0.0, (sum, r) => sum + r.totalCost);
-    final avgConsumption = _calculateAverageConsumption(provider.records);
-    final alertCount = provider.records
+    final avgConsumption = _calculateAverageConsumption(provider.fuelRecords);
+    final alertCount = provider.fuelRecords
         .where((r) => r.isAbnormal == true)
         .length;
 
@@ -238,7 +238,7 @@ class _FuelScreenState extends State<FuelScreen> {
           const SizedBox(width: 12),
           StatCard(
             title: 'عدد التعبئات',
-            value: provider.records.length.toString(),
+            value: provider.fuelRecords.length.toString(),
             icon: Icons.local_gas_station,
             color: AppColors.accent,
             subtitle: 'هذا الشهر',
@@ -270,10 +270,10 @@ class _FuelScreenState extends State<FuelScreen> {
   Widget _buildConsumptionChart(FuelProvider provider) {
     final vehicles = context.read<VehicleProvider>().allVehicles;
     final filteredRecords = _selectedVehicleId != null
-        ? provider.records
+        ? provider.fuelRecords
             .where((r) => r.vehicleId == _selectedVehicleId)
             .toList()
-        : provider.records;
+        : provider.fuelRecords;
 
     // Group consumption rates by vehicle
     final Map<int, List<double>> vehicleConsumption = {};
@@ -798,7 +798,7 @@ class _FuelScreenState extends State<FuelScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              provider.deleteRecord(id);
+              provider.deleteFuelRecord(id);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('تم حذف السجل بنجاح'),

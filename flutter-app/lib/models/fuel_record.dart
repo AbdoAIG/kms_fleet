@@ -92,7 +92,7 @@ class FuelRecord {
       'full_tank': fullTank ? 1 : 0,
       'notes': notes,
       'consumption_rate': consumptionRate,
-      'is_abnormal': isAbnormal ? 1 : 0,
+      'is_abnormal': (isAbnormal ?? false) ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

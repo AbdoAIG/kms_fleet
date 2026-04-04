@@ -141,13 +141,13 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
       if (_isEditing) {
         await context
             .read<FuelProvider>()
-            .updateRecord(record);
+            .updateFuelRecord(record);
         AppHelpers.showSnackBar(
             context, 'تم تعديل سجل الوقود بنجاح');
       } else {
         await context
             .read<FuelProvider>()
-            .addRecord(record);
+            .addFuelRecord(record);
         AppHelpers.showSnackBar(
             context, 'تم إضافة سجل الوقود بنجاح');
       }

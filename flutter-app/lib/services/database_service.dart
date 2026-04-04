@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
@@ -56,7 +57,7 @@ class DatabaseService {
     }
     for (final c in _seedChecklists()) {
       await db.rawInsert("INSERT INTO $_ct(vehicle_id,type,inspection_date,odometer_reading,items,inspector_name,notes,status,overall_score,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-          [c.vehicleId, c.type, now, c.odometerReading, c.items.map((i) => i.toMap()).toList().toString(), c.inspectorName ?? '', c.notes ?? '', c.status, c.overallScore, now, now]);
+          [c.vehicleId, c.type, now, c.odometerReading, jsonEncode(c.items.map((i) => i.toMap()).toList()), c.inspectorName ?? '', c.notes ?? '', c.status, c.overallScore, now, now]);
     }
     for (final f in _seedFuelRecords()) {
       await db.rawInsert("INSERT INTO $_ft(vehicle_id,fill_date,odometer_reading,liters,cost_per_liter,fuel_type,station_name,station_location,full_tank,notes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -130,7 +131,7 @@ class DatabaseService {
       Checklist(id: 3, vehicleId: 3, type: 'weekly', inspectionDate: n, odometerReading: 88200, items: [
         ChecklistItem(title: 'المحرك', description: 'فحص حالة المحرك', isChecked: true, hasDefect: false),
         ChecklistItem(title: 'البطارية', description: 'فحص البطارية', isChecked: true, hasDefect: true, defectNotes: 'البطارية ضعيفة تحتاج تبديل'),
-        ChecklistItem(title: 'ال冷却器', description: 'فحص المبرد', isChecked: false, hasDefect: false),
+        ChecklistItem(title: 'المبرد', description: 'فحص المبرد', isChecked: false, hasDefect: false),
         ChecklistItem(title: 'السوائل', description: 'فحص مستوى السوائل', isChecked: true, hasDefect: false),
         ChecklistItem(title: 'الحزام', description: 'فحص أحزمة المحرك', isChecked: true, hasDefect: false),
       ], inspectorName: 'سعيد حسن', status: 'pending', overallScore: 75.0, createdAt: n, updatedAt: n),
@@ -494,13 +495,19 @@ class DatabaseService {
   static Future<int> insertFuelRecord(FuelRecord f) async {
     if (_useMemory) {
       final maxId = _memFuelRecords.isEmpty ? 0 : _memFuelRecords.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
-      _memFuelRecords.insert(0, f.copyWith(id: maxId + 1));
+      final record = f.copyWith(id: maxId + 1);
+      _memFuelRecords.insert(0, record);
+      // Calculate consumption rate for this record
+      _calculateAndUpdateConsumptionRate(record, _memFuelRecords);
       return maxId + 1;
     }
     try {
       final db = _database;
       if (db == null) return -1;
-      return db.insert(_ft, f.toMap());
+      final id = await db.insert(_ft, f.toMap());
+      // Calculate and update consumption rate
+      await _recalculateFuelConsumption(f.vehicleId);
+      return id;
     } catch (e) { return -1; }
   }
 
@@ -528,6 +535,83 @@ class DatabaseService {
       if (db == null) return 0;
       return db.delete(_ft, where: 'id = ?', whereArgs: [id]);
     } catch (e) { return 0; }
+  }
+
+  // ===== Fuel Consumption Rate Calculation =====
+
+  /// Abnormal threshold: consumption rate >20% worse than vehicle average
+  static const double _abnormalThreshold = 0.20;
+
+  /// Recalculate consumption rates and abnormal flags for all records of a vehicle (SQLite path).
+  static Future<void> _recalculateFuelConsumption(int vehicleId) async {
+    try {
+      final db = _database;
+      if (db == null) return;
+      final maps = await db.query(_ft,
+          where: 'vehicle_id = ?',
+          whereArgs: [vehicleId],
+          orderBy: 'odometer_reading ASC');
+      final records = maps.map((m) => FuelRecord.fromMap(m)).toList();
+      _applyConsumptionRates(records);
+
+      // Write updated records back to DB
+      for (final r in records) {
+        if (r.consumptionRate != null || r.isAbnormal != null) {
+          await db.update(_ft, {
+            'consumption_rate': r.consumptionRate,
+            'is_abnormal': (r.isAbnormal ?? false) ? 1 : 0,
+          }, where: 'id = ?', whereArgs: [r.id]);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error recalculating fuel consumption: $e');
+    }
+  }
+
+  /// Calculate consumption rates for a list of records (in-memory path).
+  static void _calculateAndUpdateConsumptionRate(
+      FuelRecord newRecord, List<FuelRecord> allRecords) {
+    final vehicleRecords = allRecords
+        .where((r) => r.vehicleId == newRecord.vehicleId)
+        .toList()
+      ..sort((a, b) => a.odometerReading.compareTo(b.odometerReading));
+    _applyConsumptionRates(vehicleRecords);
+  }
+
+  /// Core logic: calculate km/l between consecutive full-tank fill-ups,
+  /// then flag any record whose rate is >20% below the vehicle's own average.
+  static void _applyConsumptionRates(List<FuelRecord> records) {
+    if (records.isEmpty) return;
+
+    // Step 1: calculate raw km-per-liter between consecutive full-tank fill-ups
+    final List<double> rates = [];
+    for (int i = 1; i < records.length; i++) {
+      final prev = records[i - 1];
+      final curr = records[i];
+      if (prev.fullTank && curr.fullTank && curr.liters > 0) {
+        final distance = curr.odometerReading - prev.odometerReading;
+        if (distance > 0) {
+          final rate = distance / curr.liters; // km per liter
+          rates.add(rate);
+          records[i] = curr.copyWith(consumptionRate: rate);
+        }
+      }
+    }
+
+    // Step 2: calculate average and flag abnormal
+    if (rates.length >= 2) {
+      double sum = 0;
+      for (final r in rates) { sum += r; }
+      final avg = sum / rates.length;
+
+      for (int i = 0; i < records.length; i++) {
+        final r = records[i];
+        if (r.consumptionRate != null && r.consumptionRate! > 0) {
+          final isAbnormal = (avg - r.consumptionRate!) / r.consumptionRate! > _abnormalThreshold;
+          records[i] = r.copyWith(isAbnormal: isAbnormal);
+        }
+      }
+    }
   }
 
   // ===== Fuel Consumption Stats =====
