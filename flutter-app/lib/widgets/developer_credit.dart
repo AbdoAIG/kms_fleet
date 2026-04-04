@@ -25,9 +25,6 @@ class _DeveloperCreditState extends State<DeveloperCredit>
   int _currentIndex = 0;
   Timer? _switchTimer;
 
-  static const Color _gold = Color(0xFFD4A017);
-  static const Color _goldLight = Color(0xFFF5D060);
-
   final List<Map<String, IconData>> _credits = const [
     {'تطوير: عبدالرحمن إبراهيم': Icons.code_rounded},
     {'تصميم: شهد ناجح': Icons.palette_rounded},
@@ -41,7 +38,6 @@ class _DeveloperCreditState extends State<DeveloperCredit>
       duration: const Duration(milliseconds: 1500),
     );
     _fadeController.forward(from: 0);
-    // 5 seconds between each switch
     _switchTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       _switchCredit();
     });
@@ -70,38 +66,38 @@ class _DeveloperCreditState extends State<DeveloperCredit>
     final credit = _credits[_currentIndex];
     final text = credit.keys.first;
     final icon = credit.values.first;
-    final useFontSize = widget.fontSize ?? (widget.compact ? 11.0 : 14.0);
-    final useIconSize = widget.iconSize ?? (widget.compact ? 14.0 : 18.0);
+    final useFontSize = widget.fontSize ?? (widget.compact ? 13.0 : 16.0);
+    final useIconSize = widget.iconSize ?? (widget.compact ? 16.0 : 20.0);
     final verticalPadding = widget.compact ? 8.0 : 16.0;
+
+    const goldColor = Color(0xFFD4A017);
 
     return FadeTransition(
       opacity: _fadeController,
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: verticalPadding),
-        child: ShaderMask(
-          shaderCallback: (bounds) {
-            return const LinearGradient(
-              colors: [_gold, _goldLight, _gold],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ).createShader(bounds);
-          },
-          blendMode: BlendMode.srcIn,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: useIconSize),
-              const SizedBox(width: 8),
-              Text(
-                text,
-                style: TextStyle(
-                  fontSize: useFontSize,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: useIconSize, color: goldColor),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: useFontSize,
+                fontWeight: FontWeight.w700,
+                color: goldColor,
+                letterSpacing: 0.5,
+                shadows: const [
+                  Shadow(
+                    color: Color(0x55D4A017),
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
