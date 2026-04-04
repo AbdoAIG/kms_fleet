@@ -34,3 +34,32 @@ Key Architecture Decisions:
 - Material 3 with custom theming (modern, professional)
 - CupertinoPageTransitionsBuilder (smooth iOS-like animations)
 - No heavy dependencies (minimal package count for stability)
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Fix red screen error on vehicle selection + add vehicle diagram + depreciation calculator
+
+Work Log:
+- Analyzed all project files to identify the cause of the red error screen
+- Rewrote vehicle_details_screen.dart completely (887 lines) with:
+  - Full error handling with try-catch and retry button
+  - Interactive vehicle diagram using CustomPainter showing car parts
+  - Parts highlight RED for active faults (pending/in_progress maintenance)
+  - Parts show color-coded status for: engine, tires, battery, brakes, AC, transmission, filter, body, electrical
+  - Faults legend showing pending issues with descriptions
+  - Vehicle depreciation (نولون) calculator with Egyptian market rates
+  - Purchase price estimation by make/model
+  - Current value, yearly depreciation, km rate calculations
+  - Cost per km for maintenance analysis
+  - Normal light theme (removed previous dark design)
+  - Working edit button navigating to /add-vehicle
+- Updated main.dart with try-catch error boundary in route generation
+- Force pushed all changes to GitHub
+
+Stage Summary:
+- Fixed the red screen error that appeared when selecting a vehicle
+- Added interactive 2D car diagram with fault highlighting
+- Added depreciation (نولون) calculation feature
+- Added error state handling with retry capability
+- All changes pushed to GitHub (commit 86d91a5)
