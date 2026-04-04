@@ -12,7 +12,9 @@ import '../providers/maintenance_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final void Function(int tabIndex)? onNavigateToTab;
+
+  const DashboardScreen({super.key, this.onNavigateToTab});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -389,7 +391,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  // Navigate to maintenance tab - handled by MainScreen
+                  widget.onNavigateToTab?.call(2); // Tab index 2 = Maintenance
                 },
                 child: const Text(
                   'عرض الكل',

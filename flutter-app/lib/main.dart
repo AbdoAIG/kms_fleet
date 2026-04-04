@@ -10,6 +10,7 @@ import 'utils/app_theme.dart';
 import 'utils/app_colors.dart';
 import 'models/maintenance_record.dart';
 import 'models/vehicle.dart';
+import 'widgets/developer_credit.dart';
 import 'screens/main_screen.dart';
 import 'screens/add_vehicle_screen.dart';
 import 'screens/add_maintenance_screen.dart';
@@ -148,13 +149,23 @@ class _SplashScreen extends StatelessWidget {
       backgroundColor: AppColors.primary,
       body: Center(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.directions_car, color: Colors.white, size: 64),
-            const SizedBox(height: 16),
-            const Text('KMS Fleet', style: TextStyle(fontFamily: 'Cairo', fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white)),
-            const SizedBox(height: 24),
+            const Spacer(),
+            const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.directions_car, color: Colors.white, size: 64),
+                SizedBox(height: 16),
+                Text('KMS Fleet', style: TextStyle(fontFamily: 'Cairo', fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white)),
+                SizedBox(height: 24),
+              ],
+            ),
             CircularProgressIndicator(strokeWidth: 2, color: Colors.white.withOpacity(0.7)),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: DeveloperCredit(compact: false),
+            ),
           ],
         ),
       ),

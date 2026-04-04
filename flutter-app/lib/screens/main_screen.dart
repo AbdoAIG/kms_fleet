@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../providers/theme_provider.dart';
+import '../widgets/developer_credit.dart';
 import 'dashboard_screen.dart';
 import 'vehicles_screen.dart';
 import 'maintenance_screen.dart';
@@ -19,12 +20,16 @@ class _MainScreenState extends State<MainScreen>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    DashboardScreen(),
+  late final List<Widget> _screens = [
+    DashboardScreen(onNavigateToTab: _switchToTab),
     VehiclesScreen(),
     MaintenanceScreen(),
     ReportsScreen(),
   ];
+
+  void _switchToTab(int index) {
+    setState(() => _currentIndex = index);
+  }
 
   @override
   bool get wantKeepAlive => true;
@@ -49,17 +54,23 @@ class _MainScreenState extends State<MainScreen>
           ],
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(0, Icons.dashboard_outlined, 'لوحة التحكم'),
-                _buildNavItem(1, Icons.directions_car_outlined, 'المركبات'),
-                _buildNavItem(2, Icons.build_outlined, 'الصيانة'),
-                _buildNavItem(3, Icons.bar_chart_outlined, 'التقارير'),
-              ],
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(0, Icons.dashboard_outlined, 'لوحة التحكم'),
+                    _buildNavItem(1, Icons.directions_car_outlined, 'المركبات'),
+                    _buildNavItem(2, Icons.build_outlined, 'الصيانة'),
+                    _buildNavItem(3, Icons.bar_chart_outlined, 'التقارير'),
+                  ],
+                ),
+              ),
+              const DeveloperCredit(),
+            ],
           ),
         ),
       ),
