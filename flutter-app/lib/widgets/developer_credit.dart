@@ -6,12 +6,14 @@ class DeveloperCredit extends StatefulWidget {
   final bool compact;
   final bool darkBackground;
   final double? fontSize;
+  final double? iconSize;
 
   const DeveloperCredit({
     super.key,
     this.compact = true,
     this.darkBackground = false,
     this.fontSize,
+    this.iconSize,
   });
 
   @override
@@ -66,7 +68,7 @@ class _DeveloperCreditState extends State<DeveloperCredit>
     final text = credit.keys.first;
     final icon = credit.values.first;
     final useFontSize = widget.fontSize ?? (widget.compact ? 10.0 : 13.0);
-    final iconSize = widget.compact ? 12.0 : 16.0;
+    final useIconSize = widget.iconSize ?? (widget.compact ? 12.0 : 16.0);
     final verticalPadding = widget.compact ? 8.0 : 16.0;
     final textColor = widget.darkBackground
         ? Colors.white.withOpacity(0.7)
@@ -79,7 +81,7 @@ class _DeveloperCreditState extends State<DeveloperCredit>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: iconSize, color: textColor),
+            Icon(icon, size: useIconSize, color: textColor),
             const SizedBox(width: 6),
             Text(
               text,
