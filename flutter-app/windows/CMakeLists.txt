@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 3.14)
-project(runner LANGUAGES CXX)
 
-# Configure Google Firebase if present
-if(EXISTS "${CMAKE_SOURCE_DIR}/../build/windows/x64/extracted/firebase_cpp_sdk_windows/CMakeLists.txt")
-  set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-  message(STATUS "Firebase C++ SDK found, applying CMAKE_POLICY_VERSION_MINIMUM=3.5")
-endif()
+# Fix Firebase C++ SDK CMake compatibility
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
+project(runner LANGUAGES CXX)
 
 set(BINARY_NAME "kms_fleet")
 
