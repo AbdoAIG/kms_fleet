@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/auth_provider.dart';
 import 'providers/vehicle_provider.dart';
 import 'providers/maintenance_provider.dart';
 import 'providers/checklist_provider.dart';
@@ -19,6 +21,7 @@ import 'models/fuel_record.dart';
 import 'models/vehicle.dart';
 import 'widgets/developer_credit.dart';
 import 'screens/main_screen.dart';
+import 'screens/login_screen.dart';
 import 'screens/add_vehicle_screen.dart';
 import 'screens/add_maintenance_screen.dart';
 import 'screens/add_checklist_screen.dart';
@@ -65,6 +68,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => VehicleProvider()),
         ChangeNotifierProvider(create: (_) => MaintenanceProvider()),
@@ -124,7 +128,12 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
         );
       },
       home: _ready
-          ? const MainScreen()
+          ? Consumer<AuthProvider>(
+              builder: (context, auth, _) {
+                if (auth.isLoggedIn) return const MainScreen();
+                return const LoginScreen();
+              },
+            )
           : _SplashScreen(error: _error, onRetry: _retry),
       onGenerateRoute: (settings) {
         try {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
+import '../services/report_service.dart';
+import '../services/firebase_sync_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
@@ -14,6 +16,7 @@ class ReportsScreen extends StatefulWidget {
 
 class _ReportsScreenState extends State<ReportsScreen> {
   bool _isLoading = true;
+  bool _isSyncing = false;
   List<Map<String, dynamic>> _typeData = [];
   List<Map<String, dynamic>> _monthlyData = [];
   List<Map<String, dynamic>> _vehicleData = [];
@@ -45,11 +48,85 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
+  Future<void> _syncData() async {
+    setState(() => _isSyncing = true);
+    try {
+      await FirebaseSyncService.syncNow();
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تمت المزامنة بنجاح ✅'), backgroundColor: AppColors.success),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشلت المزامنة: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSyncing = false);
+    }
+  }
+
+  Future<void> _handleExport(String type) async {
+    try {
+      String path = '';
+      String label = '';
+      switch (type) {
+        case 'maintenance_pdf':
+          path = await ReportService.generateMaintenancePDF();
+          label = 'تقرير الصيانة';
+          break;
+        case 'vehicles_pdf':
+          path = await ReportService.generateVehiclesPDF();
+          label = 'تقرير المركبات';
+          break;
+        case 'fuel_excel':
+          path = await ReportService.generateFuelExcel();
+          label = 'تقرير الوقود';
+          break;
+        case 'checklist_excel':
+          path = await ReportService.generateChecklistExcel();
+          label = 'تقرير الفحوصات';
+          break;
+      }
+      if (path.isNotEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم حفظ $label بنجاح ✅'), backgroundColor: AppColors.success),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في التصدير: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('التقارير والإحصائيات'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync),
+            tooltip: 'مزامنة مع Firebase',
+            onPressed: _isSyncing ? null : _syncData,
+          ),
+          PopupMenuButton<String>(
+            onSelected: _handleExport,
+            icon: const Icon(Icons.file_download),
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'maintenance_pdf', child: Text('تقرير الصيانة PDF')),
+              const PopupMenuItem(value: 'vehicles_pdf', child: Text('تقرير المركبات PDF')),
+              const PopupMenuItem(value: 'fuel_excel', child: Text('تقرير الوقود Excel')),
+              const PopupMenuItem(value: 'checklist_excel', child: Text('تقرير الفحوصات Excel')),
+            ],
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
