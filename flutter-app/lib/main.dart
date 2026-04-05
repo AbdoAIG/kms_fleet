@@ -38,25 +38,26 @@ void main() async {
   await Firebase.initializeApp();
 
   _localNotifications = FlutterLocalNotificationsPlugin();
-  await _localNotifications.initialize(
-    const AndroidInitializationSettings('@mipmap/ic_launcher'),
-  );
+  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const initSettings = InitializationSettings(android: androidSettings);
+  await _localNotifications.initialize(initSettings);
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     if (message.notification != null) {
-      _localNotifications.show(
-        message.hashCode,
-        message.notification!.title,
-        message.notification!.body,
-        const AndroidNotificationDetails(
+      final androidDetails = const AndroidNotificationDetails(
           'kms_fleet',
           'KMS Fleet',
           channelDescription: 'KMS Fleet Notifications',
           importance: Importance.high,
           priority: Priority.high,
-        ),
+        );
+      _localNotifications.show(
+        message.hashCode,
+        message.notification!.title,
+        message.notification!.body,
+        NotificationDetails(android: androidDetails),
       );
     }
   });
