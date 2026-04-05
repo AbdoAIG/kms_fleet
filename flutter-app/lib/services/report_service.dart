@@ -430,9 +430,6 @@ class ReportService {
         }
       }
 
-      // ── Column widths ──────────────────────────────────────────────
-      sheet.defaultColumnWidth = 18;
-
       final fileName = 'سجلات_الوقود_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx';
       return _saveAndShareExcel(workbook, fileName);
     } catch (e) {
@@ -517,9 +514,6 @@ class ReportService {
           );
         }
       }
-
-      // ── Column widths ──────────────────────────────────────────────
-      sheet.defaultColumnWidth = 18;
 
       final fileName = 'قوائم_الفحص_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx';
       return _saveAndShareExcel(workbook, fileName);
