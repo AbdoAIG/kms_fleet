@@ -187,10 +187,6 @@ class ReportService {
                   top: pw.BorderSide(color: PdfColors.grey400),
                   bottom: pw.BorderSide(color: PdfColors.grey400),
                 ),
-                rowDecoration: pw.BoxDecoration(
-                  colorFn: (index) =>
-                      index.isEven ? PdfColors.grey100 : PdfColors.white,
-                ),
               )
             else
               pw.Center(
@@ -330,10 +326,6 @@ class ReportService {
                   top: pw.BorderSide(color: PdfColors.grey400),
                   bottom: pw.BorderSide(color: PdfColors.grey400),
                 ),
-                rowDecoration: pw.BoxDecoration(
-                  colorFn: (index) =>
-                      index.isEven ? PdfColors.grey100 : PdfColors.white,
-                ),
               )
             else
               pw.Center(
@@ -388,7 +380,6 @@ class ReportService {
         'ملاحظات',
       ];
 
-      final headerCellStyle = CellValuetype.text;
       for (var col = 0; col < headers.length; col++) {
         final cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0));
         cell.value = TextCellValue(headers[col]);
@@ -439,10 +430,8 @@ class ReportService {
         }
       }
 
-      // ── Auto-fit column widths (approximate) ───────────────────────
-      for (var col = 0; col < headers.length; col++) {
-        sheet.setColWidth(col, 18);
-      }
+      // ── Column widths ──────────────────────────────────────────────
+      sheet.defaultColumnWidth = 18;
 
       final fileName = 'سجلات_الوقود_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx';
       return _saveAndShareExcel(workbook, fileName);
@@ -530,9 +519,7 @@ class ReportService {
       }
 
       // ── Column widths ──────────────────────────────────────────────
-      for (var col = 0; col < headers.length; col++) {
-        sheet.setColWidth(col, 18);
-      }
+      sheet.defaultColumnWidth = 18;
 
       final fileName = 'قوائم_الفحص_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx';
       return _saveAndShareExcel(workbook, fileName);
