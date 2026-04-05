@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
@@ -28,42 +30,32 @@ import 'screens/add_checklist_screen.dart';
 import 'screens/add_fuel_screen.dart';
 import 'screens/vehicle_details_screen.dart';
 
-late FlutterLocalNotificationsPlugin _localNotifications;
-
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-}
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  await Firebase.initializeApp();
+  // ── Firebase ───────────────────────────────────────────────────────────
+  // Supported on Android, iOS, Web and (via firebase_core_desktop) macOS.
+  // Windows and Linux have limited / no support – we skip gracefully.
+  final isUnsupported =
+      !kIsWeb && (Platform.isWindows || Platform.isLinux);
 
-  _localNotifications = FlutterLocalNotificationsPlugin();
-  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const initSettings = InitializationSettings(android: androidSettings);
-  await _localNotifications.initialize(initSettings);
+  if (!isUnsupported) {
+    try {
+      await Firebase.initializeApp();
+      debugPrint('[Firebase] Core ✓');
 
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    if (message.notification != null) {
-      final androidDetails = const AndroidNotificationDetails(
-          'kms_fleet',
-          'KMS Fleet',
-          channelDescription: 'KMS Fleet Notifications',
-          importance: Importance.high,
-          priority: Priority.high,
-        );
-      _localNotifications.show(
-        message.hashCode,
-        message.notification!.title,
-        message.notification!.body,
-        NotificationDetails(android: androidDetails),
-      );
+      // Push notifications — mobile only (not Web, not macOS).
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+        _initNotifications();
+        _setupMessaging();
+      }
+    } catch (e) {
+      debugPrint('[Firebase] init skipped: $e');
     }
-  });
+  } else {
+    debugPrint('[Firebase] Skipped on ${Platform.operatingSystem}');
+  }
 
   runApp(
     MultiProvider(
@@ -79,6 +71,60 @@ void main() async {
     ),
   );
 }
+
+// ── Push notifications (Android / iOS only) ───────────────────────────────
+
+void _initNotifications() {
+  try {
+    final plugin = FlutterLocalNotificationsPlugin();
+    plugin.initialize(
+      const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      ),
+    );
+    debugPrint('[Firebase] Notifications ✓');
+  } catch (e) {
+    debugPrint('[Firebase] Notifications skipped: $e');
+  }
+}
+
+void _setupMessaging() {
+  try {
+    FirebaseMessaging.onBackgroundMessage(_bgHandler);
+    FirebaseMessaging.onMessage.listen(_onMessage);
+    debugPrint('[Firebase] Messaging ✓');
+  } catch (e) {
+    debugPrint('[Firebase] Messaging skipped: $e');
+  }
+}
+
+Future<void> _bgHandler(RemoteMessage m) async {
+  await Firebase.initializeApp();
+}
+
+void _onMessage(RemoteMessage message) {
+  if (message.notification == null) return;
+  try {
+    FlutterLocalNotificationsPlugin().show(
+      message.hashCode,
+      message.notification!.title,
+      message.notification!.body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'kms_fleet',
+          'KMS Fleet',
+          channelDescription: 'KMS Fleet Notifications',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  } catch (_) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// App
+// ═══════════════════════════════════════════════════════════════════════════
 
 class KmsFleetApp extends StatefulWidget {
   const KmsFleetApp({super.key});
@@ -113,7 +159,9 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
       title: 'KMS Fleet',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: context.watch<ThemeProvider>().isDark ? ThemeMode.dark : ThemeMode.light,
+      themeMode: context.watch<ThemeProvider>().isDark
+          ? ThemeMode.dark
+          : ThemeMode.light,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -139,7 +187,8 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
         try {
           if (settings.name == '/add-vehicle') {
             return MaterialPageRoute(
-              builder: (_) => AddVehicleScreen(vehicle: settings.arguments as Vehicle?),
+              builder: (_) => AddVehicleScreen(
+                  vehicle: settings.arguments as Vehicle?),
             );
           }
           if (settings.name == '/add-maintenance') {
@@ -154,7 +203,9 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
           if (settings.name == '/add-checklist') {
             return MaterialPageRoute(
               builder: (_) => AddChecklistScreen(
-                checklist: settings.arguments is Checklist ? settings.arguments as Checklist : null,
+                checklist: settings.arguments is Checklist
+                    ? settings.arguments as Checklist
+                    : null,
               ),
             );
           }
@@ -167,9 +218,11 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
               ),
             );
           }
-          if (settings.name == '/vehicle-details' && settings.arguments is Vehicle) {
+          if (settings.name == '/vehicle-details' &&
+              settings.arguments is Vehicle) {
             return MaterialPageRoute(
-              builder: (_) => VehicleDetailsScreen(vehicle: settings.arguments as Vehicle),
+              builder: (_) =>
+                  VehicleDetailsScreen(vehicle: settings.arguments as Vehicle),
             );
           }
           return MaterialPageRoute(builder: (_) => const MainScreen());
@@ -181,7 +234,10 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
   }
 
   void _retry() {
-    setState(() { _error = ''; _ready = false; });
+    setState(() {
+      _error = '';
+      _ready = false;
+    });
     _init();
   }
 }
@@ -202,13 +258,21 @@ class _SplashScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                const Icon(Icons.error_outline, color: AppColors.error,
+                    size: 48),
                 const SizedBox(height: 16),
-                const Text('حدث خطأ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                const Text('حدث خطأ',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
-                Text(error, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                Text(error,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary)),
                 const SizedBox(height: 24),
-                ElevatedButton(onPressed: onRetry, child: const Text('إعادة المحاولة')),
+                ElevatedButton(
+                    onPressed: onRetry,
+                    child: const Text('إعادة المحاولة')),
               ],
             ),
           ),
@@ -226,11 +290,18 @@ class _SplashScreen extends StatelessWidget {
               children: [
                 Icon(Icons.directions_car, color: Colors.white, size: 64),
                 SizedBox(height: 16),
-                Text('KMS Fleet', style: TextStyle(fontFamily: 'Cairo', fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white)),
+                Text('KMS Fleet',
+                    style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white)),
                 SizedBox(height: 24),
               ],
             ),
-            CircularProgressIndicator(strokeWidth: 2, color: Colors.white.withOpacity(0.7)),
+            CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white.withOpacity(0.7)),
             const Spacer(),
             Padding(
               padding: const EdgeInsets.only(bottom: 24),

@@ -1,11 +1,10 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:excel/excel.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
@@ -37,44 +36,43 @@ class ReportService {
 
   // ── Shared helpers ───────────────────────────────────────────────────────
 
-  /// Saves [bytes] to a temporary file named [fileName] inside the system
-  /// temp directory and then opens the system share sheet.
-  ///
-  /// Returns the file path on success, or an empty string on failure.
-  static Future<String> _saveAndShare(
+  /// Shares raw bytes as a named file via the system share sheet.
+  /// Uses [XFile.fromData] so it works on ALL platforms (Android, iOS,
+  /// Web, Windows, macOS, Linux) without needing `dart:io` File.
+  static Future<String> _shareBytes(
     List<int> bytes,
     String fileName,
+    String mimeType,
   ) async {
     try {
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(bytes);
-      await Share.shareXFiles([XFile(file.path)], text: '');
-      return file.path;
+      final xFile = XFile.fromData(
+        Uint8List.fromList(bytes),
+        name: fileName,
+        mimeType: mimeType,
+      );
+      await Share.shareXFiles([xFile], text: '');
+      return fileName;
     } catch (e) {
-      debugPrint('ReportService: error saving/sharing file: $e');
+      debugPrint('ReportService: error sharing file: $e');
       return '';
     }
   }
 
-  /// Saves an [Excel] workbook to a temporary file and shares it.
-  static Future<String> _saveAndShareExcel(
+  /// Encodes an [Excel] workbook and shares it.
+  static Future<String> _shareExcel(
     Excel workbook,
     String fileName,
   ) async {
     try {
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/$fileName');
       final bytes = workbook.save();
       if (bytes == null) {
         debugPrint('ReportService: workbook save returned null');
         return '';
       }
-      await file.writeAsBytes(bytes);
-      await Share.shareXFiles([XFile(file.path)], text: '');
-      return file.path;
+      return _shareBytes(bytes, fileName,
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     } catch (e) {
-      debugPrint('ReportService: error saving/sharing Excel: $e');
+      debugPrint('ReportService: error sharing Excel: $e');
       return '';
     }
   }
@@ -201,7 +199,7 @@ class ReportService {
 
       final bytes = await pdf.save();
       final fileName = 'تقرير_الصيانة_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
-      return _saveAndShare(bytes, fileName);
+      return _shareBytes(bytes, fileName, 'application/pdf');
     } catch (e) {
       debugPrint('ReportService: generateMaintenancePDF error: $e');
       return '';
@@ -340,7 +338,7 @@ class ReportService {
 
       final bytes = await pdf.save();
       final fileName = 'تقرير_الأسطول_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
-      return _saveAndShare(bytes, fileName);
+      return _shareBytes(bytes, fileName, 'application/pdf');
     } catch (e) {
       debugPrint('ReportService: generateVehiclesPDF error: $e');
       return '';
@@ -431,7 +429,7 @@ class ReportService {
       }
 
       final fileName = 'سجلات_الوقود_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx';
-      return _saveAndShareExcel(workbook, fileName);
+      return _shareExcel(workbook, fileName);
     } catch (e) {
       debugPrint('ReportService: generateFuelExcel error: $e');
       return '';
@@ -516,7 +514,7 @@ class ReportService {
       }
 
       final fileName = 'قوائم_الفحص_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx';
-      return _saveAndShareExcel(workbook, fileName);
+      return _shareExcel(workbook, fileName);
     } catch (e) {
       debugPrint('ReportService: generateChecklistExcel error: $e');
       return '';
