@@ -645,7 +645,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'تكلفة الصيانة لكل كم: ${odometer > 0 ? AppFormatters.formatCurrency(_totalCost / odometer) : "0 ر.س"}',
+                    'تكلفة الصيانة لكل كم: ${odometer > 0 ? AppFormatters.formatCurrency(_totalCost / odometer) : "0 ج.م"}',
                     style: const TextStyle(fontSize: 12, color: AppColors.info, fontWeight: FontWeight.w600),
                   ),
                 ),

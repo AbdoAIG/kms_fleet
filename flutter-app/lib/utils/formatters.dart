@@ -4,8 +4,8 @@ class AppFormatters {
   AppFormatters._();
 
   static final NumberFormat _currencyFormat = NumberFormat.currency(
-    locale: 'ar_SA',
-    symbol: 'ر.س',
+    locale: 'ar_EG',
+    symbol: 'ج.م',
     decimalDigits: 2,
   );
 
@@ -21,9 +21,9 @@ class AppFormatters {
 
   static String formatCurrencyCompact(double amount) {
     if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)} مليون ر.س';
+      return '${(amount / 1000000).toStringAsFixed(1)} مليون ج.م';
     } else if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(1)} ألف ر.س';
+      return '${(amount / 1000).toStringAsFixed(1)} ألف ج.م';
     }
     return _currencyFormat.format(amount);
   }

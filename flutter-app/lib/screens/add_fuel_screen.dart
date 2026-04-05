@@ -292,7 +292,7 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
                         const TextInputType.numberWithOptions(
                             decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'سعر اللتر (ر.س)',
+                      labelText: 'سعر اللتر (ج.م)',
                       prefixIcon:
                           Icon(Icons.monetization_on),
                     ),
@@ -344,7 +344,7 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${_totalCost.toStringAsFixed(2)} ر.س',
+                          '${_totalCost.toStringAsFixed(2)} ج.م',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
