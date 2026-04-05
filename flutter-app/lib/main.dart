@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
@@ -22,9 +25,41 @@ import 'screens/add_checklist_screen.dart';
 import 'screens/add_fuel_screen.dart';
 import 'screens/vehicle_details_screen.dart';
 
-void main() {
+late FlutterLocalNotificationsPlugin _localNotifications;
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+}
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  await Firebase.initializeApp();
+
+  _localNotifications = FlutterLocalNotificationsPlugin();
+  await _localNotifications.initialize(
+    const AndroidInitializationSettings('@mipmap/ic_launcher'),
+  );
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    if (message.notification != null) {
+      _localNotifications.show(
+        message.hashCode,
+        message.notification!.title,
+        message.notification!.body,
+        const AndroidNotificationDetails(
+          'kms_fleet',
+          'KMS Fleet',
+          channelDescription: 'KMS Fleet Notifications',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      );
+    }
+  });
 
   runApp(
     MultiProvider(
