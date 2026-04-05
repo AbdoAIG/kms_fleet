@@ -184,7 +184,7 @@ class _FuelScreenState extends State<FuelScreen> {
                               record, provider),
                         );
                       },
-                      childCount: provider.fuelRecords.length;
+                      childCount: provider.fuelRecords.length,
                     ),
                   ),
                 ),

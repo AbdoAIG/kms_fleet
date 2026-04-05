@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
@@ -944,11 +945,11 @@ class _VehicleDiagramPainter extends CustomPainter {
 
     final faultPartPaint = Paint()
       ..color = AppColors.error
-      ..style = PaintingStyle.fill();
+      ..style = PaintingStyle.fill;
 
     final historyPartPaint = Paint()
       ..color = AppColors.accent
-      ..style = PaintingStyle.fill();
+      ..style = PaintingStyle.fill;
 
     final labelPaint = Paint()
       ..color = const Color(0xFF1A1A2E)
@@ -1087,7 +1088,7 @@ class _VehicleDiagramPainter extends CustomPainter {
   }
 
   void _drawLabel(Canvas canvas, String text, double x, double y, TextStyle style) {
-    final paragraphBuilder = ParagraphBuilder(ParagraphStyle(
+    final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
       textDirection: TextDirection.rtl,
       fontSize: style.fontSize,
       fontFamily: style.fontFamily,
@@ -1096,7 +1097,7 @@ class _VehicleDiagramPainter extends CustomPainter {
       ..pushStyle(ui.TextStyle(color: style.color))
       ..addText(text);
     final paragraph = paragraphBuilder.build();
-    paragraph.layout(const ParagraphConstraints(width: 60));
+    paragraph.layout(ui.ParagraphConstraints(width: 60));
     canvas.drawParagraph(
       paragraph,
       Offset(x - paragraph.width / 2, y - paragraph.height / 2),
