@@ -815,28 +815,35 @@ class DatabaseService {
   }
 
   static Future<Map<String, dynamic>> getDriverStats() async {
-    final drivers = await getAllDrivers();
+    final vehicles = await getAllVehicles();
     final now = DateTime.now();
+    int totalDrivers = 0;
     int activeDrivers = 0;
     int suspendedDrivers = 0;
     int nearExpiryCount = 0;
     int expiredCount = 0;
 
-    for (final d in drivers) {
-      if (d.status == 'active') activeDrivers++;
-      if (d.status == 'suspended') suspendedDrivers++;
-      if (d.licenseExpiryDate != null) {
-        final diff = d.licenseExpiryDate!.difference(now).inDays;
-        if (diff < 0) {
-          expiredCount++;
-        } else if (diff <= 30) {
-          nearExpiryCount++;
+    for (final v in vehicles) {
+      if (v.driverName != null && v.driverName!.isNotEmpty) {
+        totalDrivers++;
+        if (v.driverStatus == 'suspended') {
+          suspendedDrivers++;
+        } else {
+          activeDrivers++;
+        }
+        if (v.driverLicenseExpiry != null) {
+          final diff = v.driverLicenseExpiry!.difference(now).inDays;
+          if (diff < 0) {
+            expiredCount++;
+          } else if (diff <= 30) {
+            nearExpiryCount++;
+          }
         }
       }
     }
 
     return {
-      'totalDrivers': drivers.length,
+      'totalDrivers': totalDrivers,
       'activeDrivers': activeDrivers,
       'suspendedDrivers': suspendedDrivers,
       'nearExpiryCount': nearExpiryCount,
