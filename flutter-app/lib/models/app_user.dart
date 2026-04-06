@@ -12,7 +12,7 @@ class AppUser {
   AppUser({
     this.id,
     this.email = '',
-    required this.displayName,
+    this.displayName = '',
     required this.role,
     this.phone = '',
     this.isActive = true,

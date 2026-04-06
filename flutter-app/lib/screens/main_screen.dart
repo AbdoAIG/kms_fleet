@@ -73,7 +73,7 @@ class _MainScreenState extends State<MainScreen>
       final workOrderProvider = context.read<WorkOrderProvider>();
       final tripProvider = context.read<TripTrackingProvider>();
 
-      await Future.wait<Future<dynamic>>([
+      await Future.wait([
         vehicleProvider.loadVehicles(),
         maintenanceProvider.loadRecords(),
         fuelProvider.loadFuelRecords(),
