@@ -87,3 +87,29 @@ Stage Summary:
 - Work orders accessible from Maintenance tab (sub-tab)
 - Professional reports accessible from existing Reports tab
 - Commit 0c293c6 pushed to GitHub
+---
+Task ID: 1
+Agent: Main Agent
+Task: Remove Expenses tab + Fix PDF/Excel .bin download issue
+
+Work Log:
+- Read all project files to understand current state (main_screen.dart, main.dart, report_service.dart, pubspec.yaml, etc.)
+- Identified 7 tabs in bottom nav (Dashboard, Vehicles, Maintenance, Checklist, Fuel, Reports, Expenses)
+- Removed ExpensesScreen from _screens list in main_screen.dart
+- Removed Expenses nav item from _navItems in main_screen.dart
+- Removed import of expenses_screen.dart from main_screen.dart
+- Removed expense_provider import and ExpenseProvider from MultiProvider in main.dart
+- Removed expense.dart, expenses_screen.dart, add_expense_screen.dart imports from main.dart
+- Removed /add-expense route from onGenerateRoute in main.dart
+- Fixed PDF/Excel .bin issue in report_service.dart:
+  - Added dart:io and path_provider imports
+  - Replaced XFile.fromData() with file-based approach: write bytes to temp directory with correct extension
+  - Added _mimeType() helper for proper MIME type detection
+  - Now creates actual files with .pdf/.xlsx extensions before sharing
+- Pushed all changes to GitHub (commit 6babcf7)
+
+Stage Summary:
+- Expenses tab completely removed from bottom navigation and sidebar
+- 6 tabs remain: الرئيسية، المركبات، الصيانة، الفحص، الوقود، التقارير
+- PDF and Excel files will now be saved with correct extensions and MIME types
+- Expense model and database methods kept for report generation (monthly cost PDF, comprehensive Excel)
