@@ -24,12 +24,14 @@ abstract class Vehicle3DPainter extends CustomPainter {
   });
 
   void draw3DShadow(Canvas canvas, Offset center, double width, double height) {
+    final safeW = width.clamp(10.0, 500.0);
+    final safeH = height.clamp(2.0, 100.0);
     final shadowPaint = Paint()
       ..color = Colors.black.withOpacity(0.15)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromCenter(center: center.translate(3, 5), width: width, height: height * 0.15),
+        Rect.fromCenter(center: center.translate(3, 5), width: safeW, height: safeH * 0.15),
         const Radius.circular(8),
       ),
       shadowPaint,
@@ -37,50 +39,53 @@ abstract class Vehicle3DPainter extends CustomPainter {
   }
 
   void drawWheel(Canvas canvas, Offset center, double radius, {bool isFront = false}) {
+    final r = radius.clamp(3.0, 50.0);
     // Tire
     final tirePaint = Paint()
       ..color = const Color(0xFF2D2D2D)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius, tirePaint);
+    canvas.drawCircle(center, r, tirePaint);
 
     // Tire tread ring
     final treadPaint = Paint()
       ..color = const Color(0xFF1A1A1A)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = radius * 0.2;
-    canvas.drawCircle(center, radius * 0.75, treadPaint);
+      ..strokeWidth = r * 0.2;
+    canvas.drawCircle(center, r * 0.75, treadPaint);
 
     // Hub
     final hubPaint = Paint()
       ..color = const Color(0xFFC0C0C0)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius * 0.5, hubPaint);
+    canvas.drawCircle(center, r * 0.5, hubPaint);
 
     // Hub shine
     final hubShine = Paint()
       ..color = Colors.white.withOpacity(0.4)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center.translate(-radius * 0.15, -radius * 0.15), radius * 0.2, hubShine);
+    canvas.drawCircle(center.translate(-r * 0.15, -r * 0.15), r * 0.2, hubShine);
 
     // Axle bolt pattern
     for (var i = 0; i < 5; i++) {
       final angle = (i * 72) * math.pi / 180;
       final boltCenter = center.translate(
-        math.cos(angle) * radius * 0.3,
-        math.sin(angle) * radius * 0.3,
+        math.cos(angle) * r * 0.3,
+        math.sin(angle) * r * 0.3,
       );
-      canvas.drawCircle(boltCenter, radius * 0.06, Paint()..color = const Color(0xFF666666));
+      canvas.drawCircle(boltCenter, r * 0.06, Paint()..color = const Color(0xFF666666));
     }
   }
 
   void drawGlass(Canvas canvas, Rect rect, {double opacity = 0.6}) {
+    if (rect.width < 1 || rect.height < 1) return;
+    final safeOpacity = opacity.clamp(0.0, 1.0);
     final glassPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          const Color(0xFF87CEEB).withOpacity(opacity),
-          const Color(0xFF4A90D9).withOpacity(opacity + 0.15),
+          const Color(0xFF87CEEB).withOpacity(safeOpacity),
+          const Color(0xFF4A90D9).withOpacity((safeOpacity + 0.15).clamp(0.0, 1.0)),
         ],
       ).createShader(rect)
       ..style = PaintingStyle.fill;
@@ -88,38 +93,44 @@ abstract class Vehicle3DPainter extends CustomPainter {
 
     // Glass reflection
     final reflRect = Rect.fromLTRB(rect.left + 2, rect.top + 2, rect.left + rect.width * 0.4, rect.top + rect.height * 0.6);
-    final reflPaint = Paint()
-      ..color = Colors.white.withOpacity(0.25)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(reflRect, reflPaint);
+    if (reflRect.width > 0 && reflRect.height > 0) {
+      final reflPaint = Paint()
+        ..color = Colors.white.withOpacity(0.25)
+        ..style = PaintingStyle.fill;
+      canvas.drawRect(reflRect, reflPaint);
+    }
   }
 
   void drawHeadlight(Canvas canvas, Offset center, double size) {
+    final safeSize = size.clamp(2.0, 100.0);
+    final shaderRect = Rect.fromCenter(center: center, width: safeSize, height: safeSize);
     final hlPaint = Paint()
       ..shader = RadialGradient(
         center: Alignment.center,
         radius: 1,
         colors: [Colors.yellow.shade200, Colors.yellow.shade50.withOpacity(0.5)],
-      ).createShader(Rect.fromCenter(center: center, width: size, height: size))
+      ).createShader(shaderRect)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, size / 2, hlPaint);
+    canvas.drawCircle(center, safeSize / 2, hlPaint);
 
     // Glow
     final glowPaint = Paint()
       ..color = Colors.yellow.shade100.withOpacity(0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-    canvas.drawCircle(center, size * 0.8, glowPaint);
+    canvas.drawCircle(center, safeSize * 0.8, glowPaint);
   }
 
   void drawTaillight(Canvas canvas, Offset center, double size) {
+    final safeSize = size.clamp(2.0, 100.0);
+    final shaderRect = Rect.fromCenter(center: center, width: safeSize, height: safeSize);
     final tlPaint = Paint()
       ..shader = RadialGradient(
         center: Alignment.center,
         radius: 1,
         colors: [Colors.red.shade400, Colors.red.shade700],
-      ).createShader(Rect.fromCenter(center: center, width: size, height: size))
+      ).createShader(shaderRect)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, size / 2, tlPaint);
+    canvas.drawCircle(center, safeSize / 2, tlPaint);
   }
 
   Color get vehicleBodyPaint => bodyColor;
@@ -981,21 +992,23 @@ class _Vehicle3DCardState extends State<Vehicle3DCard>
 
   Vehicle3DPainter _getPainter() {
     final c = _typeColor;
+    final light = Color.lerp(c, Colors.white, 0.35) ?? c;
+    final dark = Color.lerp(c, Colors.black, 0.3) ?? c;
     return switch (widget.vehicle.vehicleType) {
       'jumbo_truck' => JumboTruckPainter(
-        mainColor: c, darkColor: c.withOpacity(0.7), lightColor: c.withOpacity(1.3), bodyColor: c),
+        mainColor: c, darkColor: dark, lightColor: light, bodyColor: c),
       'half_truck' => HalfTruckPainter(
-        mainColor: c, darkColor: c.withOpacity(0.7), lightColor: c.withOpacity(1.3), bodyColor: c),
+        mainColor: c, darkColor: dark, lightColor: light, bodyColor: c),
       'bus' => BusPainter(
-        mainColor: c, darkColor: c.withOpacity(0.7), lightColor: c.withOpacity(1.3), bodyColor: c),
+        mainColor: c, darkColor: dark, lightColor: light, bodyColor: c),
       'microbus' => MicrobusPainter(
-        mainColor: c, darkColor: c.withOpacity(0.7), lightColor: c.withOpacity(1.3), bodyColor: c),
+        mainColor: c, darkColor: dark, lightColor: light, bodyColor: c),
       'double_cabin' => DoubleCabinPainter(
-        mainColor: c, darkColor: c.withOpacity(0.7), lightColor: c.withOpacity(1.3), bodyColor: c),
+        mainColor: c, darkColor: dark, lightColor: light, bodyColor: c),
       'forklift' => ForkliftPainter(
         mainColor: Colors.yellow.shade600, darkColor: Colors.orange.shade800, lightColor: Colors.yellow.shade300, bodyColor: Colors.yellow.shade600),
       _ => HalfTruckPainter(
-        mainColor: c, darkColor: c.withOpacity(0.7), lightColor: c.withOpacity(1.3), bodyColor: c),
+        mainColor: c, darkColor: dark, lightColor: light, bodyColor: c),
     };
   }
 
