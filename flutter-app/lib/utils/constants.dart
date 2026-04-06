@@ -174,7 +174,7 @@ class AppConstants {
 
   // Database
   static const String dbName = 'kms_fleet.db';
-  static const int dbVersion = 2;
+  static const int dbVersion = 2; // v1=vehicles+maintenance, v2=+expenses
 
   // Animation Durations
   static const Duration shortAnimation = Duration(milliseconds: 200);

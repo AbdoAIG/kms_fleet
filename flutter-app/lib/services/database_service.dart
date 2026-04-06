@@ -4,6 +4,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
+import '../models/expense.dart';
 import '../utils/constants.dart';
 
 class DatabaseService {
@@ -11,8 +12,10 @@ class DatabaseService {
   static bool _useMemory = true;
   static List<Vehicle> _memVehicles = [];
   static List<MaintenanceRecord> _memRecords = [];
+  static List<Expense> _memExpenses = [];
   static const _vt = 'vehicles';
   static const _mt = 'maintenance_records';
+  static const _et = 'expenses';
 
   DatabaseService._();
 
@@ -25,7 +28,7 @@ class DatabaseService {
       }
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, AppConstants.dbName);
-      _database = await openDatabase(path, version: 1, onCreate: _onCreate);
+      _database = await openDatabase(path, version: 2, onCreate: _onCreate, onUpgrade: _onUpgrade);
       _useMemory = false;
     } catch (e) {
       debugPrint('DB init error, fallback to memory: $e');
@@ -37,6 +40,7 @@ class DatabaseService {
   static Future<void> _onCreate(Database db, int v) async {
     await db.execute('CREATE TABLE $_vt(id INTEGER PRIMARY KEY AUTOINCREMENT,plate_number TEXT NOT NULL,make TEXT NOT NULL,model TEXT NOT NULL,year INTEGER NOT NULL,color TEXT DEFAULT white,fuel_type TEXT DEFAULT petrol,current_odometer INTEGER DEFAULT 0,status TEXT DEFAULT active,notes TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)');
     await db.execute('CREATE TABLE $_mt(id INTEGER PRIMARY KEY AUTOINCREMENT,vehicle_id INTEGER NOT NULL,maintenance_date TEXT NOT NULL,description TEXT NOT NULL,type TEXT NOT NULL,odometer_reading INTEGER DEFAULT 0,cost REAL DEFAULT 0,labor_cost REAL,service_provider TEXT,invoice_number TEXT,priority TEXT DEFAULT medium,status TEXT DEFAULT pending,parts_used TEXT,next_maintenance_date TEXT,next_maintenance_km INTEGER,notes TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)');
+    await db.execute('CREATE TABLE $_et(id INTEGER PRIMARY KEY AUTOINCREMENT,vehicle_id INTEGER,type TEXT NOT NULL,amount REAL NOT NULL,odometer_reading REAL,expense_date TEXT NOT NULL,description TEXT,service_provider TEXT,invoice_number TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)');
     final now = DateTime.now().toIso8601String();
     for (final v in _seedVehicles()) {
       await db.rawInsert("INSERT INTO $_vt(plate_number,make,model,year,color,fuel_type,current_odometer,status,notes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
@@ -46,11 +50,22 @@ class DatabaseService {
       await db.rawInsert("INSERT INTO $_mt(vehicle_id,maintenance_date,description,type,odometer_reading,cost,labor_cost,service_provider,invoice_number,priority,status,parts_used,notes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
           [r.vehicleId, now, r.description, r.type, r.odometerReading, r.cost, r.laborCost, r.serviceProvider, r.invoiceNumber, r.priority, r.status, r.partsUsed, r.notes ?? '', now, now]);
     }
+    for (final e in _seedExpenses()) {
+      await db.rawInsert("INSERT INTO $_et(vehicle_id,type,amount,odometer_reading,expense_date,description,service_provider,invoice_number,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
+          [e.vehicleId, e.type, e.amount, e.odometerReading, now, e.description, e.serviceProvider, e.invoiceNumber, now, now]);
+    }
+  }
+
+  static Future<void> _onUpgrade(Database db, int oldV, int newV) async {
+    if (oldV < 2) {
+      await db.execute('CREATE TABLE IF NOT EXISTS $_et(id INTEGER PRIMARY KEY AUTOINCREMENT,vehicle_id INTEGER,type TEXT NOT NULL,amount REAL NOT NULL,odometer_reading REAL,expense_date TEXT NOT NULL,description TEXT,service_provider TEXT,invoice_number TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)');
+    }
   }
 
   static void _seedMemory() {
     _memVehicles = _seedVehicles();
     _memRecords = _seedRecords();
+    _memExpenses = _seedExpenses();
   }
 
   static List<Vehicle> _seedVehicles() {
@@ -90,6 +105,22 @@ class DatabaseService {
       MaintenanceRecord(id: 14, vehicleId: 10, maintenanceDate: n, description: 'تغيير زيت وفلاتر', type: 'oil_change', odometerReading: 54000, cost: 600, laborCost: 100, serviceProvider: 'مركز تويوتا', invoiceNumber: 'INV-014', priority: 'medium', status: 'completed', createdAt: n, updatedAt: n),
       MaintenanceRecord(id: 15, vehicleId: 11, maintenanceDate: n, description: 'إصلاح كهرباء', type: 'electrical', odometerReading: 91000, cost: 950, laborCost: 250, serviceProvider: 'مركز بي إم دبليو', invoiceNumber: 'INV-016', priority: 'high', status: 'completed', createdAt: n, updatedAt: n),
       MaintenanceRecord(id: 16, vehicleId: 12, maintenanceDate: n, description: 'صيانة أولى', type: 'inspection', odometerReading: 15000, cost: 0, status: 'completed', serviceProvider: 'وكالة أودي', invoiceNumber: 'INV-017', priority: 'low', createdAt: n, updatedAt: n),
+    ];
+  }
+
+  static List<Expense> _seedExpenses() {
+    final n = DateTime.now();
+    return [
+      Expense(id: 1, vehicleId: 1, type: 'fuel', amount: 2500, odometerReading: 44500, expenseDate: n, description: 'تعبئة بنزين', serviceProvider: 'محطة وقود النيل', invoiceNumber: 'FUEL-001', createdAt: n, updatedAt: n),
+      Expense(id: 2, vehicleId: 1, type: 'toll', amount: 150, expenseDate: n, description: 'رسوم طريق القاهرة الإسكندرية', createdAt: n, updatedAt: n),
+      Expense(id: 3, vehicleId: 2, type: 'fuel', amount: 3200, odometerReading: 61900, expenseDate: n, description: 'تعبئة بنزين', serviceProvider: 'محطة وقود_MOBIL', createdAt: n, updatedAt: n),
+      Expense(id: 4, vehicleId: 3, type: 'fine', amount: 500, expenseDate: n, description: 'مخالفة سرعة', serviceProvider: 'المرور', createdAt: n, updatedAt: n),
+      Expense(id: 5, vehicleId: 6, type: 'insurance', amount: 4500, expenseDate: n, description: 'تأمين سنوي', serviceProvider: 'شركة التأمين المصرية', createdAt: n, updatedAt: n),
+      Expense(id: 6, vehicleId: 6, type: 'fuel', amount: 5500, odometerReading: 118000, expenseDate: n, description: 'تعبئة ديزل', serviceProvider: 'محطة وقود 合作', createdAt: n, updatedAt: n),
+      Expense(id: 7, vehicleId: 4, type: 'toll', amount: 200, expenseDate: n, description: 'رسوم طريق مصر إسكندرية', createdAt: n, updatedAt: n),
+      Expense(id: 8, vehicleId: 10, type: 'fuel', amount: 6000, odometerReading: 54000, expenseDate: n, description: 'تعبئة ديزل', createdAt: n, updatedAt: n),
+      Expense(id: 9, vehicleId: null, type: 'miscellaneous', amount: 350, expenseDate: n, description: 'مصروفات نثرية', createdAt: n, updatedAt: n),
+      Expense(id: 10, vehicleId: 5, type: 'insurance', amount: 8000, expenseDate: n, description: 'تأمين شامل سنوي', serviceProvider: 'شركة أليانز', createdAt: n, updatedAt: n),
     ];
   }
 
@@ -247,6 +278,70 @@ class DatabaseService {
       final db = _database;
       if (db == null) return 0;
       return db.delete(_mt, where: 'id = ?', whereArgs: [id]);
+    } catch (e) { return 0; }
+  }
+
+  // ===== Expense CRUD =====
+  static Future<List<Expense>> getAllExpenses() async {
+    if (_useMemory) return List.from(_memExpenses);
+    try {
+      final db = _database;
+      if (db == null) return List.from(_memExpenses);
+      final maps = await db.query(_et, orderBy: 'expense_date DESC');
+      return maps.map((m) => Expense.fromMap(m)).toList();
+    } catch (e) {
+      return List.from(_memExpenses);
+    }
+  }
+
+  static Future<List<Expense>> getExpensesByVehicleId(int vid) async {
+    if (_useMemory) {
+      return _memExpenses.where((e) => e.vehicleId == vid).toList();
+    }
+    try {
+      final db = _database;
+      if (db == null) return [];
+      final maps = await db.query(_et, where: 'vehicle_id = ?', whereArgs: [vid], orderBy: 'expense_date DESC');
+      return maps.map((m) => Expense.fromMap(m)).toList();
+    } catch (e) { return []; }
+  }
+
+  static Future<int> insertExpense(Expense e) async {
+    if (_useMemory) {
+      final maxId = _memExpenses.isEmpty ? 0 : _memExpenses.map((x) => x.id ?? 0).reduce((a, b) => a > b ? a : b);
+      _memExpenses.insert(0, e.copyWith(id: maxId + 1));
+      return maxId + 1;
+    }
+    try {
+      final db = _database;
+      if (db == null) return -1;
+      return db.insert(_et, e.toMap());
+    } catch (e) { return -1; }
+  }
+
+  static Future<int> updateExpense(Expense e) async {
+    if (_useMemory) {
+      for (int i = 0; i < _memExpenses.length; i++) {
+        if (_memExpenses[i].id == e.id) { _memExpenses[i] = e; return 1; }
+      }
+      return 0;
+    }
+    try {
+      final db = _database;
+      if (db == null) return 0;
+      return db.update(_et, e.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [e.id]);
+    } catch (e) { return 0; }
+  }
+
+  static Future<int> deleteExpense(int id) async {
+    if (_useMemory) {
+      _memExpenses.removeWhere((e) => e.id == id);
+      return 1;
+    }
+    try {
+      final db = _database;
+      if (db == null) return 0;
+      return db.delete(_et, where: 'id = ?', whereArgs: [id]);
     } catch (e) { return 0; }
   }
 

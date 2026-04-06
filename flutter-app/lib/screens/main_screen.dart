@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../providers/theme_provider.dart';
+import '../providers/expense_provider.dart';
 import 'dashboard_screen.dart';
 import 'vehicles_screen.dart';
 import 'maintenance_screen.dart';
+import 'expenses_screen.dart';
 import 'reports_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -23,11 +25,21 @@ class _MainScreenState extends State<MainScreen>
     DashboardScreen(),
     VehiclesScreen(),
     MaintenanceScreen(),
+    ExpensesScreen(),
     ReportsScreen(),
   ];
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load expenses on init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ExpenseProvider>().loadExpenses();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,14 +62,15 @@ class _MainScreenState extends State<MainScreen>
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(0, Icons.dashboard_outlined, 'لوحة التحكم'),
                 _buildNavItem(1, Icons.directions_car_outlined, 'المركبات'),
                 _buildNavItem(2, Icons.build_outlined, 'الصيانة'),
-                _buildNavItem(3, Icons.bar_chart_outlined, 'التقارير'),
+                _buildNavItem(3, Icons.receipt_long_outlined, 'المصروفات'),
+                _buildNavItem(4, Icons.bar_chart_outlined, 'التقارير'),
               ],
             ),
           ),
@@ -79,7 +92,7 @@ class _MainScreenState extends State<MainScreen>
             child: AnimatedContainer(
               duration: AppConstants.shortAnimation,
               padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 6),
+                  horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.primary.withOpacity(0.1)
@@ -91,16 +104,16 @@ class _MainScreenState extends State<MainScreen>
                 children: [
                   Icon(
                     icon,
-                    size: 22,
+                    size: 20,
                     color: isSelected
                         ? AppColors.primary
                         : AppColors.textHint,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     label,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 9,
                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: isSelected
                           ? AppColors.primary

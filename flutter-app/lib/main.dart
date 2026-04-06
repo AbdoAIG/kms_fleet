@@ -5,15 +5,18 @@ import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/vehicle_provider.dart';
 import 'providers/maintenance_provider.dart';
+import 'providers/expense_provider.dart';
 import 'services/database_service.dart';
 import 'utils/app_theme.dart';
 import 'utils/app_colors.dart';
 import 'models/maintenance_record.dart';
 import 'models/vehicle.dart';
+import 'models/expense.dart';
 import 'screens/main_screen.dart';
 import 'screens/add_vehicle_screen.dart';
 import 'screens/add_maintenance_screen.dart';
 import 'screens/vehicle_details_screen.dart';
+import 'screens/add_expense_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +27,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => VehicleProvider()),
         ChangeNotifierProvider(create: (_) => MaintenanceProvider()),
+        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
       ],
       child: const KmsFleetApp(),
     ),
@@ -98,6 +102,11 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
         if (settings.name == '/vehicle-details' && settings.arguments is Vehicle) {
           return MaterialPageRoute(
             builder: (_) => VehicleDetailsScreen(vehicle: settings.arguments as Vehicle),
+          );
+        }
+        if (settings.name == '/add-expense') {
+          return MaterialPageRoute(
+            builder: (_) => AddExpenseScreen(expense: settings.arguments as Expense?),
           );
         }
         return MaterialPageRoute(builder: (_) => const MainScreen());
