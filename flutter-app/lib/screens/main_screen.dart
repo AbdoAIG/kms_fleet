@@ -61,6 +61,15 @@ class _MainScreenState extends State<MainScreen>
   @override
   bool get wantKeepAlive => true;
 
+  @override
+  void initState() {
+    super.initState();
+    // Auto-load all data when MainScreen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _performSync();
+    });
+  }
+
   Future<void> _performSync() async {
     if (_isSyncing) return;
     setState(() => _isSyncing = true);

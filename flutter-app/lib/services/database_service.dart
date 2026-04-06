@@ -64,9 +64,61 @@ class DatabaseService {
       if (supabaseReady && currentUserId != null) {
         _offline = false;
         debugPrint('DB: Switched to Supabase online mode');
+        // Check if the user has any data, if not seed from memory
+        await _seedIfEmpty();
       }
     } catch (e) {
       debugPrint('DB: Failed to go online: $e');
+    }
+  }
+
+  /// If Supabase tables are empty for this user, seed with sample data.
+  static Future<void> _seedIfEmpty() async {
+    try {
+      final response = await _db.from('vehicles').select('id').eq('user_id', _uid!).limit(1);
+      if (response.isEmpty) {
+        debugPrint('DB: No data found for user, seeding sample data...');
+        // Seed vehicles first (other entities reference them)
+        for (final v in _seedVehicles()) {
+          await _db.from('vehicles').insert(_toSupabaseRow(v.toMap()));
+        }
+        for (final r in _seedRecords()) {
+          await _db.from('maintenance_records').insert(_toSupabaseRow(r.toMap()));
+        }
+        for (final c in _seedChecklists()) {
+          final map = _toSupabaseRow(c.toMap());
+          if (map['items'] is String) {
+            try { map['items'] = jsonDecode(map['items']); } catch (_) {}
+          }
+          await _db.from('checklists').insert(map);
+        }
+        for (final f in _seedFuelRecords()) {
+          final map = _toSupabaseRow(f.toMap());
+          if (map['full_tank'] is int) map['full_tank'] = (map['full_tank'] as int) != 0;
+          if (map['is_abnormal'] is int) map['is_abnormal'] = (map['is_abnormal'] as int) != 0;
+          await _db.from('fuel_records').insert(map);
+        }
+        for (final v in _seedViolations()) {
+          await _db.from('driver_violations').insert(_toSupabaseRow(v.toMap()));
+        }
+        for (final e in _seedExpenses()) {
+          await _db.from('expenses').insert(_toSupabaseRow(e.toMap()));
+        }
+        for (final o in _seedWorkOrders()) {
+          await _db.from('work_orders').insert(_toSupabaseRow(o.toMap()));
+        }
+        for (final t in _seedTrips()) {
+          final map = _toSupabaseRow(t.toMap());
+          final rawPoints = map['trip_points_json'];
+          if (rawPoints is String && rawPoints.isNotEmpty) {
+            try { map['trip_points_json'] = jsonDecode(rawPoints); } catch (_) {}
+          }
+          await _db.from('trip_trackings').insert(map);
+        }
+        debugPrint('DB: Sample data seeded successfully');
+      }
+    } catch (e) {
+      debugPrint('DB: Error checking/seeding data: $e');
     }
   }
 
