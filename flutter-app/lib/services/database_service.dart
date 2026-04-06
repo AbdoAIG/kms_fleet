@@ -4,7 +4,6 @@ import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
 import '../models/checklist.dart';
 import '../models/fuel_record.dart';
-import '../models/driver.dart';
 import '../models/driver_violation.dart';
 import '../models/expense.dart';
 import '../utils/constants.dart';
@@ -20,14 +19,12 @@ class DatabaseService {
   static List<MaintenanceRecord> _memRecords = [];
   static List<Checklist> _memChecklists = [];
   static List<FuelRecord> _memFuelRecords = [];
-  static List<Driver> _memDrivers = [];
   static List<DriverViolation> _memViolations = [];
   static List<Expense> _memExpenses = [];
   static const _vt = 'vehicles';
   static const _mt = 'maintenance_records';
   static const _ct = 'checklists';
   static const _ft = 'fuel_records';
-  static const _dt = 'drivers';
   static const _vt2 = 'driver_violations';
   static const _et = 'expenses';
 
@@ -52,7 +49,6 @@ class DatabaseService {
     _memRecords = _seedRecords();
     _memChecklists = _seedChecklists();
     _memFuelRecords = _seedFuelRecords();
-    _memDrivers = _seedDrivers();
     _memViolations = _seedViolations();
     _memExpenses = _seedExpenses();
   }
@@ -149,26 +145,13 @@ class DatabaseService {
     ];
   }
 
-  // ===== Driver seed =====
-  static List<Driver> _seedDrivers() {
-    final n = DateTime.now();
-    return [
-      Driver(id: 1, name: 'أحمد محمود', phone: '01012345678', licenseNumber: 'DL-001', licenseExpiryDate: n.add(const Duration(days: 180)), status: 'active', vehicleId: 1, assignedDate: n.subtract(const Duration(days: 90)), createdAt: n, updatedAt: n),
-      Driver(id: 2, name: 'محمد علي', phone: '01098765432', licenseNumber: 'DL-002', licenseExpiryDate: n.add(const Duration(days: 90)), status: 'active', vehicleId: 2, assignedDate: n.subtract(const Duration(days: 60)), createdAt: n, updatedAt: n),
-      Driver(id: 3, name: 'حسن إبراهيم', phone: '01055544433', licenseNumber: 'DL-003', licenseExpiryDate: n.add(const Duration(days: 30)), status: 'active', vehicleId: 3, assignedDate: n.subtract(const Duration(days: 120)), createdAt: n, updatedAt: n),
-      Driver(id: 4, name: 'خالد سعيد', phone: '01112223334', licenseNumber: 'DL-004', licenseExpiryDate: n.add(const Duration(days: 365)), status: 'active', vehicleId: 4, assignedDate: n.subtract(const Duration(days: 45)), createdAt: n, updatedAt: n),
-      Driver(id: 5, name: 'عمر فاروق', phone: '01155667788', licenseNumber: 'DL-005', licenseExpiryDate: n.subtract(const Duration(days: 30)), status: 'suspended', vehicleId: 5, assignedDate: n.subtract(const Duration(days: 200)), createdAt: n, updatedAt: n),
-      Driver(id: 6, name: 'ياسر أحمد', phone: '01234567890', licenseNumber: 'DL-006', licenseExpiryDate: n.add(const Duration(days: 240)), status: 'active', vehicleId: 6, assignedDate: n.subtract(const Duration(days: 30)), createdAt: n, updatedAt: n),
-    ];
-  }
-
   // ===== Violation seed =====
   static List<DriverViolation> _seedViolations() {
     final n = DateTime.now();
     return [
-      DriverViolation(id: 1, driverId: 5, vehicleId: 5, type: 'speeding', amount: 500, date: n.subtract(const Duration(days: 10)), description: 'سرعة زائدة على طريق القاهرة الإسكندرية', points: 2, status: 'paid', createdAt: n, updatedAt: n),
-      DriverViolation(id: 2, driverId: 3, vehicleId: 3, type: 'overweight', amount: 300, date: n.subtract(const Duration(days: 5)), description: 'حمل زائد على مركبة نقل', points: 1, status: 'pending', createdAt: n, updatedAt: n),
-      DriverViolation(id: 3, driverId: 2, vehicleId: 2, type: 'red_light', amount: 1000, date: n.subtract(const Duration(days: 2)), description: 'تجاوز إشارة مرورية حمراء', points: 3, status: 'pending', createdAt: n, updatedAt: n),
+      DriverViolation(id: 1, vehicleId: 5, type: 'speeding', amount: 500, date: n.subtract(const Duration(days: 10)), description: 'سرعة زائدة على طريق القاهرة الإسكندرية', points: 2, status: 'paid', createdAt: n, updatedAt: n),
+      DriverViolation(id: 2, vehicleId: 3, type: 'overweight', amount: 300, date: n.subtract(const Duration(days: 5)), description: 'حمل زائد على مركبة نقل', points: 1, status: 'pending', createdAt: n, updatedAt: n),
+      DriverViolation(id: 3, vehicleId: 2, type: 'red_light', amount: 1000, date: n.subtract(const Duration(days: 2)), description: 'تجاوز إشارة مرورية حمراء', points: 3, status: 'pending', createdAt: n, updatedAt: n),
     ];
   }
 
@@ -622,140 +605,43 @@ class DatabaseService {
     return stats;
   }
 
-  // ===== Driver CRUD =====
-  static Future<List<Driver>> getAllDrivers() async {
-    if (_useMemory) return List.from(_memDrivers);
-    try {
-      final maps = await nativeQuery(_dt, orderBy: 'created_at DESC');
-      return maps.map((m) => Driver.fromMap(m)).toList();
-    } catch (e) {
-      return List.from(_memDrivers);
-    }
-  }
-
-  static Future<Driver?> getDriverById(int id) async {
-    if (_useMemory) {
-      for (final d in _memDrivers) {
-        if (d.id == id) return d;
-      }
-      return null;
-    }
-    try {
-      final maps = await nativeQuery(_dt, where: 'id = ?', whereArgs: [id]);
-      if (maps.isEmpty) return null;
-      return Driver.fromMap(maps.first);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  static Future<List<Driver>> searchDrivers(String query) async {
-    final all = await getAllDrivers();
-    final q = query.toLowerCase();
-    return all.where((d) =>
-        d.name.toLowerCase().contains(q) ||
-        d.phone.contains(q) ||
-        d.licenseNumber.toLowerCase().contains(q)).toList();
-  }
-
-  static Future<int> insertDriver(Driver d) async {
-    if (_useMemory) {
-      final maxId = _memDrivers.isEmpty ? 0 : _memDrivers.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
-      _memDrivers.insert(0, d.copyWith(id: maxId + 1));
-      return maxId + 1;
-    }
-    try {
-      return nativeInsert(_dt, d.toMap());
-    } catch (e) { return -1; }
-  }
-
-  static Future<int> updateDriver(Driver d) async {
-    if (_useMemory) {
-      for (int i = 0; i < _memDrivers.length; i++) {
-        if (_memDrivers[i].id == d.id) { _memDrivers[i] = d; return 1; }
-      }
-      return 0;
-    }
-    try {
-      return nativeUpdate(_dt, d.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [d.id]);
-    } catch (e) { return 0; }
-  }
-
-  static Future<int> deleteDriver(int id) async {
-    if (_useMemory) {
-      _memDrivers.removeWhere((d) => d.id == id);
-      return 1;
-    }
-    try {
-      return nativeDelete(_dt, where: 'id = ?', whereArgs: [id]);
-    } catch (e) { return 0; }
-  }
-
-  static Future<Driver?> getDriverByVehicleId(int vehicleId) async {
-    if (_useMemory) {
-      for (final d in _memDrivers) {
-        if (d.vehicleId == vehicleId) return d;
-      }
-      return null;
-    }
-    try {
-      final maps = await nativeQuery(_dt, where: 'vehicle_id = ?', whereArgs: [vehicleId]);
-      if (maps.isEmpty) return null;
-      return Driver.fromMap(maps.first);
-    } catch (e) {
-      return null;
-    }
-  }
-
   // ===== DriverViolation CRUD =====
   static Future<List<DriverViolation>> getAllViolations() async {
-    final drivers = await getAllDrivers();
     final vehicles = await getAllVehicles();
     if (_useMemory) {
       return _memViolations.map((v) {
-        Driver? drv;
         Vehicle? veh;
-        for (final d in drivers) { if (d.id == v.driverId) { drv = d; break; } }
         for (final vv in vehicles) { if (vv.id == v.vehicleId) { veh = vv; break; } }
-        return v.copyWith(driver: drv, vehicle: veh);
+        return v.copyWith(vehicle: veh);
       }).toList();
     }
     try {
       final maps = await nativeQuery(_vt2, orderBy: 'date DESC');
       return maps.map((m) {
-        final did = (m['driver_id'] as int?) ?? 0;
         final vid = (m['vehicle_id'] as int?) ?? 0;
-        Driver? drv;
         Vehicle? veh;
-        for (final d in drivers) { if (d.id == did) { drv = d; break; } }
         for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-        return DriverViolation.fromMap(m).copyWith(driver: drv, vehicle: veh);
+        return DriverViolation.fromMap(m).copyWith(vehicle: veh);
       }).toList();
     } catch (e) {
       return List.from(_memViolations);
     }
   }
 
-  static Future<List<DriverViolation>> getViolationsByDriverId(int driverId) async {
-    final drivers = await getAllDrivers();
+  static Future<List<DriverViolation>> getViolationsByVehicleId(int vehicleId) async {
     final vehicles = await getAllVehicles();
-    Driver? drv;
-    for (final d in drivers) { if (d.id == driverId) { drv = d; break; } }
+    Vehicle? veh;
+    for (final v in vehicles) { if (v.id == vehicleId) { veh = v; break; } }
 
     if (_useMemory) {
-      return _memViolations.where((v) => v.driverId == driverId).map((v) {
-        Vehicle? veh;
-        for (final vv in vehicles) { if (vv.id == v.vehicleId) { veh = vv; break; } }
-        return v.copyWith(driver: drv, vehicle: veh);
+      return _memViolations.where((v) => v.vehicleId == vehicleId).map((v) {
+        return v.copyWith(vehicle: veh);
       }).toList();
     }
     try {
-      final maps = await nativeQuery(_vt2, where: 'driver_id = ?', whereArgs: [driverId], orderBy: 'date DESC');
+      final maps = await nativeQuery(_vt2, where: 'vehicle_id = ?', whereArgs: [vehicleId], orderBy: 'date DESC');
       return maps.map((m) {
-        Vehicle? veh;
-        final vid = (m['vehicle_id'] as int?) ?? 0;
-        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-        return DriverViolation.fromMap(m).copyWith(driver: drv, vehicle: veh);
+        return DriverViolation.fromMap(m).copyWith(vehicle: veh);
       }).toList();
     } catch (e) { return []; }
   }

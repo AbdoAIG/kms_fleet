@@ -1,11 +1,8 @@
-import 'driver.dart';
 import 'vehicle.dart';
 
 class DriverViolation {
   final int? id;
-  final int driverId;
   final int? vehicleId;
-  final Driver? driver;
   final Vehicle? vehicle;
   final String type;
   final double amount;
@@ -18,9 +15,7 @@ class DriverViolation {
 
   DriverViolation({
     this.id,
-    required this.driverId,
     this.vehicleId,
-    this.driver,
     this.vehicle,
     required this.type,
     required this.amount,
@@ -35,9 +30,7 @@ class DriverViolation {
 
   DriverViolation copyWith({
     int? id,
-    int? driverId,
     int? vehicleId,
-    Driver? driver,
     Vehicle? vehicle,
     String? type,
     double? amount,
@@ -50,9 +43,7 @@ class DriverViolation {
   }) {
     return DriverViolation(
       id: id ?? this.id,
-      driverId: driverId ?? this.driverId,
       vehicleId: vehicleId ?? this.vehicleId,
-      driver: driver ?? this.driver,
       vehicle: vehicle ?? this.vehicle,
       type: type ?? this.type,
       amount: amount ?? this.amount,
@@ -68,7 +59,6 @@ class DriverViolation {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'driver_id': driverId,
       'vehicle_id': vehicleId,
       'type': type,
       'amount': amount,
@@ -84,7 +74,6 @@ class DriverViolation {
   factory DriverViolation.fromMap(Map<String, dynamic> map) {
     return DriverViolation(
       id: map['id'] as int?,
-      driverId: map['driver_id'] as int? ?? 0,
       vehicleId: map['vehicle_id'] as int?,
       type: map['type'] as String? ?? 'other',
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
