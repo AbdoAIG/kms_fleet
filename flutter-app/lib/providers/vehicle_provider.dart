@@ -8,12 +8,14 @@ class VehicleProvider extends ChangeNotifier {
   bool _isLoading = false;
   String _searchQuery = '';
   String _statusFilter = 'all';
+  String _typeFilter = 'all';
 
   List<Vehicle> get vehicles => _filteredVehicles;
   List<Vehicle> get allVehicles => _vehicles;
   bool get isLoading => _isLoading;
   String get searchQuery => _searchQuery;
   String get statusFilter => _statusFilter;
+  String get typeFilter => _typeFilter;
 
   VehicleProvider();
 
@@ -39,7 +41,9 @@ class VehicleProvider extends ChangeNotifier {
     try {
       final results = await DatabaseService.searchVehicles(query);
       _filteredVehicles = results
-          .where((v) => _statusFilter == 'all' || v.status == _statusFilter)
+          .where((v) =>
+              (_statusFilter == 'all' || v.status == _statusFilter) &&
+              (_typeFilter == 'all' || v.vehicleType == _typeFilter))
           .toList();
     } catch (e) {
       debugPrint('Error searching vehicles: $e');
@@ -49,6 +53,11 @@ class VehicleProvider extends ChangeNotifier {
 
   void setStatusFilter(String status) {
     _statusFilter = status;
+    _applyFilters();
+  }
+
+  void setTypeFilter(String type) {
+    _typeFilter = type;
     _applyFilters();
   }
 
@@ -66,6 +75,9 @@ class VehicleProvider extends ChangeNotifier {
     }
     if (_statusFilter != 'all') {
       result = result.where((v) => v.status == _statusFilter).toList();
+    }
+    if (_typeFilter != 'all') {
+      result = result.where((v) => v.vehicleType == _typeFilter).toList();
     }
     _filteredVehicles = result;
     notifyListeners();

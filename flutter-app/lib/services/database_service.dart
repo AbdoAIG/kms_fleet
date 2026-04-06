@@ -148,18 +148,18 @@ class DatabaseService {
   static List<Vehicle> _seedVehicles() {
     final n = DateTime.now();
     return [
-      Vehicle(id: 1, plateNumber: 'أ ب ج 1234', make: 'تويوتا', model: 'كامري', year: 2023, color: 'white', fuelType: 'petrol', currentOdometer: 45000, status: 'active', driverName: 'أحمد محمود', createdAt: n, updatedAt: n),
-      Vehicle(id: 2, plateNumber: 'د ه و 5678', make: 'هيونداي', model: 'توسان', year: 2022, color: 'black', fuelType: 'petrol', currentOdometer: 62000, status: 'active', driverName: 'محمد علي', createdAt: n, updatedAt: n),
-      Vehicle(id: 3, plateNumber: 'ز ح ط 9012', make: 'نيسان', model: 'صني', year: 2021, color: 'silver', fuelType: 'petrol', currentOdometer: 89000, status: 'active', driverName: 'حسن إبراهيم', createdAt: n, updatedAt: n),
-      Vehicle(id: 4, plateNumber: 'ي ك ل 3456', make: 'كيا', model: 'سبورتاج', year: 2023, color: 'blue', fuelType: 'diesel', currentOdometer: 28000, status: 'active', driverName: 'خالد سعيد', createdAt: n, updatedAt: n),
-      Vehicle(id: 5, plateNumber: 'م ن س 7890', make: 'مرسيدس', model: 'C-Class', year: 2022, color: 'black', fuelType: 'petrol', currentOdometer: 35000, status: 'maintenance', driverName: 'عمر فاروق', createdAt: n, updatedAt: n),
-      Vehicle(id: 6, plateNumber: 'ع ف ق 2345', make: 'تويوتا', model: 'هايلكس', year: 2020, color: 'white', fuelType: 'diesel', currentOdometer: 120000, status: 'active', driverName: 'ياسر أحمد', createdAt: n, updatedAt: n),
-      Vehicle(id: 7, plateNumber: 'ر ش ت 6789', make: 'هيونداي', model: 'إلنترا', year: 2024, color: 'red', fuelType: 'petrol', currentOdometer: 8000, status: 'active', driverName: 'عبدالله حسن', createdAt: n, updatedAt: n),
-      Vehicle(id: 8, plateNumber: 'ث خ ذ 0123', make: 'فورد', model: 'إكسبلورر', year: 2021, color: 'gray', fuelType: 'petrol', currentOdometer: 78000, status: 'inactive', driverName: 'محمود سالم', createdAt: n, updatedAt: n),
-      Vehicle(id: 9, plateNumber: 'ض ظ غ 4567', make: 'شيفروليه', model: 'تاهو', year: 2023, color: 'black', fuelType: 'petrol', currentOdometer: 22000, status: 'active', driverName: 'طه عبدالرحمن', createdAt: n, updatedAt: n),
-      Vehicle(id: 10, plateNumber: 'ج ث ب 8901', make: 'تويوتا', model: 'لاند كروزر', year: 2022, color: 'white', fuelType: 'diesel', currentOdometer: 55000, status: 'active', driverName: 'إبراهيم عثمان', createdAt: n, updatedAt: n),
-      Vehicle(id: 11, plateNumber: 'ن ح ي 2468', make: 'بي إم دبليو', model: 'الفئة 5', year: 2021, color: 'blue', fuelType: 'petrol', currentOdometer: 92000, status: 'active', driverName: 'كريم حسام', createdAt: n, updatedAt: n),
-      Vehicle(id: 12, plateNumber: 'و ك م 1357', make: 'أودي', model: 'Q7', year: 2023, color: 'gray', fuelType: 'diesel', currentOdometer: 18000, status: 'active', driverName: 'رامي شريف', createdAt: n, updatedAt: n),
+      Vehicle(id: 1, plateNumber: 'أ ب ج 1234', make: 'تويوتا', model: 'هايلكس', year: 2023, color: 'white', fuelType: 'diesel', currentOdometer: 45000, status: 'active', vehicleType: 'half_truck', driverName: 'أحمد محمود', createdAt: n, updatedAt: n),
+      Vehicle(id: 2, plateNumber: 'د ه و 5678', make: 'هيونداي', model: 'HD78', year: 2022, color: 'white', fuelType: 'diesel', currentOdometer: 62000, status: 'active', vehicleType: 'half_truck', driverName: 'محمد علي', createdAt: n, updatedAt: n),
+      Vehicle(id: 3, plateNumber: 'ز ح ط 9012', make: 'ميتسوبيشي', model: 'فوستر', year: 2021, color: 'white', fuelType: 'diesel', currentOdometer: 89000, status: 'active', vehicleType: 'jumbo_truck', driverName: 'حسن إبراهيم', createdAt: n, updatedAt: n),
+      Vehicle(id: 4, plateNumber: 'ي ك ل 3456', make: 'تويوتا', model: 'هايلكس دبل', year: 2023, color: 'white', fuelType: 'diesel', currentOdometer: 28000, status: 'active', vehicleType: 'double_cabin', driverName: 'خالد سعيد', createdAt: n, updatedAt: n),
+      Vehicle(id: 5, plateNumber: 'م ن س 7890', make: 'مرسيدس', model: 'O500', year: 2020, color: 'white', fuelType: 'diesel', currentOdometer: 135000, status: 'active', vehicleType: 'bus', driverName: 'عمر فاروق', createdAt: n, updatedAt: n),
+      Vehicle(id: 6, plateNumber: 'ع ف ق 2345', make: 'تويوتا', model: 'هاييس', year: 2019, color: 'white', fuelType: 'diesel', currentOdometer: 120000, status: 'active', vehicleType: 'microbus', driverName: 'ياسر أحمد', createdAt: n, updatedAt: n),
+      Vehicle(id: 7, plateNumber: 'ر ش ت 6789', make: 'تويوتا', model: '7FB', year: 2022, color: 'yellow', fuelType: 'diesel', currentOdometer: 8000, status: 'active', vehicleType: 'forklift', driverName: 'عبدالله حسن', createdAt: n, updatedAt: n),
+      Vehicle(id: 8, plateNumber: 'ث خ ذ 0123', make: 'نيسان', model: 'ديزل', year: 2021, color: 'white', fuelType: 'diesel', currentOdometer: 78000, status: 'inactive', vehicleType: 'jumbo_truck', driverName: 'محمود سالم', createdAt: n, updatedAt: n),
+      Vehicle(id: 9, plateNumber: 'ض ظ غ 4567', make: 'تويوتا', model: 'هايلكس دبل', year: 2023, color: 'black', fuelType: 'diesel', currentOdometer: 22000, status: 'maintenance', vehicleType: 'double_cabin', driverName: 'طه عبدالرحمن', createdAt: n, updatedAt: n),
+      Vehicle(id: 10, plateNumber: 'ج ث ب 8901', make: 'هيونداي', model: 'كاونتري', year: 2022, color: 'white', fuelType: 'diesel', currentOdometer: 55000, status: 'active', vehicleType: 'microbus', driverName: 'إبراهيم عثمان', createdAt: n, updatedAt: n),
+      Vehicle(id: 11, plateNumber: 'ن ح ي 2468', make: 'فولكس واجن', model: 'تارو', year: 2021, color: 'white', fuelType: 'diesel', currentOdometer: 92000, status: 'active', vehicleType: 'half_truck', driverName: 'كريم حسام', createdAt: n, updatedAt: n),
+      Vehicle(id: 12, plateNumber: 'و ك م 1357', make: 'تويوتا', model: '8FB', year: 2023, color: 'yellow', fuelType: 'diesel', currentOdometer: 18000, status: 'active', vehicleType: 'forklift', driverName: 'رامي شريف', createdAt: n, updatedAt: n),
     ];
   }
 

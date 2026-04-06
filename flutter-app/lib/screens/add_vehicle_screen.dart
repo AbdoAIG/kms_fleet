@@ -32,6 +32,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   String _selectedColor = 'white';
   String _selectedFuelType = 'petrol';
   String _selectedStatus = 'active';
+  String _selectedVehicleType = '';
   String _selectedMake = '';
   List<String> _filteredModels = [];
 
@@ -57,6 +58,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       _selectedColor = widget.vehicle!.color;
       _selectedFuelType = widget.vehicle!.fuelType;
       _selectedStatus = widget.vehicle!.status;
+      _selectedVehicleType = widget.vehicle!.vehicleType ?? '';
       _selectedMake = widget.vehicle!.make;
       _updateModels();
     }
@@ -101,6 +103,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         fuelType: _selectedFuelType,
         currentOdometer: int.parse(_odometerController.text.trim()),
         status: _selectedStatus,
+        vehicleType: _selectedVehicleType.isEmpty ? null : _selectedVehicleType,
         driverName: _driverNameController.text.trim().isEmpty
             ? null
             : _driverNameController.text.trim(),
@@ -164,6 +167,34 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   return 'يرجى إدخال رقم اللوحة';
                 }
                 return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            // Vehicle Type Dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedVehicleType.isEmpty ? null : _selectedVehicleType,
+              decoration: const InputDecoration(
+                labelText: 'نوع المركبة',
+                prefixIcon: Icon(Icons.category),
+              ),
+              items: AppConstants.vehicleTypes.entries.map((entry) {
+                return DropdownMenuItem(
+                  value: entry.key,
+                  child: Row(
+                    children: [
+                      Icon(
+                        AppConstants.vehicleTypeIcons[entry.key] ?? Icons.directions_car,
+                        size: 18,
+                        color: AppConstants.vehicleTypeColors[entry.key] ?? AppColors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(entry.value),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() => _selectedVehicleType = value ?? '');
               },
             ),
             const SizedBox(height: 12),

@@ -23,6 +23,22 @@ class VehicleCard extends StatelessWidget {
   Color get _statusColor =>
       AppConstants.vehicleStatusColors[vehicle.status] ?? AppColors.textSecondary;
 
+  /// Get vehicle type icon, or fallback to directions_car.
+  IconData get _typeIcon {
+    if (vehicle.vehicleType != null && vehicle.vehicleType!.isNotEmpty) {
+      return AppConstants.vehicleTypeIcons[vehicle.vehicleType] ?? Icons.directions_car;
+    }
+    return Icons.directions_car;
+  }
+
+  /// Get vehicle type color, or fallback to primary.
+  Color get _typeColor {
+    if (vehicle.vehicleType != null && vehicle.vehicleType!.isNotEmpty) {
+      return AppConstants.vehicleTypeColors[vehicle.vehicleType] ?? AppColors.primary;
+    }
+    return AppColors.primary;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -45,27 +61,29 @@ class VehicleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Top row: icon + info + status ──
+            // ── Top row: icon + vehicle info + status ──
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [AppColors.primary, AppColors.primaryLight],
+                      colors: [_typeColor, _typeColor.withOpacity(0.7)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.directions_car, color: Colors.white, size: 24),
+                  child: Icon(_typeIcon, color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Vehicle name (make + model + year)
                       Text(
                         vehicle.displayName,
                         style: const TextStyle(
@@ -102,6 +120,25 @@ class VehicleCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      // Driver name (if exists) — shown below vehicle info
+                      if (vehicle.hasDriver) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.person_outline, size: 13, color: AppColors.textHint),
+                            const SizedBox(width: 4),
+                            Text(
+                              vehicle.driverDisplayName,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -143,26 +180,23 @@ class VehicleCard extends StatelessWidget {
                   const SizedBox(width: 14),
                   _InfoChip(icon: Icons.local_gas_station, label: AppConstants.fuelTypes[vehicle.fuelType] ?? ''),
                   const SizedBox(width: 14),
-                  // Color indicator
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: _getColorFromName(vehicle.color),
-                          borderRadius: BorderRadius.circular(3),
-                          border: Border.all(color: AppColors.border, width: 0.5),
+                  // Vehicle type badge
+                  if (vehicle.vehicleType != null && vehicle.vehicleType!.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _typeColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        AppConstants.vehicleTypes[vehicle.vehicleType] ?? vehicle.vehicleType!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _typeColor,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        AppConstants.vehicleColors[vehicle.color] ?? vehicle.color,
-                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
+                    ),
                   const Spacer(),
                   // Actions menu
                   if (onEdit != null || onMaintenance != null)

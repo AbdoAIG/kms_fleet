@@ -99,9 +99,19 @@ class Vehicle {
 
   bool get hasDriver => driverName != null && driverName!.isNotEmpty;
 
-  String get displayName => hasDriver
-      ? driverName!
-      : '$make $model $year';
+  /// Always shows the vehicle make/model/year.
+  String get displayName => '$make $model $year';
+
+  /// The driver name or empty string.
+  String get driverDisplayName => hasDriver ? driverName! : '';
+
+  /// The vehicle type label from constants.
+  String get vehicleTypeLabel => vehicleType != null && vehicleType!.isNotEmpty
+      ? vehicleType!
+      : '';
+
+  /// A short display label combining make + model.
+  String get shortName => '$make $model';
 
   Map<String, dynamic> toMap() {
     return {

@@ -174,27 +174,30 @@ class AppConstants {
 
   // Vehicle Types
   static const Map<String, String> vehicleTypes = {
-    'half_truck': 'نص نقل',
-    'jumbo': 'نقل جامبو',
-    'truck': 'كلرك',
+    'half_truck': 'عربيه نص نقل (دبابه)',
+    'jumbo_truck': 'عربيه نقل جامبو',
+    'double_cabin': 'عربيه دبل كابينه',
+    'bus': 'أتوبيسات',
     'microbus': 'ميكروباص',
-    'bus': 'أتوبيس',
+    'forklift': 'كلارك',
   };
 
   static const Map<String, IconData> vehicleTypeIcons = {
     'half_truck': Icons.local_shipping,
-    'jumbo': Icons.airport_shuttle,
-    'truck': Icons.local_shipping,
-    'microbus': Icons.directions_bus,
+    'jumbo_truck': Icons.airport_shuttle,
+    'double_cabin': Icons.local_shipping,
     'bus': Icons.bus_alert,
+    'microbus': Icons.directions_bus,
+    'forklift': Icons.construction,
   };
 
   static const Map<String, Color> vehicleTypeColors = {
     'half_truck': Color(0xFF0F766E),
-    'jumbo': Color(0xFFEA580C),
-    'truck': Color(0xFFDC2626),
-    'microbus': Color(0xFF2563EB),
+    'jumbo_truck': Color(0xFFEA580C),
+    'double_cabin': Color(0xFF16A34A),
     'bus': Color(0xFF7C3AED),
+    'microbus': Color(0xFF2563EB),
+    'forklift': Color(0xFFDC2626),
   };
 
   // Vehicle Purpose

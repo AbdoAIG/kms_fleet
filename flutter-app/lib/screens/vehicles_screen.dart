@@ -18,6 +18,7 @@ class VehiclesScreen extends StatefulWidget {
 class _VehiclesScreenState extends State<VehiclesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _statusFilter = 'all';
+  String _typeFilter = 'all';
 
   @override
   void initState() {
@@ -121,7 +122,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
             ),
           ),
 
-          // ── Filter Chips ──
+          // ── Vehicle Type Category Tabs ──
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: SizedBox(
@@ -129,11 +130,32 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  _buildFilterChip('الكل', 'all'),
-                  _buildFilterChip('نشطة', 'active'),
-                  _buildFilterChip('في الصيانة', 'maintenance'),
-                  _buildFilterChip('غير نشطة', 'inactive'),
-                  _buildFilterChip('متقاعدة', 'retired'),
+                  _buildTypeChip('الكل', 'all'),
+                  _buildTypeChip('عربيه نص نقل', 'half_truck'),
+                  _buildTypeChip('نقل جامبو', 'jumbo_truck'),
+                  _buildTypeChip('دبل كابينه', 'double_cabin'),
+                  _buildTypeChip('أتوبيسات', 'bus'),
+                  _buildTypeChip('ميكروباص', 'microbus'),
+                  _buildTypeChip('كلارك', 'forklift'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+
+          // ── Status Filter Chips ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: SizedBox(
+              height: 34,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _buildStatusChip('الكل', 'all'),
+                  _buildStatusChip('نشطة', 'active'),
+                  _buildStatusChip('في الصيانة', 'maintenance'),
+                  _buildStatusChip('غير نشطة', 'inactive'),
+                  _buildStatusChip('متقاعدة', 'retired'),
                 ],
               ),
             ),
@@ -152,7 +174,9 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                   return EmptyStateWidget(
                     icon: Icons.directions_car_outlined,
                     title: 'لا توجد مركبات',
-                    subtitle: 'أضف مركبة جديدة لبدء إدارة الأسطول',
+                    subtitle: _typeFilter != 'all'
+                        ? 'لا توجد مركبات من نوع ${AppConstants.vehicleTypes[_typeFilter] ?? _typeFilter}'
+                        : 'أضف مركبة جديدة لبدء إدارة الأسطول',
                     actionText: 'إضافة مركبة',
                     onAction: () => Navigator.pushNamed(context, '/add-vehicle'),
                   );
@@ -231,29 +255,76 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label, String value) {
+  Widget _buildTypeChip(String label, String value) {
+    final isSelected = _typeFilter == value;
+    Color? chipColor;
+    if (value != 'all') {
+      chipColor = AppConstants.vehicleTypeColors[value];
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: FilterChip(
+        selected: isSelected,
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (value != 'all' && chipColor != null) ...[
+              Icon(
+                AppConstants.vehicleTypeIcons[value] ?? Icons.directions_car,
+                size: 14,
+                color: isSelected ? Colors.white : chipColor,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+        onSelected: (selected) {
+          setState(() => _typeFilter = value);
+          context.read<VehicleProvider>().setTypeFilter(value);
+        },
+        backgroundColor: AppColors.surface,
+        selectedColor: chipColor ?? AppColors.primary,
+        showCheckmark: false,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        side: BorderSide(color: isSelected ? (chipColor ?? AppColors.primary) : AppColors.border),
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String label, String value) {
     final isSelected = _statusFilter == value;
     return Padding(
-      padding: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.only(left: 6),
       child: FilterChip(
         selected: isSelected,
         label: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? Colors.white : AppColors.textSecondary,
+            color: isSelected ? Colors.white : AppColors.textHint,
           ),
         ),
         onSelected: (selected) {
           setState(() => _statusFilter = value);
           context.read<VehicleProvider>().setStatusFilter(value);
         },
-        backgroundColor: AppColors.surface,
-        selectedColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
+        selectedColor: AppColors.primary.withOpacity(0.7),
         showCheckmark: false,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border.withOpacity(0.5)),
+        visualDensity: VisualDensity.compact,
       ),
     );
   }
