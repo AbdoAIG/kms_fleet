@@ -11,7 +11,7 @@ class AppUser {
 
   AppUser({
     this.id,
-    required this.email,
+    this.email = '',
     required this.displayName,
     required this.role,
     this.phone = '',

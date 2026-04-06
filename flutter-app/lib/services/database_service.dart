@@ -340,7 +340,7 @@ class DatabaseService {
       return 0;
     }
     try {
-      await _db.from('vehicles').update(v.toMap()).eq('id', v.id).eq('user_id', _uid!);
+      await _db.from('vehicles').update(v.toMap()).eq('id', v.id!).eq('user_id', _uid!);
       return 1;
     } catch (e) { debugPrint('DB: Error updating vehicle: $e'); return 0; }
   }
@@ -409,7 +409,7 @@ class DatabaseService {
       return 0;
     }
     try {
-      await _db.from('maintenance_records').update(r.toMap()).eq('id', r.id).eq('user_id', _uid!);
+      await _db.from('maintenance_records').update(r.toMap()).eq('id', r.id!).eq('user_id', _uid!);
       return 1;
     } catch (e) { return 0; }
   }
@@ -506,7 +506,7 @@ class DatabaseService {
       if (rawItems is String && rawItems.isNotEmpty) {
         try { map['items'] = jsonDecode(rawItems); } catch (_) {}
       }
-      await _db.from('checklists').update(map).eq('id', c.id).eq('user_id', _uid!);
+      await _db.from('checklists').update(map).eq('id', c.id!).eq('user_id', _uid!);
       return 1;
     } catch (e) { return 0; }
   }
@@ -601,7 +601,7 @@ class DatabaseService {
       final map = f.toMap();
       if (map['full_tank'] is int) map['full_tank'] = (map['full_tank'] as int) != 0;
       if (map['is_abnormal'] is int) map['is_abnormal'] = (map['is_abnormal'] as int) != 0;
-      await _db.from('fuel_records').update(map).eq('id', f.id).eq('user_id', _uid!);
+      await _db.from('fuel_records').update(map).eq('id', f.id!).eq('user_id', _uid!);
       return 1;
     } catch (e) { return 0; }
   }
@@ -742,7 +742,7 @@ class DatabaseService {
       return 0;
     }
     try {
-      await _db.from('driver_violations').update(v.toMap()).eq('id', v.id).eq('user_id', _uid!);
+      await _db.from('driver_violations').update(v.toMap()).eq('id', v.id!).eq('user_id', _uid!);
       return 1;
     } catch (e) { return 0; }
   }
@@ -814,7 +814,7 @@ class DatabaseService {
       return 0;
     }
     try {
-      await _db.from('expenses').update(e.toMap()).eq('id', e.id).eq('user_id', _uid!);
+      await _db.from('expenses').update(e.toMap()).eq('id', e.id!).eq('user_id', _uid!);
       return 1;
     } catch (ex) { return 0; }
   }
@@ -880,7 +880,7 @@ class DatabaseService {
       return 0;
     }
     try {
-      await _db.from('work_orders').update(o.toMap()).eq('id', o.id).eq('user_id', _uid!);
+      await _db.from('work_orders').update(o.toMap()).eq('id', o.id!).eq('user_id', _uid!);
       return 1;
     } catch (e) { return 0; }
   }
@@ -947,7 +947,7 @@ class DatabaseService {
       if (rawPoints is String && rawPoints.isNotEmpty) {
         try { map['trip_points_json'] = jsonDecode(rawPoints); } catch (_) {}
       }
-      await _db.from('trip_trackings').update(map).eq('id', t.id).eq('user_id', _uid!);
+      await _db.from('trip_trackings').update(map).eq('id', t.id!).eq('user_id', _uid!);
       return 1;
     } catch (e) { return 0; }
   }
@@ -1008,7 +1008,7 @@ class DatabaseService {
     try {
       final map = u.toMap();
       if (map['is_active'] is int) map['is_active'] = (map['is_active'] as int) != 0;
-      await _db.from('app_users').update(map).eq('id', u.id);
+      await _db.from('app_users').update(map).eq('id', u.id!);
       return 1;
     } catch (e) { return 0; }
   }
@@ -1067,7 +1067,7 @@ class DatabaseService {
     return stats;
   }
 
-  static Future<Map<String, double>> getMonthlyCosts() async {
+  static Future<List<Map<String, dynamic>>> getMonthlyCosts() async {
     final records = await getAllMaintenanceRecords();
     final expenses = await getAllExpenses();
     final costs = <String, double>{};
@@ -1080,16 +1080,24 @@ class DatabaseService {
     for (final r in records) { addCost(r.maintenanceDate, r.totalCost); }
     for (final e in expenses) { addCost(e.date, e.amount); }
 
-    return costs;
+    // Convert to sorted list of maps for FutureBuilder compatibility
+    final sortedKeys = costs.keys.toList()..sort();
+    return sortedKeys.map((key) => {
+      'month': key,
+      'total_cost': costs[key],
+    }).toList();
   }
 
-  static Future<Map<String, double>> getMaintenanceByType() async {
+  static Future<List<Map<String, dynamic>>> getMaintenanceByType() async {
     final records = await getAllMaintenanceRecords();
     final stats = <String, double>{};
     for (final r in records) {
       stats[r.type] = (stats[r.type] ?? 0) + r.totalCost;
     }
-    return stats;
+    return stats.entries.map((entry) => {
+      'type': entry.key,
+      'total_cost': entry.value,
+    }).toList();
   }
 
   static Future<List<Map<String, dynamic>>> getVehicleMaintenanceCosts() async {

@@ -29,7 +29,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> _loadData() async {
     try {
-      final results = await Future.wait([
+      final results = await Future.wait<dynamic>([
         DatabaseService.getMaintenanceByType(),
         DatabaseService.getMonthlyCosts(),
         DatabaseService.getVehicleMaintenanceCosts(),

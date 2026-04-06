@@ -8,6 +8,12 @@ import '../providers/theme_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/notification_provider.dart';
+import '../providers/vehicle_provider.dart';
+import '../providers/maintenance_provider.dart';
+import '../providers/fuel_provider.dart';
+import '../providers/checklist_provider.dart';
+import '../providers/work_order_provider.dart';
+import '../providers/trip_tracking_provider.dart';
 import '../widgets/developer_credit.dart';
 import '../services/supabase_service.dart';
 import 'dashboard_screen.dart';
@@ -67,7 +73,7 @@ class _MainScreenState extends State<MainScreen>
       final workOrderProvider = context.read<WorkOrderProvider>();
       final tripProvider = context.read<TripTrackingProvider>();
 
-      await Future.wait([
+      await Future.wait<Future<dynamic>>([
         vehicleProvider.loadVehicles(),
         maintenanceProvider.loadRecords(),
         fuelProvider.loadFuelRecords(),
@@ -319,11 +325,11 @@ class _MainScreenState extends State<MainScreen>
             ListTile(
               leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
               title: const Text('الإشعارات', style: TextStyle(fontWeight: FontWeight.w600)),
-              trailing: context.select<NotificationProvider, int>((p) => p.unreadCount, 0) > 0
+              trailing: context.select<NotificationProvider, int>((p) => p.unreadCount) > 0
                   ? Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(10)),
-                      child: Text('${context.select<NotificationProvider, int>((p) => p.unreadCount, 0)} جديد', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                      child: Text('${context.select<NotificationProvider, int>((p) => p.unreadCount)} جديد', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
                     )
                   : null,
               onTap: () { Navigator.pop(context); _showNotificationsPanel(); },
