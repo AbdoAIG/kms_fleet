@@ -10,6 +10,7 @@ import '../providers/maintenance_provider.dart';
 import '../providers/vehicle_provider.dart';
 import '../providers/work_order_provider.dart';
 import '../models/work_order.dart';
+import '../models/vehicle.dart';
 import 'add_work_order_screen.dart';
 import 'work_order_details_screen.dart';
 
