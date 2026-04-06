@@ -208,3 +208,20 @@ Stage Summary:
 - Commit 47e1a2a pushed to GitHub
 - User needs to run MIGRATION_VEHICLE_TYPES.sql in Supabase SQL Editor to update existing vehicles with old type values
 
+---
+Task ID: 6
+Agent: Main Agent
+Task: Remove self-registration, accounts managed via Supabase only
+
+Work Log:
+- Removed register_screen.dart import from login_screen.dart
+- Replaced "Create new account" link with "Contact system admin for an account" hint
+- Removed signUp() method from AuthProvider
+- Verified vehicles table is empty in Supabase — no SQL migration needed
+- Pushed commit d47d379 to GitHub
+
+Stage Summary:
+- 2 files changed, 10 insertions, 76 deletions
+- Registration completely removed from the app
+- User needs to disable sign-ups in Supabase Dashboard: Authentication → Settings → turn OFF "Allow sign ups"
+
