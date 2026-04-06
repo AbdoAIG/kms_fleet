@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
@@ -6,6 +7,7 @@ import '../models/checklist.dart';
 import '../models/fuel_record.dart';
 import '../models/driver_violation.dart';
 import '../models/expense.dart';
+import '../models/work_order.dart';
 import '../utils/constants.dart';
 
 // Conditional import: use native sqflite on Android/iOS, stub on web/desktop.
@@ -21,12 +23,14 @@ class DatabaseService {
   static List<FuelRecord> _memFuelRecords = [];
   static List<DriverViolation> _memViolations = [];
   static List<Expense> _memExpenses = [];
+  static List<WorkOrder> _memWorkOrders = [];
   static const _vt = 'vehicles';
   static const _mt = 'maintenance_records';
   static const _ct = 'checklists';
   static const _ft = 'fuel_records';
   static const _vt2 = 'driver_violations';
   static const _et = 'expenses';
+  static const _wot = 'work_orders';
 
   DatabaseService._();
 
@@ -51,6 +55,7 @@ class DatabaseService {
     _memFuelRecords = _seedFuelRecords();
     _memViolations = _seedViolations();
     _memExpenses = _seedExpenses();
+    _memWorkOrders = _seedWorkOrders();
   }
 
   static List<Vehicle> _seedVehicles() {
@@ -167,6 +172,19 @@ class DatabaseService {
       Expense(id: 6, vehicleId: 6, type: 'miscellaneous', amount: 250, date: n.subtract(const Duration(days: 7)), description: 'تغيير لوحة ترخيص جديدة', serviceProvider: 'مصلحة المرور', invoiceNumber: 'MISC-002', createdAt: n, updatedAt: n),
       Expense(id: 7, vehicleId: 1, type: 'fuel', amount: 550, date: n.subtract(const Duration(days: 3)), description: 'تعبئة وقود - بنزين 95', serviceProvider: 'محطة الأفق', odometerReading: 45500, createdAt: n, updatedAt: n),
       Expense(id: 8, vehicleId: 3, type: 'maintenance', amount: 350, date: n.subtract(const Duration(days: 20)), description: 'تغيير فلتر زيت وفلتر هواء', serviceProvider: 'ورشة الصيانة السريعة', invoiceNumber: 'MAINT-001', odometerReading: 89500, createdAt: n, updatedAt: n),
+    ];
+  }
+
+  // ===== Work Order seed =====
+  static List<WorkOrder> _seedWorkOrders() {
+    final n = DateTime.now();
+    return [
+      WorkOrder(id: 1, vehicleId: 1, type: 'maintenance', status: 'open', description: 'تغيير زيت المحرك + فلتر الهواء', technicianName: 'أحمد فني', technicianPhone: '01155544433', estimatedCost: 600, priority: 'medium', createdAt: n.subtract(const Duration(days: 1)), updatedAt: n),
+      WorkOrder(id: 2, vehicleId: 5, type: 'repair', status: 'in_progress', description: 'إصلاح ناقل الحركة - مشكلة في الفتيس', technicianName: 'محمد ميكانيكي', technicianPhone: '01234455566', estimatedCost: 4000, actualCost: 4500, priority: 'urgent', startDate: n.subtract(const Duration(days: 3)), createdAt: n.subtract(const Duration(days: 5)), updatedAt: n),
+      WorkOrder(id: 3, vehicleId: 2, type: 'inspection', status: 'completed', description: 'فحص دوري شامل - 60,000 كم', technicianName: 'خالد فاحص', technicianPhone: '01099988877', estimatedCost: 350, actualCost: 350, priority: 'low', startDate: n.subtract(const Duration(days: 7)), completedDate: n.subtract(const Duration(days: 5)), createdAt: n.subtract(const Duration(days: 10)), updatedAt: n),
+      WorkOrder(id: 4, vehicleId: 3, type: 'repair', status: 'open', description: 'إصلاح مشكلة في المكيف', technicianName: 'ياسر كهربائي', technicianPhone: '01177788899', estimatedCost: 1200, priority: 'high', createdAt: n.subtract(const Duration(hours: 6)), updatedAt: n),
+      WorkOrder(id: 5, vehicleId: 6, type: 'maintenance', status: 'completed', description: 'صيانة الدفع الرباعي + تغيير الإطارات', technicianName: 'سعيد فني', technicianPhone: '01066677788', estimatedCost: 3000, actualCost: 2800, priority: 'medium', startDate: n.subtract(const Duration(days: 14)), completedDate: n.subtract(const Duration(days: 10)), createdAt: n.subtract(const Duration(days: 16)), updatedAt: n),
+      WorkOrder(id: 6, vehicleId: 10, type: 'inspection', status: 'in_progress', description: 'فحص قبل الرحلة الطويلة', technicianName: 'عبدالله فاحص', technicianPhone: '01555566677', estimatedCost: 200, priority: 'medium', startDate: n.subtract(const Duration(days: 1)), createdAt: n.subtract(const Duration(days: 2)), updatedAt: n),
     ];
   }
 
@@ -676,6 +694,73 @@ class DatabaseService {
     }
     try {
       return nativeDelete(_vt2, where: 'id = ?', whereArgs: [id]);
+    } catch (e) { return 0; }
+  }
+
+  // ===== Work Order CRUD =====
+  static Future<List<WorkOrder>> getAllWorkOrders() async {
+    final vehicles = await getAllVehicles();
+    if (_useMemory) {
+      return _memWorkOrders.map((o) {
+        Vehicle? veh;
+        for (final v in vehicles) { if (v.id == o.vehicleId) { veh = v; break; } }
+        return o.copyWith(vehicle: veh);
+      }).toList();
+    }
+    try {
+      final maps = await nativeQuery(_wot, orderBy: 'created_at DESC');
+      return maps.map((m) {
+        final vid = (m['vehicle_id'] as int?) ?? 0;
+        Vehicle? veh;
+        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
+        return WorkOrder.fromMap(m).copyWith(vehicle: veh);
+      }).toList();
+    } catch (e) {
+      return List.from(_memWorkOrders);
+    }
+  }
+
+  static Future<List<WorkOrder>> getWorkOrdersByVehicleId(int vid) async {
+    final v = await getVehicleById(vid);
+    if (_useMemory) {
+      return _memWorkOrders.where((o) => o.vehicleId == vid).map((o) => o.copyWith(vehicle: v)).toList();
+    }
+    try {
+      final maps = await nativeQuery(_wot, where: 'vehicle_id = ?', whereArgs: [vid], orderBy: 'created_at DESC');
+      return maps.map((m) => WorkOrder.fromMap(m).copyWith(vehicle: v)).toList();
+    } catch (e) { return []; }
+  }
+
+  static Future<int> insertWorkOrder(WorkOrder o) async {
+    if (_useMemory) {
+      final maxId = _memWorkOrders.isEmpty ? 0 : _memWorkOrders.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+      _memWorkOrders.insert(0, o.copyWith(id: maxId + 1));
+      return maxId + 1;
+    }
+    try {
+      return nativeInsert(_wot, o.toMap());
+    } catch (e) { return -1; }
+  }
+
+  static Future<int> updateWorkOrder(WorkOrder o) async {
+    if (_useMemory) {
+      for (int i = 0; i < _memWorkOrders.length; i++) {
+        if (_memWorkOrders[i].id == o.id) { _memWorkOrders[i] = o; return 1; }
+      }
+      return 0;
+    }
+    try {
+      return nativeUpdate(_wot, o.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [o.id]);
+    } catch (e) { return 0; }
+  }
+
+  static Future<int> deleteWorkOrder(int id) async {
+    if (_useMemory) {
+      _memWorkOrders.removeWhere((o) => o.id == id);
+      return 1;
+    }
+    try {
+      return nativeDelete(_wot, where: 'id = ?', whereArgs: [id]);
     } catch (e) { return 0; }
   }
 

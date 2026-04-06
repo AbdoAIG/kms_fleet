@@ -353,6 +353,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 10),
               Expanded(child: _QuickActionCard(icon: Icons.build, label: 'إضافة صيانة', color: AppColors.accent, gradient: [AppColors.accent, AppColors.accentLight], onTap: () => Navigator.pushNamed(context, '/add-maintenance'))),
               const SizedBox(width: 10),
+              Expanded(child: _QuickActionCard(icon: Icons.assignment, label: 'أمر عمل', color: AppColors.info, gradient: [AppColors.info, const Color(0xFF60A5FA)], onTap: () => Navigator.pushNamed(context, '/add-work-order'))),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
               Expanded(child: _QuickActionCard(icon: Icons.bar_chart, label: 'التقارير', color: AppColors.success, gradient: [AppColors.success, const Color(0xFF4ADE80)], onTap: () => widget.onNavigateToTab?.call(5))),
             ],
           ),
