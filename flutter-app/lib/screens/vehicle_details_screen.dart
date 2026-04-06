@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
 import '../services/database_service.dart';
+import '../services/report_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
@@ -22,6 +23,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   bool _isLoading = true;
   double _totalCost = 0;
   String? _error;
+  bool _isExporting = false;
 
   @override
   void initState() {
@@ -74,6 +76,49 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       appBar: AppBar(
         title: Text(vehicle.displayName),
         actions: [
+          if (_isExporting)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+            )
+          else
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.file_download),
+              onSelected: (value) async {
+                setState(() { _isExporting = true; });
+                try {
+                  if (value == 'pdf') {
+                    await ReportService.generateSingleVehiclePDF(vehicle);
+                  } else if (value == 'excel') {
+                    await ReportService.generateSingleVehicleExcel(vehicle);
+                  }
+                } finally {
+                  if (mounted) setState(() { _isExporting = false; });
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'pdf',
+                  child: Row(children: [
+                    Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 20),
+                    SizedBox(width: 8),
+                    Text('📄 تصدير PDF المركبة'),
+                  ]),
+                ),
+                const PopupMenuItem(
+                  value: 'excel',
+                  child: Row(children: [
+                    Icon(Icons.table_chart, color: AppColors.success, size: 20),
+                    SizedBox(width: 8),
+                    Text('📊 تصدير Excel المركبة'),
+                  ]),
+                ),
+              ],
+            ),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () async {

@@ -1245,6 +1245,605 @@ class ReportService {
     }
   }
 
+  // ═════════════════════════════════════════════════════════════════════════
+  //  PDF Report: Single Vehicle
+  // ═════════════════════════════════════════════════════════════════════════
+
+  static Future<String> generateSingleVehiclePDF(Vehicle vehicle) async {
+    try {
+      final font = await _loadCairoFont();
+      final vehicleId = vehicle.id ?? 0;
+      final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
+
+      // Fetch vehicle-specific data
+      final maintenanceRecords = await DatabaseService.getMaintenanceByVehicleId(vehicleId);
+      final fuelRecords = await DatabaseService.getFuelRecordsByVehicleId(vehicleId);
+      final allViolations = await DatabaseService.getAllViolations();
+      final violations = allViolations.where((v) => v.vehicleId == vehicleId).toList();
+
+      // Calculate totals
+      double totalMaintenanceCost = 0;
+      for (final r in maintenanceRecords) {
+        totalMaintenanceCost += r.totalCost;
+      }
+      double totalFuelCost = 0;
+      for (final f in fuelRecords) {
+        totalFuelCost += f.totalCost;
+      }
+      double totalViolationAmount = 0;
+      for (final v in violations) {
+        totalViolationAmount += v.amount;
+      }
+
+      final pdf = pw.Document(
+        theme: pw.ThemeData.withFont(base: font, bold: font),
+      );
+
+      // Common table border style
+      const tableBorder = pw.TableBorder(
+        horizontalInside: pw.BorderSide(color: PdfColors.grey300),
+        verticalInside: pw.BorderSide(color: PdfColors.grey300),
+        left: pw.BorderSide(color: PdfColors.grey400),
+        right: pw.BorderSide(color: PdfColors.grey400),
+        top: pw.BorderSide(color: PdfColors.grey400),
+        bottom: pw.BorderSide(color: PdfColors.grey400),
+      );
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          textDirection: pw.TextDirection.rtl,
+          build: (context) => [
+            // ── Header ──
+            pw.Center(
+              child: pw.Column(
+                mainAxisSize: pw.MainAxisSize.min,
+                children: [
+                  pw.Text(
+                    'تقرير مركبة: ${vehicle.make} ${vehicle.model}',
+                    style: pw.TextStyle(
+                      fontSize: 22,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    '${AppConstants.appName} – $now',
+                    style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 16),
+            pw.Divider(),
+            pw.SizedBox(height: 12),
+
+            // ── Vehicle Info Section ──
+            pw.Text(
+              'بيانات المركبة',
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            pw.TableHelper.fromTextArray(
+              headers: ['البيان', 'القيمة'],
+              data: [
+                ['رقم اللوحة', vehicle.plateNumber],
+                ['الماركة والموديل', '${vehicle.make} ${vehicle.model}'],
+                ['سنة الصنع', '${vehicle.year}'],
+                ['اللون', AppConstants.vehicleColors[vehicle.color] ?? vehicle.color],
+                ['نوع الوقود', AppConstants.fuelTypes[vehicle.fuelType] ?? vehicle.fuelType],
+                ['العداد الحالي', '${vehicle.currentOdometer} كم'],
+                ['الحالة', AppConstants.vehicleStatuses[vehicle.status] ?? vehicle.status],
+                if (vehicle.vehicleType != null && vehicle.vehicleType!.isNotEmpty)
+                  ['نوع المركبة', vehicle.vehicleType!],
+                ['اسم السائق', vehicle.driverName ?? 'غير محدد'],
+              ],
+              headerStyle: pw.TextStyle(
+                fontSize: 9,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.teal800),
+              cellStyle: const pw.TextStyle(fontSize: 9),
+              cellAlignment: pw.Alignment.center,
+              headerAlignment: pw.Alignment.center,
+              border: tableBorder,
+            ),
+            pw.SizedBox(height: 16),
+
+            // ── Cost Summary ──
+            pw.Text(
+              'ملخص التكاليف',
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+              children: [
+                pw.Text(
+                  'إجمالي الصيانة: ${totalMaintenanceCost.toStringAsFixed(2)} ج.م',
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.Text(
+                  'إجمالي الوقود: ${totalFuelCost.toStringAsFixed(2)} ج.م',
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.Text(
+                  'إجمالي المخالفات: ${totalViolationAmount.toStringAsFixed(2)} ج.م',
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 16),
+            pw.Divider(),
+            pw.SizedBox(height: 12),
+
+            // ── Maintenance Records ──
+            pw.Text(
+              'سجل الصيانة (${maintenanceRecords.length} سجل)',
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            if (maintenanceRecords.isNotEmpty)
+              pw.TableHelper.fromTextArray(
+                headers: ['#', 'التاريخ', 'الوصف', 'النوع', 'التكلفة', 'الحالة', 'الأولوية'],
+                data: maintenanceRecords.asMap().entries.map((entry) {
+                  final i = entry.key + 1;
+                  final r = entry.value;
+                  return [
+                    '$i',
+                    DateFormat('dd/MM/yyyy').format(r.maintenanceDate),
+                    r.description,
+                    AppConstants.maintenanceTypes[r.type] ?? r.type,
+                    '${r.totalCost.toStringAsFixed(2)} ج.م',
+                    AppConstants.maintenanceStatuses[r.status] ?? r.status,
+                    AppConstants.priorities[r.priority] ?? r.priority,
+                  ];
+                }).toList(),
+                headerStyle: pw.TextStyle(
+                  fontSize: 8,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.white,
+                ),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.teal800),
+                cellStyle: const pw.TextStyle(fontSize: 7),
+                cellAlignment: pw.Alignment.center,
+                headerAlignment: pw.Alignment.center,
+                border: tableBorder,
+              )
+            else
+              pw.Center(
+                child: pw.Text(
+                  'لا توجد سجلات صيانة',
+                  style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey500),
+                ),
+              ),
+            pw.SizedBox(height: 16),
+
+            // ── Fuel Records ──
+            pw.Text(
+              'سجل الوقود (${fuelRecords.length} سجل)',
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            if (fuelRecords.isNotEmpty)
+              pw.TableHelper.fromTextArray(
+                headers: ['#', 'التاريخ', 'العداد', 'اللترات', 'سعر اللتر', 'الإجمالي', 'المحطة'],
+                data: fuelRecords.asMap().entries.map((entry) {
+                  final i = entry.key + 1;
+                  final r = entry.value;
+                  return [
+                    '$i',
+                    DateFormat('dd/MM/yyyy').format(r.fillDate),
+                    '${r.odometerReading} كم',
+                    '${r.liters.toStringAsFixed(1)} لتر',
+                    '${r.costPerLiter.toStringAsFixed(2)} ج.م',
+                    '${r.totalCost.toStringAsFixed(2)} ج.م',
+                    r.stationName ?? '',
+                  ];
+                }).toList(),
+                headerStyle: pw.TextStyle(
+                  fontSize: 8,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.white,
+                ),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.teal800),
+                cellStyle: const pw.TextStyle(fontSize: 7),
+                cellAlignment: pw.Alignment.center,
+                headerAlignment: pw.Alignment.center,
+                border: tableBorder,
+              )
+            else
+              pw.Center(
+                child: pw.Text(
+                  'لا توجد سجلات وقود',
+                  style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey500),
+                ),
+              ),
+            pw.SizedBox(height: 16),
+
+            // ── Violations ──
+            pw.Text(
+              'المخالفات (${violations.length} مخالفة)',
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            if (violations.isNotEmpty)
+              pw.TableHelper.fromTextArray(
+                headers: ['#', 'التاريخ', 'الوصف', 'النوع', 'المبلغ', 'النقاط', 'الحالة'],
+                data: violations.asMap().entries.map((entry) {
+                  final i = entry.key + 1;
+                  final v = entry.value;
+                  return [
+                    '$i',
+                    DateFormat('dd/MM/yyyy').format(v.date),
+                    v.description,
+                    v.type,
+                    '${v.amount.toStringAsFixed(2)} ج.م',
+                    '${v.points}',
+                    v.status,
+                  ];
+                }).toList(),
+                headerStyle: pw.TextStyle(
+                  fontSize: 8,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.white,
+                ),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.teal800),
+                cellStyle: const pw.TextStyle(fontSize: 7),
+                cellAlignment: pw.Alignment.center,
+                headerAlignment: pw.Alignment.center,
+                border: tableBorder,
+              )
+            else
+              pw.Center(
+                child: pw.Text(
+                  'لا توجد مخالفات',
+                  style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey500),
+                ),
+              ),
+          ],
+        ),
+      );
+
+      final bytes = await pdf.save();
+      final dateStr = DateFormat('yyyyMMdd').format(DateTime.now());
+      final fileName = 'تقرير_مركبة_${vehicle.plateNumber}_$dateStr.pdf';
+      return _shareBytes(bytes, fileName);
+    } catch (e) {
+      debugPrint('ReportService: generateSingleVehiclePDF error: $e');
+      return '';
+    }
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  Excel Report: Single Vehicle
+  // ═════════════════════════════════════════════════════════════════════════
+
+  static Future<String> generateSingleVehicleExcel(Vehicle vehicle) async {
+    try {
+      final vehicleId = vehicle.id ?? 0;
+
+      // Fetch vehicle-specific data
+      final maintenanceRecords = await DatabaseService.getMaintenanceByVehicleId(vehicleId);
+      final fuelRecords = await DatabaseService.getFuelRecordsByVehicleId(vehicleId);
+      final allViolations = await DatabaseService.getAllViolations();
+      final violations = allViolations.where((v) => v.vehicleId == vehicleId).toList();
+
+      final workbook = Excel.createExcel();
+
+      // ── Sheet 1: Vehicle Info ──
+      final infoSheet = workbook['بيانات المركبة'];
+      workbook.delete('Sheet1');
+
+      const infoHeaders = ['البيان', 'القيمة'];
+      for (var col = 0; col < infoHeaders.length; col++) {
+        final cell = infoSheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0));
+        cell.value = TextCellValue(infoHeaders[col]);
+        cell.cellStyle = CellStyle(
+          bold: true,
+          fontSize: 11,
+          horizontalAlign: HorizontalAlign.Center,
+        );
+      }
+
+      final infoData = [
+        ['رقم اللوحة', vehicle.plateNumber],
+        ['الماركة', vehicle.make],
+        ['الموديل', vehicle.model],
+        ['سنة الصنع', '${vehicle.year}'],
+        ['اللون', AppConstants.vehicleColors[vehicle.color] ?? vehicle.color],
+        ['نوع الوقود', AppConstants.fuelTypes[vehicle.fuelType] ?? vehicle.fuelType],
+        ['العداد الحالي', '${vehicle.currentOdometer}'],
+        ['الحالة', AppConstants.vehicleStatuses[vehicle.status] ?? vehicle.status],
+        if (vehicle.vehicleType != null && vehicle.vehicleType!.isNotEmpty)
+          ['نوع المركبة', vehicle.vehicleType!],
+        ['اسم السائق', vehicle.driverName ?? 'غير محدد'],
+        ['رقم هاتف السائق', vehicle.driverPhone ?? 'غير محدد'],
+      ];
+
+      for (var row = 0; row < infoData.length; row++) {
+        for (var col = 0; col < infoData[row].length; col++) {
+          final cell = infoSheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row + 1));
+          cell.value = TextCellValue(infoData[row][col]);
+          cell.cellStyle = CellStyle(fontSize: 10, horizontalAlign: HorizontalAlign.Center);
+        }
+      }
+
+      // ── Sheet 2: Maintenance Records ──
+      final maintSheet = workbook['سجل الصيانة'];
+      const maintHeaders = [
+        '#', 'التاريخ', 'الوصف', 'النوع', 'تكلفة القطع (ج.م)',
+        'تكلفة العمالة (ج.م)', 'الإجمالي (ج.م)', 'الحالة', 'الأولوية',
+        'مقدم الخدمة', 'رقم الفاتورة', 'العداد', 'قطع الغيار', 'ملاحظات',
+      ];
+      for (var col = 0; col < maintHeaders.length; col++) {
+        final cell = maintSheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0));
+        cell.value = TextCellValue(maintHeaders[col]);
+        cell.cellStyle = CellStyle(bold: true, fontSize: 11, horizontalAlign: HorizontalAlign.Center);
+      }
+
+      for (var row = 0; row < maintenanceRecords.length; row++) {
+        final r = maintenanceRecords[row];
+        final values = <CellValue>[
+          IntCellValue(row + 1),
+          TextCellValue(DateFormat('dd/MM/yyyy').format(r.maintenanceDate)),
+          TextCellValue(r.description),
+          TextCellValue(AppConstants.maintenanceTypes[r.type] ?? r.type),
+          DoubleCellValue(r.cost),
+          DoubleCellValue(r.laborCost ?? 0),
+          DoubleCellValue(r.totalCost),
+          TextCellValue(AppConstants.maintenanceStatuses[r.status] ?? r.status),
+          TextCellValue(AppConstants.priorities[r.priority] ?? r.priority),
+          TextCellValue(r.serviceProvider ?? ''),
+          TextCellValue(r.invoiceNumber ?? ''),
+          IntCellValue(r.odometerReading),
+          TextCellValue(r.partsUsed ?? ''),
+          TextCellValue(r.notes ?? ''),
+        ];
+        for (var col = 0; col < values.length; col++) {
+          final cell = maintSheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row + 1));
+          cell.value = values[col];
+          cell.cellStyle = CellStyle(fontSize: 10, horizontalAlign: HorizontalAlign.Center);
+        }
+      }
+
+      // ── Sheet 3: Fuel Records ──
+      final fuelSheet = workbook['سجل الوقود'];
+      const fuelHeaders = [
+        '#', 'تاريخ التعبئة', 'العداد (كم)', 'اللترات', 'سعر اللتر (ج.م)',
+        'الإجمالي (ج.م)', 'المحطة', 'الموقع', 'خزان كامل', 'معدل الاستهلاك', 'ملاحظات',
+      ];
+      for (var col = 0; col < fuelHeaders.length; col++) {
+        final cell = fuelSheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0));
+        cell.value = TextCellValue(fuelHeaders[col]);
+        cell.cellStyle = CellStyle(bold: true, fontSize: 11, horizontalAlign: HorizontalAlign.Center);
+      }
+
+      for (var row = 0; row < fuelRecords.length; row++) {
+        final r = fuelRecords[row];
+        final values = <CellValue>[
+          IntCellValue(row + 1),
+          TextCellValue(DateFormat('dd/MM/yyyy').format(r.fillDate)),
+          IntCellValue(r.odometerReading),
+          DoubleCellValue(r.liters),
+          DoubleCellValue(r.costPerLiter),
+          DoubleCellValue(r.totalCost),
+          TextCellValue(r.stationName ?? ''),
+          TextCellValue(r.stationLocation ?? ''),
+          TextCellValue(r.fullTank ? 'نعم' : 'لا'),
+          TextCellValue(r.consumptionRate != null ? '${r.consumptionRate!.toStringAsFixed(1)} كم/لتر' : ''),
+          TextCellValue(r.notes ?? ''),
+        ];
+        for (var col = 0; col < values.length; col++) {
+          final cell = fuelSheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row + 1));
+          cell.value = values[col];
+          cell.cellStyle = CellStyle(fontSize: 10, horizontalAlign: HorizontalAlign.Center);
+        }
+      }
+
+      // ── Sheet 4: Violations ──
+      final violSheet = workbook['المخالفات'];
+      const violHeaders = [
+        '#', 'التاريخ', 'الوصف', 'النوع', 'المبلغ (ج.م)', 'النقاط', 'الحالة',
+      ];
+      for (var col = 0; col < violHeaders.length; col++) {
+        final cell = violSheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0));
+        cell.value = TextCellValue(violHeaders[col]);
+        cell.cellStyle = CellStyle(bold: true, fontSize: 11, horizontalAlign: HorizontalAlign.Center);
+      }
+
+      for (var row = 0; row < violations.length; row++) {
+        final v = violations[row];
+        final values = <CellValue>[
+          IntCellValue(row + 1),
+          TextCellValue(DateFormat('dd/MM/yyyy').format(v.date)),
+          TextCellValue(v.description),
+          TextCellValue(v.type),
+          DoubleCellValue(v.amount),
+          IntCellValue(v.points),
+          TextCellValue(v.status),
+        ];
+        for (var col = 0; col < values.length; col++) {
+          final cell = violSheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row + 1));
+          cell.value = values[col];
+          cell.cellStyle = CellStyle(fontSize: 10, horizontalAlign: HorizontalAlign.Center);
+        }
+      }
+
+      final bytes = workbook.save();
+      if (bytes == null) {
+        debugPrint('ReportService: generateSingleVehicleExcel workbook save returned null');
+        return '';
+      }
+      final dateStr = DateFormat('yyyyMMdd').format(DateTime.now());
+      final fileName = 'مركبة_${vehicle.plateNumber}_$dateStr.xlsx';
+      return _shareBytes(bytes, fileName);
+    } catch (e) {
+      debugPrint('ReportService: generateSingleVehicleExcel error: $e');
+      return '';
+    }
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  PDF Report: Single Maintenance Record
+  // ═════════════════════════════════════════════════════════════════════════
+
+  static Future<String> generateSingleMaintenancePDF(MaintenanceRecord record) async {
+    try {
+      final font = await _loadCairoFont();
+      final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
+
+      final vehicleLabel = record.vehicle != null
+          ? '${record.vehicle!.make} ${record.vehicle!.model}'
+          : 'غير معروف';
+      final plateLabel = record.vehicle?.plateNumber ?? '';
+
+      final pdf = pw.Document(
+        theme: pw.ThemeData.withFont(base: font, bold: font),
+      );
+
+      // Common table border style
+      const tableBorder = pw.TableBorder(
+        horizontalInside: pw.BorderSide(color: PdfColors.grey300),
+        verticalInside: pw.BorderSide(color: PdfColors.grey300),
+        left: pw.BorderSide(color: PdfColors.grey400),
+        right: pw.BorderSide(color: PdfColors.grey400),
+        top: pw.BorderSide(color: PdfColors.grey400),
+        bottom: pw.BorderSide(color: PdfColors.grey400),
+      );
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          textDirection: pw.TextDirection.rtl,
+          build: (context) => [
+            // ── Header ──
+            pw.Center(
+              child: pw.Column(
+                mainAxisSize: pw.MainAxisSize.min,
+                children: [
+                  pw.Text(
+                    'تقرير عطل - ${record.description}',
+                    style: pw.TextStyle(
+                      fontSize: 22,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    '${AppConstants.appName} – $now',
+                    style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 16),
+            pw.Divider(),
+            pw.SizedBox(height: 12),
+
+            // ── Vehicle Info ──
+            pw.Text(
+              'بيانات المركبة',
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            pw.TableHelper.fromTextArray(
+              headers: ['البيان', 'القيمة'],
+              data: [
+                ['المركبة', vehicleLabel],
+                ['رقم اللوحة', plateLabel],
+              ],
+              headerStyle: pw.TextStyle(
+                fontSize: 9,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.teal800),
+              cellStyle: const pw.TextStyle(fontSize: 9),
+              cellAlignment: pw.Alignment.center,
+              headerAlignment: pw.Alignment.center,
+              border: tableBorder,
+            ),
+            pw.SizedBox(height: 16),
+
+            // ── Maintenance Details ──
+            pw.Text(
+              'تفاصيل العطل',
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            pw.TableHelper.fromTextArray(
+              headers: ['البيان', 'القيمة'],
+              data: [
+                ['التاريخ', DateFormat('dd/MM/yyyy').format(record.maintenanceDate)],
+                ['الوصف', record.description],
+                ['النوع', AppConstants.maintenanceTypes[record.type] ?? record.type],
+                ['الحالة', AppConstants.maintenanceStatuses[record.status] ?? record.status],
+                ['الأولوية', AppConstants.priorities[record.priority] ?? record.priority],
+                ['العداد عند الصيانة', '${record.odometerReading} كم'],
+                ['مقدم الخدمة', record.serviceProvider ?? 'غير محدد'],
+                ['رقم الفاتورة', record.invoiceNumber ?? 'غير محدد'],
+                ['قطع الغيار', record.partsUsed ?? 'لا توجد'],
+                ['ملاحظات', record.notes ?? 'لا توجد'],
+                if (record.nextMaintenanceDate != null)
+                  ['تاريخ الصيانة القادمة', DateFormat('dd/MM/yyyy').format(record.nextMaintenanceDate!)],
+                if (record.nextMaintenanceKm != null)
+                  ['العداد القادم للصيانة', '${record.nextMaintenanceKm} كم'],
+              ],
+              headerStyle: pw.TextStyle(
+                fontSize: 9,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.teal800),
+              cellStyle: const pw.TextStyle(fontSize: 9),
+              cellAlignment: pw.Alignment.center,
+              headerAlignment: pw.Alignment.center,
+              border: tableBorder,
+            ),
+            pw.SizedBox(height: 16),
+
+            // ── Cost Breakdown ──
+            pw.Text(
+              'تفصيل التكلفة',
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            pw.TableHelper.fromTextArray(
+              headers: ['البند', 'المبلغ (ج.م)'],
+              data: [
+                ['تكلفة القطع', record.cost.toStringAsFixed(2)],
+                ['تكلفة العمالة', (record.laborCost ?? 0).toStringAsFixed(2)],
+                ['الإجمالي', record.totalCost.toStringAsFixed(2)],
+              ],
+              headerStyle: pw.TextStyle(
+                fontSize: 9,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.teal800),
+              cellStyle: const pw.TextStyle(fontSize: 9),
+              cellAlignment: pw.Alignment.center,
+              headerAlignment: pw.Alignment.center,
+              border: tableBorder,
+            ),
+          ],
+        ),
+      );
+
+      final bytes = await pdf.save();
+      final dateStr = DateFormat('yyyyMMdd').format(DateTime.now());
+      final fileName = 'عطل_${plateLabel}_$dateStr.pdf';
+      return _shareBytes(bytes, fileName);
+    } catch (e) {
+      debugPrint('ReportService: generateSingleMaintenancePDF error: $e');
+      return '';
+    }
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────
 
   static String _workOrderTypeLabel(String type) {

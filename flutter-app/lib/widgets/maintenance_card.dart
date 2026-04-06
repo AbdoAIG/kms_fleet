@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/maintenance_record.dart';
+import '../services/report_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
@@ -91,6 +92,22 @@ class MaintenanceCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
+                          ),
+                          // Export PDF button
+                          IconButton(
+                            icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            tooltip: 'تصدير تقرير العطل',
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('جاري تصدير التقرير...'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                              ReportService.generateSingleMaintenancePDF(record);
+                            },
                           ),
                           if (onEdit != null || onDelete != null)
                             PopupMenuButton<String>(
