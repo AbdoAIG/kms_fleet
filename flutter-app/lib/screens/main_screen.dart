@@ -190,11 +190,18 @@ class _MainScreenState extends State<MainScreen>
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white.withOpacity(0.5), width: 1),
                 ),
-                child: const Icon(Icons.local_shipping, color: Colors.white, size: 22),
+                padding: const EdgeInsets.all(4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(7),
+                  child: Image.asset(
+                    'assets/images/kms_logo.jpeg',
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Column(

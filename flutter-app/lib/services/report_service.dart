@@ -42,6 +42,64 @@ class ReportService {
     return pw.Font.ttf(fontData.buffer.asByteData());
   }
 
+  /// Loads the KMS logo image for PDF headers.
+  static Future<pw.MemoryImage> _loadLogoImage() async {
+    final logoData = await rootBundle.load('assets/images/kms_logo.jpeg');
+    return pw.MemoryImage(logoData.buffer.asUint8List());
+  }
+
+  /// Builds a standard PDF header with logo, report title, and subtitle.
+  static Future<List<pw.Widget>> buildPdfHeader({
+    required String title,
+    required String subtitle,
+  }) async {
+    final logoImage = await _loadLogoImage();
+    return [
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.center,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          // Logo
+          pw.Container(
+            width: 50,
+            height: 50,
+            decoration: const pw.BoxDecoration(
+              borderRadius: pw.BorderRadius.all(pw.Radius.circular(8)),
+            ),
+            child: pw.ClipRRect(
+              horizontalRadius: 8,
+              verticalRadius: 8,
+              child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+            ),
+          ),
+          pw.SizedBox(width: 16),
+          // Title + Subtitle
+          pw.Column(
+            mainAxisSize: pw.MainAxisSize.min,
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              pw.Text(
+                title,
+                style: pw.TextStyle(
+                  fontSize: 22,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                subtitle,
+                style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
+              ),
+            ],
+          ),
+        ],
+      ),
+      pw.SizedBox(height: 16),
+      pw.Divider(),
+      pw.SizedBox(height: 12),
+    ];
+  }
+
   // ── Shared helpers ───────────────────────────────────────────────────────
 
   /// MIME type mapping for proper file sharing.
@@ -124,6 +182,12 @@ class ReportService {
       final records = await DatabaseService.getAllMaintenanceRecords();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
+      // Pre-build header with logo
+      final headerWidgets = await buildPdfHeader(
+        title: 'تقرير سجلات الصيانة',
+        subtitle: '${AppConstants.appName} – $now',
+      );
+
       final pdf = pw.Document(
         theme: pw.ThemeData.withFont(
           base: font,
@@ -137,28 +201,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
-            pw.Center(
-              child: pw.Column(
-                mainAxisSize: pw.MainAxisSize.min,
-                children: [
-                  pw.Text(
-                    'تقرير سجلات الصيانة',
-                    style: pw.TextStyle(
-                      fontSize: 22,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    '${AppConstants.appName} – $now',
-                    style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
-                  ),
-                ],
-              ),
-            ),
-            pw.SizedBox(height: 16),
-            pw.Divider(),
-            pw.SizedBox(height: 12),
+            ...headerWidgets,
             pw.Text(
               'إجمالي السجلات: ${records.length}',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -233,6 +276,12 @@ class ReportService {
       final vehicles = await DatabaseService.getAllVehicles();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
+      // Pre-build header with logo
+      final headerWidgets = await buildPdfHeader(
+        title: 'تقرير أسطول المركبات',
+        subtitle: '${AppConstants.appName} – $now',
+      );
+
       final pdf = pw.Document(
         theme: pw.ThemeData.withFont(base: font, bold: font),
       );
@@ -243,28 +292,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
-            pw.Center(
-              child: pw.Column(
-                mainAxisSize: pw.MainAxisSize.min,
-                children: [
-                  pw.Text(
-                    'تقرير أسطول المركبات',
-                    style: pw.TextStyle(
-                      fontSize: 22,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    '${AppConstants.appName} – $now',
-                    style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
-                  ),
-                ],
-              ),
-            ),
-            pw.SizedBox(height: 16),
-            pw.Divider(),
-            pw.SizedBox(height: 12),
+            ...headerWidgets,
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
               children: [
@@ -511,6 +539,12 @@ class ReportService {
       final orders = await DatabaseService.getAllWorkOrders();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
+      // Pre-build header with logo
+      final headerWidgets = await buildPdfHeader(
+        title: 'تقرير أوامر العمل',
+        subtitle: '${AppConstants.appName} – $now',
+      );
+
       final pdf = pw.Document(
         theme: pw.ThemeData.withFont(base: font, bold: font),
       );
@@ -531,28 +565,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
-            pw.Center(
-              child: pw.Column(
-                mainAxisSize: pw.MainAxisSize.min,
-                children: [
-                  pw.Text(
-                    'تقرير أوامر العمل',
-                    style: pw.TextStyle(
-                      fontSize: 22,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    '${AppConstants.appName} – $now',
-                    style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
-                  ),
-                ],
-              ),
-            ),
-            pw.SizedBox(height: 16),
-            pw.Divider(),
-            pw.SizedBox(height: 12),
+            ...headerWidgets,
             pw.Text(
               'إجمالي الأوامر: ${orders.length}',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -667,6 +680,12 @@ class ReportService {
       final expenses = await DatabaseService.getAllExpenses();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
+      // Pre-build header with logo
+      final headerWidgets = await buildPdfHeader(
+        title: 'تقرير التكاليف الشهري لكل مركبة',
+        subtitle: '${AppConstants.appName} – $now',
+      );
+
       final pdf = pw.Document(
         theme: pw.ThemeData.withFont(base: font, bold: font),
       );
@@ -731,28 +750,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
-            pw.Center(
-              child: pw.Column(
-                mainAxisSize: pw.MainAxisSize.min,
-                children: [
-                  pw.Text(
-                    'تقرير التكاليف الشهري لكل مركبة',
-                    style: pw.TextStyle(
-                      fontSize: 22,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    '${AppConstants.appName} – $now',
-                    style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
-                  ),
-                ],
-              ),
-            ),
-            pw.SizedBox(height: 16),
-            pw.Divider(),
-            pw.SizedBox(height: 12),
+            ...headerWidgets,
             pw.Text(
               'إجمالي السجلات: ${rows.length}',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -872,6 +870,12 @@ class ReportService {
       final violations = await DatabaseService.getAllViolations();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
+      // Pre-build header with logo
+      final headerWidgets = await buildPdfHeader(
+        title: 'تقرير أداء السائقين',
+        subtitle: '${AppConstants.appName} – $now',
+      );
+
       final pdf = pw.Document(
         theme: pw.ThemeData.withFont(base: font, bold: font),
       );
@@ -929,28 +933,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
-            pw.Center(
-              child: pw.Column(
-                mainAxisSize: pw.MainAxisSize.min,
-                children: [
-                  pw.Text(
-                    'تقرير أداء السائقين',
-                    style: pw.TextStyle(
-                      fontSize: 22,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    '${AppConstants.appName} – $now',
-                    style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
-                  ),
-                ],
-              ),
-            ),
-            pw.SizedBox(height: 16),
-            pw.Divider(),
-            pw.SizedBox(height: 12),
+            ...headerWidgets,
             pw.Text(
               'إجمالي السائقين: ${driverVehicles.length}',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -1255,6 +1238,12 @@ class ReportService {
       final vehicleId = vehicle.id ?? 0;
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
+      // Pre-build header with logo
+      final headerWidgets = await buildPdfHeader(
+        title: 'تقرير مركبة: ${vehicle.make} ${vehicle.model}',
+        subtitle: '${AppConstants.appName} – $now',
+      );
+
       // Fetch vehicle-specific data
       final maintenanceRecords = await DatabaseService.getMaintenanceByVehicleId(vehicleId);
       final fuelRecords = await DatabaseService.getFuelRecordsByVehicleId(vehicleId);
@@ -1295,29 +1284,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
-            // ── Header ──
-            pw.Center(
-              child: pw.Column(
-                mainAxisSize: pw.MainAxisSize.min,
-                children: [
-                  pw.Text(
-                    'تقرير مركبة: ${vehicle.make} ${vehicle.model}',
-                    style: pw.TextStyle(
-                      fontSize: 22,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    '${AppConstants.appName} – $now',
-                    style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
-                  ),
-                ],
-              ),
-            ),
-            pw.SizedBox(height: 16),
-            pw.Divider(),
-            pw.SizedBox(height: 12),
+            ...headerWidgets,
 
             // ── Vehicle Info Section ──
             pw.Text(
@@ -1695,6 +1662,12 @@ class ReportService {
       final font = await _loadCairoFont();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
+      // Pre-build header with logo
+      final headerWidgets = await buildPdfHeader(
+        title: 'تقرير عطل - ${record.description}',
+        subtitle: '${AppConstants.appName} – $now',
+      );
+
       final vehicleLabel = record.vehicle != null
           ? '${record.vehicle!.make} ${record.vehicle!.model}'
           : 'غير معروف';
@@ -1720,29 +1693,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
-            // ── Header ──
-            pw.Center(
-              child: pw.Column(
-                mainAxisSize: pw.MainAxisSize.min,
-                children: [
-                  pw.Text(
-                    'تقرير عطل - ${record.description}',
-                    style: pw.TextStyle(
-                      fontSize: 22,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    '${AppConstants.appName} – $now',
-                    style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
-                  ),
-                ],
-              ),
-            ),
-            pw.SizedBox(height: 16),
-            pw.Divider(),
-            pw.SizedBox(height: 12),
+            ...headerWidgets,
 
             // ── Vehicle Info ──
             pw.Text(
