@@ -8,6 +8,7 @@ import '../models/fuel_record.dart';
 import '../models/driver_violation.dart';
 import '../models/expense.dart';
 import '../models/work_order.dart';
+import '../models/trip_tracking.dart';
 import '../utils/constants.dart';
 
 // Conditional import: use native sqflite on Android/iOS, stub on web/desktop.
@@ -24,6 +25,7 @@ class DatabaseService {
   static List<DriverViolation> _memViolations = [];
   static List<Expense> _memExpenses = [];
   static List<WorkOrder> _memWorkOrders = [];
+  static List<TripTracking> _memTrips = [];
   static const _vt = 'vehicles';
   static const _mt = 'maintenance_records';
   static const _ct = 'checklists';
@@ -31,6 +33,7 @@ class DatabaseService {
   static const _vt2 = 'driver_violations';
   static const _et = 'expenses';
   static const _wot = 'work_orders';
+  static const _tt = 'trip_trackings';
 
   DatabaseService._();
 
@@ -56,6 +59,7 @@ class DatabaseService {
     _memViolations = _seedViolations();
     _memExpenses = _seedExpenses();
     _memWorkOrders = _seedWorkOrders();
+    _memTrips = _seedTrips();
   }
 
   static List<Vehicle> _seedVehicles() {
@@ -185,6 +189,58 @@ class DatabaseService {
       WorkOrder(id: 4, vehicleId: 3, type: 'repair', status: 'open', description: 'إصلاح مشكلة في المكيف', technicianName: 'ياسر كهربائي', technicianPhone: '01177788899', estimatedCost: 1200, priority: 'high', createdAt: n.subtract(const Duration(hours: 6)), updatedAt: n),
       WorkOrder(id: 5, vehicleId: 6, type: 'maintenance', status: 'completed', description: 'صيانة الدفع الرباعي + تغيير الإطارات', technicianName: 'سعيد فني', technicianPhone: '01066677788', estimatedCost: 3000, actualCost: 2800, priority: 'medium', startDate: n.subtract(const Duration(days: 14)), completedDate: n.subtract(const Duration(days: 10)), createdAt: n.subtract(const Duration(days: 16)), updatedAt: n),
       WorkOrder(id: 6, vehicleId: 10, type: 'inspection', status: 'in_progress', description: 'فحص قبل الرحلة الطويلة', technicianName: 'عبدالله فاحص', technicianPhone: '01555566677', estimatedCost: 200, priority: 'medium', startDate: n.subtract(const Duration(days: 1)), createdAt: n.subtract(const Duration(days: 2)), updatedAt: n),
+    ];
+  }
+
+  // ===== Trip Tracking seed =====
+  static List<TripTracking> _seedTrips() {
+    final n = DateTime.now();
+    return [
+      TripTracking(
+        id: 1, vehicleId: 1, status: 'completed',
+        startLat: 30.0444, startLng: 31.2357,
+        endLat: 30.0846, endLng: 31.2436,
+        startAddress: 'القاهرة - المعادي', endAddress: 'القاهرة - مدينة نصر',
+        distanceKm: 12.5, durationMinutes: 35,
+        startOdometer: 44800, endOdometer: 44813,
+        driverName: 'أحمد محمود',
+        notes: 'رحلة صباحية للمكتب',
+        createdAt: n.subtract(const Duration(days: 2)),
+        updatedAt: n.subtract(const Duration(days: 2)),
+      ),
+      TripTracking(
+        id: 2, vehicleId: 2, status: 'completed',
+        startLat: 30.0561, startLng: 31.2243,
+        endLat: 29.9858, endLng: 31.2812,
+        startAddress: 'الجيزة - الدقي', endAddress: 'القاهرة - المعادي',
+        distanceKm: 18.3, durationMinutes: 45,
+        startOdometer: 61700, endOdometer: 61718,
+        driverName: 'محمد علي',
+        createdAt: n.subtract(const Duration(days: 1)),
+        updatedAt: n.subtract(const Duration(days: 1)),
+      ),
+      TripTracking(
+        id: 3, vehicleId: 6, status: 'completed',
+        startLat: 30.0444, startLng: 31.2357,
+        endLat: 30.1219, endLng: 31.4056,
+        startAddress: 'القاهرة - وسط البلد', endAddress: 'القاهرة - التجمع الخامس',
+        distanceKm: 35.7, durationMinutes: 55,
+        startOdometer: 119500, endOdometer: 119536,
+        driverName: 'ياسر أحمد',
+        notes: 'توصيل بضائع',
+        createdAt: n.subtract(const Duration(hours: 8)),
+        updatedAt: n.subtract(const Duration(hours: 7)),
+      ),
+      TripTracking(
+        id: 4, vehicleId: 3, status: 'active',
+        startLat: 30.0846, startLng: 31.2436,
+        startAddress: 'القاهرة - مدينة نصر',
+        distanceKm: 5.2, durationMinutes: 12,
+        startOdometer: 88200,
+        driverName: 'حسن إبراهيم',
+        createdAt: n.subtract(const Duration(minutes: 12)),
+        updatedAt: n,
+      ),
     ];
   }
 
@@ -1029,5 +1085,91 @@ class DatabaseService {
     list.sort((a, b) => ((b['total_cost'] as double?) ?? 0).compareTo((a['total_cost'] as double?) ?? 0));
     if (list.length > 10) return list.sublist(0, 10);
     return list;
+  }
+
+  // ===== Trip Tracking CRUD =====
+  static Future<List<TripTracking>> getAllTrips() async {
+    final vehicles = await getAllVehicles();
+    if (_useMemory) {
+      return _memTrips.map((t) {
+        Vehicle? veh;
+        for (final v in vehicles) { if (v.id == t.vehicleId) { veh = v; break; } }
+        return t.copyWith(vehicle: veh);
+      }).toList();
+    }
+    try {
+      final maps = await nativeQuery(_tt, orderBy: 'created_at DESC');
+      return maps.map((m) {
+        final vid = (m['vehicle_id'] as int?) ?? 0;
+        Vehicle? veh;
+        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
+        return TripTracking.fromMap(m).copyWith(vehicle: veh);
+      }).toList();
+    } catch (e) {
+      return List.from(_memTrips);
+    }
+  }
+
+  static Future<List<TripTracking>> getTripsByVehicleId(int vid) async {
+    final v = await getVehicleById(vid);
+    if (_useMemory) {
+      return _memTrips.where((t) => t.vehicleId == vid).map((t) => t.copyWith(vehicle: v)).toList();
+    }
+    try {
+      final maps = await nativeQuery(_tt, where: 'vehicle_id = ?', whereArgs: [vid], orderBy: 'created_at DESC');
+      return maps.map((m) => TripTracking.fromMap(m).copyWith(vehicle: v)).toList();
+    } catch (e) { return []; }
+  }
+
+  static Future<int> insertTrip(TripTracking t) async {
+    if (_useMemory) {
+      final maxId = _memTrips.isEmpty ? 0 : _memTrips.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+      _memTrips.insert(0, t.copyWith(id: maxId + 1));
+      return maxId + 1;
+    }
+    try {
+      return nativeInsert(_tt, t.toMap());
+    } catch (e) { return -1; }
+  }
+
+  static Future<int> updateTrip(TripTracking t) async {
+    if (_useMemory) {
+      for (int i = 0; i < _memTrips.length; i++) {
+        if (_memTrips[i].id == t.id) { _memTrips[i] = t; return 1; }
+      }
+      return 0;
+    }
+    try {
+      return nativeUpdate(_tt, t.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [t.id]);
+    } catch (e) { return 0; }
+  }
+
+  static Future<int> deleteTrip(int id) async {
+    if (_useMemory) {
+      _memTrips.removeWhere((t) => t.id == id);
+      return 1;
+    }
+    try {
+      return nativeDelete(_tt, where: 'id = ?', whereArgs: [id]);
+    } catch (e) { return 0; }
+  }
+
+  // Trip Stats
+  static Future<Map<String, dynamic>> getTripStatsByVehicleId(int vid) async {
+    final trips = await getTripsByVehicleId(vid);
+    final completed = trips.where((t) => t.status == 'completed').toList();
+    double totalDistance = 0;
+    double totalDuration = 0;
+    for (final t in completed) {
+      totalDistance += t.distanceKm;
+      totalDuration += t.durationMinutes;
+    }
+    return {
+      'totalTrips': completed.length,
+      'totalDistanceKm': totalDistance,
+      'totalDurationMinutes': totalDuration,
+      'avgDistanceKm': completed.isNotEmpty ? totalDistance / completed.length : 0,
+      'avgDurationMinutes': completed.isNotEmpty ? totalDuration / completed.length : 0,
+    };
   }
 }

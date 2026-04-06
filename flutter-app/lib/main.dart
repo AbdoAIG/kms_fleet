@@ -11,6 +11,7 @@ import 'providers/checklist_provider.dart';
 import 'providers/fuel_provider.dart';
 import 'providers/expense_provider.dart';
 import 'providers/work_order_provider.dart';
+import 'providers/trip_tracking_provider.dart';
 import 'services/database_service.dart';
 import 'services/supabase_service.dart';
 import 'utils/app_theme.dart';
@@ -33,6 +34,9 @@ import 'screens/expenses_screen.dart';
 import 'screens/add_expense_screen.dart';
 import 'screens/add_work_order_screen.dart';
 import 'screens/work_order_details_screen.dart';
+import 'screens/gps_map_screen.dart';
+import 'screens/trip_history_screen.dart';
+import 'screens/trip_tracking_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +62,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => FuelProvider()),
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
         ChangeNotifierProvider(create: (_) => WorkOrderProvider()),
+        ChangeNotifierProvider(create: (_) => TripTrackingProvider()),
       ],
       child: const KmsFleetApp(),
     ),
@@ -169,6 +174,21 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
           if (settings.name == '/work-order-details' && settings.arguments is WorkOrder) {
             return MaterialPageRoute(
               builder: (_) => WorkOrderDetailsScreen(workOrder: settings.arguments as WorkOrder),
+            );
+          }
+          if (settings.name == '/gps-map') {
+            return MaterialPageRoute(
+              builder: (_) => const GpsMapScreen(),
+            );
+          }
+          if (settings.name == '/trip-history' && settings.arguments is Vehicle) {
+            return MaterialPageRoute(
+              builder: (_) => TripHistoryScreen(vehicle: settings.arguments as Vehicle),
+            );
+          }
+          if (settings.name == '/trip-tracking' && settings.arguments is Vehicle) {
+            return MaterialPageRoute(
+              builder: (_) => TripTrackingScreen(vehicle: settings.arguments as Vehicle),
             );
           }
           return MaterialPageRoute(builder: (_) => const MainScreen());

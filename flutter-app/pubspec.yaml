@@ -25,6 +25,11 @@ dependencies:
   supabase_flutter: ^2.8.4
   sqflite_common_ffi: ^2.3.4
 
+  # GPS & Maps
+  geolocator: ^13.0.2
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
   # Reports
   pdf: ^3.11.1
   excel: ^4.0.6

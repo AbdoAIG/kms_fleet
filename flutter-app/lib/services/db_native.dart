@@ -33,6 +33,7 @@ const _vt = 'vehicles';
 const _mt = 'maintenance_records';
 const _ct = 'checklists';
 const _ft = 'fuel_records';
+const _tt = 'trip_trackings';
 
 /// Attempt to initialize the native SQLite database.
 /// Returns true if successful, false otherwise.
@@ -76,6 +77,9 @@ Future<void> _onCreate(Database db, int version) async {
   );
   await db.execute(
     'CREATE TABLE $_ft(id INTEGER PRIMARY KEY AUTOINCREMENT,vehicle_id INTEGER NOT NULL,fill_date TEXT NOT NULL,odometer_reading INTEGER DEFAULT 0,liters REAL DEFAULT 0,cost_per_liter REAL DEFAULT 0,fuel_type TEXT DEFAULT petrol,station_name TEXT,station_location TEXT,full_tank INTEGER DEFAULT 1,notes TEXT,consumption_rate REAL,is_abnormal INTEGER DEFAULT 0,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)',
+  );
+  await db.execute(
+    'CREATE TABLE $_tt(id INTEGER PRIMARY KEY AUTOINCREMENT,vehicle_id INTEGER NOT NULL,status TEXT DEFAULT active,start_lat REAL,start_lng REAL,end_lat REAL,end_lng REAL,start_address TEXT,end_address TEXT,distance_km REAL DEFAULT 0,duration_minutes REAL DEFAULT 0,start_odometer INTEGER,end_odometer INTEGER,notes TEXT,trip_points_json TEXT,driver_name TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)',
   );
 
   final now = DateTime.now().toIso8601String();

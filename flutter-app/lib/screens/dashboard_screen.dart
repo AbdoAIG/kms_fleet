@@ -360,6 +360,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             children: [
               Expanded(child: _QuickActionCard(icon: Icons.bar_chart, label: 'التقارير', color: AppColors.success, gradient: [AppColors.success, const Color(0xFF4ADE80)], onTap: () => widget.onNavigateToTab?.call(5))),
+              const SizedBox(width: 10),
+              Expanded(child: _QuickActionCard(icon: Icons.location_on, label: 'تتبع GPS', color: AppColors.info, gradient: [AppColors.info, const Color(0xFF60A5FA)], onTap: () => Navigator.pushNamed(context, '/gps-map'))),
             ],
           ),
         ],

@@ -163,6 +163,10 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                   _buildDepreciationCard(),
                   const SizedBox(height: 20),
 
+                  // GPS Trip Actions
+                  _buildGpsActions(vehicle),
+                  const SizedBox(height: 20),
+
                   // Maintenance History
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -602,6 +606,74 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                 ),
               );
             }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// GPS Trip Actions Card
+  Widget _buildGpsActions(Vehicle vehicle) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.location_on, color: AppColors.info, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'تتبع الرحلات',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () async {
+                  await Navigator.pushNamed(
+                    context,
+                    '/trip-history',
+                    arguments: vehicle,
+                  );
+                },
+                icon: const Icon(Icons.history, size: 18),
+                label: const Text('السجل'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final result = await Navigator.pushNamed(
+                  context,
+                  '/trip-tracking',
+                  arguments: vehicle,
+                );
+                if (result == true) _loadRecords();
+              },
+              icon: const Icon(Icons.play_arrow, size: 18),
+              label: const Text('بدء رحلة جديدة'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.info,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+            ),
           ),
         ],
       ),
