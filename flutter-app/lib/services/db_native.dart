@@ -66,7 +66,7 @@ Future<void> initNativeDb() async {
 /// Creates all tables and inserts seed data.
 Future<void> _onCreate(Database db, int version) async {
   await db.execute(
-    'CREATE TABLE $_vt(id INTEGER PRIMARY KEY AUTOINCREMENT,plate_number TEXT NOT NULL,make TEXT NOT NULL,model TEXT NOT NULL,year INTEGER NOT NULL,color TEXT DEFAULT white,fuel_type TEXT DEFAULT petrol,current_odometer INTEGER DEFAULT 0,status TEXT DEFAULT active,notes TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)',
+    'CREATE TABLE $_vt(id INTEGER PRIMARY KEY AUTOINCREMENT,plate_number TEXT NOT NULL,make TEXT NOT NULL,model TEXT NOT NULL,year INTEGER NOT NULL,color TEXT DEFAULT white,fuel_type TEXT DEFAULT petrol,current_odometer INTEGER DEFAULT 0,status TEXT DEFAULT active,notes TEXT,driver_name TEXT,driver_phone TEXT,driver_license_number TEXT,driver_license_expiry TEXT,driver_status TEXT DEFAULT active,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)',
   );
   await db.execute(
     'CREATE TABLE $_mt(id INTEGER PRIMARY KEY AUTOINCREMENT,vehicle_id INTEGER NOT NULL,maintenance_date TEXT NOT NULL,description TEXT NOT NULL,type TEXT NOT NULL,odometer_reading INTEGER DEFAULT 0,cost REAL DEFAULT 0,labor_cost REAL,service_provider TEXT,invoice_number TEXT,priority TEXT DEFAULT medium,status TEXT DEFAULT pending,parts_used TEXT,next_maintenance_date TEXT,next_maintenance_km INTEGER,notes TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)',
@@ -83,8 +83,8 @@ Future<void> _onCreate(Database db, int version) async {
   // Seed vehicles
   for (final v in _seedVehicles()) {
     await db.rawInsert(
-      "INSERT INTO $_vt(plate_number,make,model,year,color,fuel_type,current_odometer,status,notes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-      [v.plateNumber, v.make, v.model, v.year, v.color, v.fuelType, v.currentOdometer, v.status, v.notes ?? '', now, now],
+      "INSERT INTO $_vt(plate_number,make,model,year,color,fuel_type,current_odometer,status,notes,driver_name,driver_phone,driver_license_number,driver_license_expiry,driver_status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      [v.plateNumber, v.make, v.model, v.year, v.color, v.fuelType, v.currentOdometer, v.status, v.notes ?? '', v.driverName ?? '', v.driverPhone ?? '', v.driverLicenseNumber ?? '', v.driverLicenseExpiry?.toIso8601String() ?? '', v.driverStatus ?? 'active', now, now],
     );
   }
 
@@ -120,18 +120,18 @@ Future<void> _onCreate(Database db, int version) async {
 List<Vehicle> _seedVehicles() {
   final n = DateTime.now();
   return [
-    Vehicle(id: 1, plateNumber: 'أ ب ج 1234', make: 'تويوتا', model: 'كامري', year: 2023, color: 'white', fuelType: 'petrol', currentOdometer: 45000, status: 'active', createdAt: n, updatedAt: n),
-    Vehicle(id: 2, plateNumber: 'د ه و 5678', make: 'هيونداي', model: 'توسان', year: 2022, color: 'black', fuelType: 'petrol', currentOdometer: 62000, status: 'active', createdAt: n, updatedAt: n),
-    Vehicle(id: 3, plateNumber: 'ز ح ط 9012', make: 'نيسان', model: 'صني', year: 2021, color: 'silver', fuelType: 'petrol', currentOdometer: 89000, status: 'active', createdAt: n, updatedAt: n),
-    Vehicle(id: 4, plateNumber: 'ي ك ل 3456', make: 'كيا', model: 'سبورتاج', year: 2023, color: 'blue', fuelType: 'diesel', currentOdometer: 28000, status: 'active', createdAt: n, updatedAt: n),
-    Vehicle(id: 5, plateNumber: 'م ن س 7890', make: 'مرسيدس', model: 'C-Class', year: 2022, color: 'black', fuelType: 'petrol', currentOdometer: 35000, status: 'maintenance', createdAt: n, updatedAt: n),
-    Vehicle(id: 6, plateNumber: 'ع ف ق 2345', make: 'تويوتا', model: 'هايلكس', year: 2020, color: 'white', fuelType: 'diesel', currentOdometer: 120000, status: 'active', createdAt: n, updatedAt: n),
-    Vehicle(id: 7, plateNumber: 'ر ش ت 6789', make: 'هيونداي', model: 'إلنترا', year: 2024, color: 'red', fuelType: 'petrol', currentOdometer: 8000, status: 'active', createdAt: n, updatedAt: n),
-    Vehicle(id: 8, plateNumber: 'ث خ ذ 0123', make: 'فورد', model: 'إكسبلورر', year: 2021, color: 'gray', fuelType: 'petrol', currentOdometer: 78000, status: 'inactive', createdAt: n, updatedAt: n),
-    Vehicle(id: 9, plateNumber: 'ض ظ غ 4567', make: 'شيفروليه', model: 'تاهو', year: 2023, color: 'black', fuelType: 'petrol', currentOdometer: 22000, status: 'active', createdAt: n, updatedAt: n),
-    Vehicle(id: 10, plateNumber: 'ج ث ب 8901', make: 'تويوتا', model: 'لاند كروزر', year: 2022, color: 'white', fuelType: 'diesel', currentOdometer: 55000, status: 'active', createdAt: n, updatedAt: n),
-    Vehicle(id: 11, plateNumber: 'ن ح ي 2468', make: 'بي إم دبليو', model: 'الفئة 5', year: 2021, color: 'blue', fuelType: 'petrol', currentOdometer: 92000, status: 'active', createdAt: n, updatedAt: n),
-    Vehicle(id: 12, plateNumber: 'و ك م 1357', make: 'أودي', model: 'Q7', year: 2023, color: 'gray', fuelType: 'diesel', currentOdometer: 18000, status: 'active', createdAt: n, updatedAt: n),
+    Vehicle(id: 1, plateNumber: 'أ ب ج 1234', make: 'تويوتا', model: 'كامري', year: 2023, color: 'white', fuelType: 'petrol', currentOdometer: 45000, status: 'active', driverName: 'أحمد محمود', driverPhone: '01012345678', driverLicenseNumber: 'DL-001', driverLicenseExpiry: n.add(const Duration(days: 180)), driverStatus: 'active', createdAt: n, updatedAt: n),
+    Vehicle(id: 2, plateNumber: 'د ه و 5678', make: 'هيونداي', model: 'توسان', year: 2022, color: 'black', fuelType: 'petrol', currentOdometer: 62000, status: 'active', driverName: 'محمد علي', driverPhone: '01098765432', driverLicenseNumber: 'DL-002', driverLicenseExpiry: n.add(const Duration(days: 90)), driverStatus: 'active', createdAt: n, updatedAt: n),
+    Vehicle(id: 3, plateNumber: 'ز ح ط 9012', make: 'نيسان', model: 'صني', year: 2021, color: 'silver', fuelType: 'petrol', currentOdometer: 89000, status: 'active', driverName: 'حسن إبراهيم', driverPhone: '01055544433', driverLicenseNumber: 'DL-003', driverLicenseExpiry: n.add(const Duration(days: 30)), driverStatus: 'active', createdAt: n, updatedAt: n),
+    Vehicle(id: 4, plateNumber: 'ي ك ل 3456', make: 'كيا', model: 'سبورتاج', year: 2023, color: 'blue', fuelType: 'diesel', currentOdometer: 28000, status: 'active', driverName: 'خالد سعيد', driverPhone: '01112223334', driverLicenseNumber: 'DL-004', driverLicenseExpiry: n.add(const Duration(days: 365)), driverStatus: 'active', createdAt: n, updatedAt: n),
+    Vehicle(id: 5, plateNumber: 'م ن س 7890', make: 'مرسيدس', model: 'C-Class', year: 2022, color: 'black', fuelType: 'petrol', currentOdometer: 35000, status: 'maintenance', driverName: 'عمر فاروق', driverPhone: '01155667788', driverLicenseNumber: 'DL-005', driverLicenseExpiry: n.subtract(const Duration(days: 30)), driverStatus: 'suspended', createdAt: n, updatedAt: n),
+    Vehicle(id: 6, plateNumber: 'ع ف ق 2345', make: 'تويوتا', model: 'هايلكس', year: 2020, color: 'white', fuelType: 'diesel', currentOdometer: 120000, status: 'active', driverName: 'ياسر أحمد', driverPhone: '01234567890', driverLicenseNumber: 'DL-006', driverLicenseExpiry: n.add(const Duration(days: 240)), driverStatus: 'active', createdAt: n, updatedAt: n),
+    Vehicle(id: 7, plateNumber: 'ر ش ت 6789', make: 'هيونداي', model: 'إلنترا', year: 2024, color: 'red', fuelType: 'petrol', currentOdometer: 8000, status: 'active', driverName: 'عبدالله حسن', driverPhone: '01087654321', driverLicenseNumber: 'DL-007', driverLicenseExpiry: n.add(const Duration(days: 400)), driverStatus: 'active', createdAt: n, updatedAt: n),
+    Vehicle(id: 8, plateNumber: 'ث خ ذ 0123', make: 'فورد', model: 'إكسبلورر', year: 2021, color: 'gray', fuelType: 'petrol', currentOdometer: 78000, status: 'inactive', driverName: 'محمود سالم', driverPhone: '01133445566', driverLicenseNumber: 'DL-008', driverLicenseExpiry: n.add(const Duration(days: 60)), driverStatus: 'active', createdAt: n, updatedAt: n),
+    Vehicle(id: 9, plateNumber: 'ض ظ غ 4567', make: 'شيفروليه', model: 'تاهو', year: 2023, color: 'black', fuelType: 'petrol', currentOdometer: 22000, status: 'active', driverName: 'طه عبدالرحمن', driverPhone: '01022334455', driverLicenseNumber: 'DL-009', driverLicenseExpiry: n.add(const Duration(days: 300)), driverStatus: 'active', createdAt: n, updatedAt: n),
+    Vehicle(id: 10, plateNumber: 'ج ث ب 8901', make: 'تويوتا', model: 'لاند كروزر', year: 2022, color: 'white', fuelType: 'diesel', currentOdometer: 55000, status: 'active', driverName: 'إبراهيم عثمان', driverPhone: '01099887766', driverLicenseNumber: 'DL-010', driverLicenseExpiry: n.add(const Duration(days: 150)), driverStatus: 'active', createdAt: n, updatedAt: n),
+    Vehicle(id: 11, plateNumber: 'ن ح ي 2468', make: 'بي إم دبليو', model: 'الفئة 5', year: 2021, color: 'blue', fuelType: 'petrol', currentOdometer: 92000, status: 'active', driverName: 'كريم حسام', driverPhone: '01166778899', driverLicenseNumber: 'DL-011', driverLicenseExpiry: n.add(const Duration(days: 200)), driverStatus: 'active', createdAt: n, updatedAt: n),
+    Vehicle(id: 12, plateNumber: 'و ك م 1357', make: 'أودي', model: 'Q7', year: 2023, color: 'gray', fuelType: 'diesel', currentOdometer: 18000, status: 'active', driverName: 'رامي شريف', driverPhone: '01144556677', driverLicenseNumber: 'DL-012', driverLicenseExpiry: n.add(const Duration(days: 500)), driverStatus: 'active', createdAt: n, updatedAt: n),
   ];
 }
 

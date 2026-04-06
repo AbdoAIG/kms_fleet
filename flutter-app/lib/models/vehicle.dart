@@ -8,12 +8,19 @@ class Vehicle {
   final String fuelType;
   final int currentOdometer;
   final String status;
-  final String? driverName;
   final String? notes;
   final String? vehicleType;
   final int? passengerCapacity;
   final double? cargoCapacityTons;
   final String? purpose;
+
+  // ── Driver fields (merged from Driver model) ──
+  final String? driverName;
+  final String? driverPhone;
+  final String? driverLicenseNumber;
+  final DateTime? driverLicenseExpiry;
+  final String? driverStatus; // active / suspended
+
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -27,12 +34,16 @@ class Vehicle {
     required this.fuelType,
     required this.currentOdometer,
     required this.status,
-    this.driverName,
     this.notes,
     this.vehicleType,
     this.passengerCapacity,
     this.cargoCapacityTons,
     this.purpose,
+    this.driverName,
+    this.driverPhone,
+    this.driverLicenseNumber,
+    this.driverLicenseExpiry,
+    this.driverStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -48,12 +59,16 @@ class Vehicle {
     String? fuelType,
     int? currentOdometer,
     String? status,
-    String? driverName,
     String? notes,
     String? vehicleType,
     int? passengerCapacity,
     double? cargoCapacityTons,
     String? purpose,
+    String? driverName,
+    String? driverPhone,
+    String? driverLicenseNumber,
+    DateTime? driverLicenseExpiry,
+    String? driverStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -67,16 +82,26 @@ class Vehicle {
       fuelType: fuelType ?? this.fuelType,
       currentOdometer: currentOdometer ?? this.currentOdometer,
       status: status ?? this.status,
-      driverName: driverName ?? this.driverName,
       notes: notes ?? this.notes,
       vehicleType: vehicleType ?? this.vehicleType,
       passengerCapacity: passengerCapacity ?? this.passengerCapacity,
       cargoCapacityTons: cargoCapacityTons ?? this.cargoCapacityTons,
       purpose: purpose ?? this.purpose,
+      driverName: driverName ?? this.driverName,
+      driverPhone: driverPhone ?? this.driverPhone,
+      driverLicenseNumber: driverLicenseNumber ?? this.driverLicenseNumber,
+      driverLicenseExpiry: driverLicenseExpiry ?? this.driverLicenseExpiry,
+      driverStatus: driverStatus ?? this.driverStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  bool get hasDriver => driverName != null && driverName!.isNotEmpty;
+
+  String get displayName => hasDriver
+      ? driverName!
+      : '$make $model $year';
 
   Map<String, dynamic> toMap() {
     return {
@@ -89,12 +114,16 @@ class Vehicle {
       'fuel_type': fuelType,
       'current_odometer': currentOdometer,
       'status': status,
-      'driver_name': driverName,
       'notes': notes,
       'vehicle_type': vehicleType,
       'passenger_capacity': passengerCapacity,
       'cargo_capacity_tons': cargoCapacityTons,
       'purpose': purpose,
+      'driver_name': driverName,
+      'driver_phone': driverPhone,
+      'driver_license_number': driverLicenseNumber,
+      'driver_license_expiry': driverLicenseExpiry?.toIso8601String(),
+      'driver_status': driverStatus,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -111,12 +140,18 @@ class Vehicle {
       fuelType: map['fuel_type'] as String? ?? 'petrol',
       currentOdometer: map['current_odometer'] as int? ?? 0,
       status: map['status'] as String? ?? 'active',
-      driverName: map['driver_name'] as String?,
       notes: map['notes'] as String?,
       vehicleType: map['vehicle_type'] as String?,
       passengerCapacity: map['passenger_capacity'] as int?,
       cargoCapacityTons: (map['cargo_capacity_tons'] as num?)?.toDouble(),
       purpose: map['purpose'] as String?,
+      driverName: map['driver_name'] as String?,
+      driverPhone: map['driver_phone'] as String?,
+      driverLicenseNumber: map['driver_license_number'] as String?,
+      driverLicenseExpiry: map['driver_license_expiry'] != null
+          ? DateTime.parse(map['driver_license_expiry'] as String)
+          : null,
+      driverStatus: map['driver_status'] as String?,
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : DateTime.now(),
@@ -125,8 +160,4 @@ class Vehicle {
           : DateTime.now(),
     );
   }
-
-  String get displayName => driverName != null && driverName!.isNotEmpty
-      ? driverName!
-      : '$make $model $year';
 }

@@ -9,7 +9,6 @@ import 'providers/vehicle_provider.dart';
 import 'providers/maintenance_provider.dart';
 import 'providers/checklist_provider.dart';
 import 'providers/fuel_provider.dart';
-import 'providers/driver_provider.dart';
 import 'providers/expense_provider.dart';
 import 'services/database_service.dart';
 import 'services/supabase_service.dart';
@@ -19,7 +18,6 @@ import 'models/maintenance_record.dart';
 import 'models/checklist.dart';
 import 'models/fuel_record.dart';
 import 'models/vehicle.dart';
-import 'models/driver.dart';
 import 'models/expense.dart';
 import 'widgets/developer_credit.dart';
 import 'screens/main_screen.dart';
@@ -29,9 +27,6 @@ import 'screens/add_maintenance_screen.dart';
 import 'screens/add_checklist_screen.dart';
 import 'screens/add_fuel_screen.dart';
 import 'screens/vehicle_details_screen.dart';
-import 'screens/drivers_screen.dart';
-import 'screens/add_driver_screen.dart';
-import 'screens/driver_details_screen.dart';
 import 'screens/expenses_screen.dart';
 import 'screens/add_expense_screen.dart';
 
@@ -57,7 +52,6 @@ void main() async {
         ChangeNotifierProvider(create: (_) => MaintenanceProvider()),
         ChangeNotifierProvider(create: (_) => ChecklistProvider()),
         ChangeNotifierProvider(create: (_) => FuelProvider()),
-        ChangeNotifierProvider(create: (_) => DriverProvider()),
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
       ],
       child: const KmsFleetApp(),
@@ -155,16 +149,6 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
           if (settings.name == '/vehicle-details' && settings.arguments is Vehicle) {
             return MaterialPageRoute(
               builder: (_) => VehicleDetailsScreen(vehicle: settings.arguments as Vehicle),
-            );
-          }
-          if (settings.name == '/add-driver') {
-            return MaterialPageRoute(
-              builder: (_) => AddDriverScreen(driver: settings.arguments as Driver?),
-            );
-          }
-          if (settings.name == '/driver-details' && settings.arguments is Driver) {
-            return MaterialPageRoute(
-              builder: (_) => DriverDetailsScreen(driver: settings.arguments as Driver),
             );
           }
           if (settings.name == '/add-expense') {

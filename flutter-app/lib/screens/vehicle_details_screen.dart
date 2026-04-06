@@ -121,6 +121,10 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                   _buildVehicleInfoCard(statusColor),
                   const SizedBox(height: 16),
 
+                  // Driver Info Card
+                  _buildDriverInfoCard(),
+                  const SizedBox(height: 16),
+
                   // Interactive Vehicle Diagram
                   _buildVehicleDiagram(),
                   const SizedBox(height: 16),
@@ -327,6 +331,107 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDriverInfoCard() {
+    final vehicle = widget.vehicle;
+    if (!vehicle.hasDriver) return const SizedBox.shrink();
+
+    final isSuspended = vehicle.driverStatus == 'suspended';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.person, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'بيانات السائق',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isSuspended ? AppColors.error.withOpacity(0.12) : AppColors.success.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isSuspended ? Icons.person_off : Icons.check_circle,
+                      size: 14,
+                      color: isSuspended ? AppColors.error : AppColors.success,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isSuspended ? 'موقوف' : 'نشط',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isSuspended ? AppColors.error : AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _DriverInfoRow(icon: Icons.person_outline, label: 'اسم السائق', value: vehicle.driverName ?? ''),
+          const SizedBox(height: 10),
+          _DriverInfoRow(icon: Icons.phone_outlined, label: 'رقم الهاتف', value: vehicle.driverPhone ?? 'غير محدد'),
+          const SizedBox(height: 10),
+          _DriverInfoRow(icon: Icons.badge_outlined, label: 'رقم الرخصة', value: vehicle.driverLicenseNumber ?? 'غير محدد'),
+          const SizedBox(height: 10),
+          _DriverInfoRow(
+            icon: Icons.event_available_outlined,
+            label: 'انتهاء الرخصة',
+            value: vehicle.driverLicenseExpiry != null
+                ? AppFormatters.formatDate(vehicle.driverLicenseExpiry!)
+                : 'غير محدد',
+            valueColor: vehicle.driverLicenseExpiry != null &&
+                vehicle.driverLicenseExpiry!.isBefore(DateTime.now().add(const Duration(days: 30)))
+                ? AppColors.error
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _DriverInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppColors.textHint),
+        const SizedBox(width: 12),
+        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        const Spacer(),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: valueColor ?? AppColors.textPrimary,
+          ),
+        ),
+      ],
     );
   }
 

@@ -24,6 +24,10 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   final _odometerController = TextEditingController();
   final _notesController = TextEditingController();
   final _driverNameController = TextEditingController();
+  final _driverPhoneController = TextEditingController();
+  final _driverLicenseController = TextEditingController();
+  DateTime? _driverLicenseExpiry;
+  String _driverStatus = 'active';
 
   String _selectedColor = 'white';
   String _selectedFuelType = 'petrol';
@@ -46,6 +50,10 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       _odometerController.text = widget.vehicle!.currentOdometer.toString();
       _notesController.text = widget.vehicle!.notes ?? '';
       _driverNameController.text = widget.vehicle!.driverName ?? '';
+      _driverPhoneController.text = widget.vehicle!.driverPhone ?? '';
+      _driverLicenseController.text = widget.vehicle!.driverLicenseNumber ?? '';
+      _driverLicenseExpiry = widget.vehicle!.driverLicenseExpiry;
+      _driverStatus = widget.vehicle!.driverStatus ?? 'active';
       _selectedColor = widget.vehicle!.color;
       _selectedFuelType = widget.vehicle!.fuelType;
       _selectedStatus = widget.vehicle!.status;
@@ -70,6 +78,8 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     _odometerController.dispose();
     _notesController.dispose();
     _driverNameController.dispose();
+    _driverPhoneController.dispose();
+    _driverLicenseController.dispose();
     super.dispose();
   }
 
@@ -94,6 +104,14 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         driverName: _driverNameController.text.trim().isEmpty
             ? null
             : _driverNameController.text.trim(),
+        driverPhone: _driverPhoneController.text.trim().isEmpty
+            ? null
+            : _driverPhoneController.text.trim(),
+        driverLicenseNumber: _driverLicenseController.text.trim().isEmpty
+            ? null
+            : _driverLicenseController.text.trim(),
+        driverLicenseExpiry: _driverLicenseExpiry,
+        driverStatus: _driverStatus,
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
@@ -308,6 +326,9 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               },
             ),
             const SizedBox(height: 12),
+            // Section: Driver Data
+            _buildSectionTitle('بيانات السائق'),
+            const SizedBox(height: 12),
             // Driver Name
             TextFormField(
               controller: _driverNameController,
@@ -318,6 +339,80 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            // Driver Phone
+            TextFormField(
+              controller: _driverPhoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'رقم هاتف السائق',
+                prefixIcon: Icon(Icons.phone),
+                hintText: '01XXXXXXXXX',
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Driver License Number
+            TextFormField(
+              controller: _driverLicenseController,
+              decoration: const InputDecoration(
+                labelText: 'رقم الرخصة',
+                prefixIcon: Icon(Icons.badge),
+                hintText: 'أدخل رقم الرخصة',
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Driver License Expiry
+            InkWell(
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _driverLicenseExpiry ?? DateTime.now().add(const Duration(days: 365)),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2030),
+                );
+                if (picked != null) {
+                  setState(() => _driverLicenseExpiry = picked);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.event_available, color: AppColors.textHint, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      _driverLicenseExpiry != null
+                          ? 'انتهاء الرخصة: ${_driverLicenseExpiry!.year}/${_driverLicenseExpiry!.month.toString().padLeft(2, '0')}/${_driverLicenseExpiry!.day.toString().padLeft(2, '0')}'
+                          : 'اختر تاريخ انتهاء الرخصة',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _driverLicenseExpiry != null ? AppColors.textPrimary : AppColors.textHint,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Driver Status
+            DropdownButtonFormField<String>(
+              value: _driverStatus,
+              decoration: const InputDecoration(
+                labelText: 'حالة السائق',
+                prefixIcon: Icon(Icons.verified_user),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'active', child: Text('نشط', style: TextStyle(color: AppColors.success))),
+                DropdownMenuItem(value: 'suspended', child: Text('موقوف', style: TextStyle(color: AppColors.error))),
+              ],
+              onChanged: (value) {
+                setState(() => _driverStatus = value ?? 'active');
+              },
+            ),
+            const SizedBox(height: 20),
             // Notes
             TextFormField(
               controller: _notesController,
