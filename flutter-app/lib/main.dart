@@ -9,7 +9,6 @@ import 'providers/vehicle_provider.dart';
 import 'providers/maintenance_provider.dart';
 import 'providers/checklist_provider.dart';
 import 'providers/fuel_provider.dart';
-import 'providers/expense_provider.dart';
 import 'providers/work_order_provider.dart';
 import 'providers/trip_tracking_provider.dart';
 import 'services/database_service.dart';
@@ -20,7 +19,6 @@ import 'models/maintenance_record.dart';
 import 'models/checklist.dart';
 import 'models/fuel_record.dart';
 import 'models/vehicle.dart';
-import 'models/expense.dart';
 import 'models/work_order.dart';
 import 'widgets/developer_credit.dart';
 import 'screens/main_screen.dart';
@@ -30,8 +28,6 @@ import 'screens/add_maintenance_screen.dart';
 import 'screens/add_checklist_screen.dart';
 import 'screens/add_fuel_screen.dart';
 import 'screens/vehicle_details_screen.dart';
-import 'screens/expenses_screen.dart';
-import 'screens/add_expense_screen.dart';
 import 'screens/add_work_order_screen.dart';
 import 'screens/work_order_details_screen.dart';
 import 'screens/gps_map_screen.dart';
@@ -60,7 +56,6 @@ void main() async {
         ChangeNotifierProvider(create: (_) => MaintenanceProvider()),
         ChangeNotifierProvider(create: (_) => ChecklistProvider()),
         ChangeNotifierProvider(create: (_) => FuelProvider()),
-        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
         ChangeNotifierProvider(create: (_) => WorkOrderProvider()),
         ChangeNotifierProvider(create: (_) => TripTrackingProvider()),
       ],
@@ -159,11 +154,6 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
           if (settings.name == '/vehicle-details' && settings.arguments is Vehicle) {
             return MaterialPageRoute(
               builder: (_) => VehicleDetailsScreen(vehicle: settings.arguments as Vehicle),
-            );
-          }
-          if (settings.name == '/add-expense') {
-            return MaterialPageRoute(
-              builder: (_) => AddExpenseScreen(expense: settings.arguments as Expense?),
             );
           }
           if (settings.name == '/add-work-order') {

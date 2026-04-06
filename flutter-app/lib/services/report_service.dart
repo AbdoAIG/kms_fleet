@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:excel/excel.dart';
@@ -26,8 +28,8 @@ import 'database_service.dart';
 // PDF generation uses the Cairo font for proper Arabic text rendering.
 // Excel generation uses the `excel` package with number and date formatting.
 //
-// NOTE: This file does NOT import dart:io, making it compatible with web.
-// It uses XFile.fromData() (from share_plus) instead of File for sharing.
+// Files are saved to a temporary directory with proper extensions and MIME
+// types before sharing, to avoid Android saving them as generic .bin files.
 
 class ReportService {
   ReportService._();
@@ -42,16 +44,35 @@ class ReportService {
 
   // ── Shared helpers ───────────────────────────────────────────────────────
 
-  /// Shares raw bytes as a file using the system share sheet.
-  /// Works on all platforms (mobile, desktop, web) via XFile.fromData.
+  /// MIME type mapping for proper file sharing.
+  static String _mimeType(String fileName) {
+    if (fileName.endsWith('.pdf')) return 'application/pdf';
+    if (fileName.endsWith('.xlsx')) {
+      return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    }
+    return 'application/octet-stream';
+  }
+
+  /// Saves raw bytes to a temporary file with the correct extension and
+  /// shares it via the system share sheet.
+  ///
+  /// Writing to disk (instead of using XFile.fromData) ensures Android
+  /// recognises the file type, preventing the "saved as .bin" issue.
   static Future<String> _shareBytes(
     List<int> bytes,
     String fileName,
   ) async {
     try {
-      final xFile = XFile.fromData(
-        Uint8List.fromList(bytes),
-        name: fileName,
+      final dir = await getTemporaryDirectory();
+      // Sanitise file name: keep only safe characters
+      final safeName = fileName.replaceAll(RegExp(r'[^\w\.\-\u0600-\u06FF]'), '_');
+      final file = File('${dir.path}/$safeName');
+      await file.writeAsBytes(bytes, flush: true);
+
+      final xFile = XFile(
+        file.path,
+        name: safeName,
+        mimeType: _mimeType(safeName),
       );
       await Share.shareXFiles([xFile], text: '');
       return fileName;

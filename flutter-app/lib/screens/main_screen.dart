@@ -15,7 +15,6 @@ import 'maintenance_screen.dart';
 import 'checklist_screen.dart';
 import 'fuel_screen.dart';
 import 'reports_screen.dart';
-import 'expenses_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -39,7 +38,6 @@ class _MainScreenState extends State<MainScreen>
     ChecklistScreen(),
     FuelScreen(),
     ReportsScreen(),
-    ExpensesScreen(),
   ];
 
   static const _navItems = [
@@ -49,7 +47,6 @@ class _MainScreenState extends State<MainScreen>
     _NavItem(Icons.fact_check_outlined, Icons.fact_check, 'الفحص'),
     _NavItem(Icons.local_gas_station_outlined, Icons.local_gas_station, 'الوقود'),
     _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, 'التقارير'),
-    _NavItem(Icons.receipt_long_outlined, Icons.receipt_long, 'المصروفات'),
   ];
 
   void _switchToTab(int index) {
