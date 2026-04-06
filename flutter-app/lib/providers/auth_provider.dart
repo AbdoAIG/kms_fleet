@@ -3,12 +3,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 import '../services/database_service.dart';
+import '../services/security_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
   bool _isLoading = false;
   String? _error;
   bool _offlineMode = false;
+
+  // ── Security state ────────────────────────────────────────────────────────
+  int _remainingAttempts = 5;
+  Duration _lockoutRemaining = Duration.zero;
+  bool _isLockedOut = false;
 
   User? get user => _user;
   bool get isLoading => _isLoading;
@@ -19,6 +25,15 @@ class AuthProvider extends ChangeNotifier {
 
   /// Whether the app is running in offline mode.
   bool get isOfflineMode => _offlineMode;
+
+  /// Remaining login attempts before lockout.
+  int get remainingAttempts => _remainingAttempts;
+
+  /// Whether the account is currently locked out.
+  bool get isLockedOut => _isLockedOut;
+
+  /// Remaining lockout duration.
+  Duration get lockoutRemaining => _lockoutRemaining;
 
   AuthProvider() {
     _setupAuth();
@@ -48,27 +63,91 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Check current security state (lockout, attempts).
+  Future<void> checkSecurityState() async {
+    final lockout = await SecurityService.getRemainingLockout();
+    final remaining = await SecurityService.getRemainingAttempts();
+
+    _lockoutRemaining = lockout;
+    _isLockedOut = lockout > Duration.zero;
+    _remainingAttempts = remaining;
+    notifyListeners();
+  }
+
   Future<bool> signIn(String email, String password) async {
+    // ── Check lockout first ───────────────────────────────────────────────
     _isLoading = true;
     _error = null;
     notifyListeners();
+
+    final lockout = await SecurityService.getRemainingLockout();
+    if (lockout > Duration.zero) {
+      _isLockedOut = true;
+      _lockoutRemaining = lockout;
+      _isLoading = false;
+      final mins = lockout.inMinutes;
+      final secs = lockout.inSeconds.remainder(60);
+      _error = 'الحساب مقفل. حاول بعد $mins دقيقة و${secs} ثانية';
+      notifyListeners();
+      return false;
+    }
+
+    _isLockedOut = false;
+    _lockoutRemaining = Duration.zero;
+
     try {
       if (!supabaseReady) {
-        // Offline mode: accept any login
-        await Future.delayed(const Duration(milliseconds: 500));
+        // ── OFFLINE LOGIN: Validate stored credentials ────────────────────
+        final hasSession = await SecurityService.hasOnlineSession();
+
+        if (!hasSession) {
+          _isLoading = false;
+          _error = 'يجب تسجيل الدخول أولاً عبر الإنترنت';
+          notifyListeners();
+          // Record failed attempt even for offline rejection
+          await _handleFailedAttempt();
+          return false;
+        }
+
+        final isValid = await SecurityService.validateOfflineCredentials(email, password);
+
+        if (!isValid) {
+          _isLoading = false;
+          _error = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+          notifyListeners();
+          await _handleFailedAttempt();
+          return false;
+        }
+
+        // Offline login successful
         _offlineMode = true;
         _isLoading = false;
+        await SecurityService.resetFailedAttempts();
+        _remainingAttempts = SecurityService.maxAttempts;
         notifyListeners();
         return true;
       }
+
+      // ── ONLINE LOGIN: Authenticate with Supabase ───────────────────────
       final response = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
       _user = response.user;
       _offlineMode = false;
+
+      // Store credentials securely for offline use
+      await SecurityService.storeOfflineCredentials(email, password);
+
       // Switch DatabaseService to online mode
       await DatabaseService.goOnline();
+
+      // Reset security counters
+      await SecurityService.resetFailedAttempts();
+      _remainingAttempts = SecurityService.maxAttempts;
+      _isLockedOut = false;
+      _lockoutRemaining = Duration.zero;
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -76,13 +155,30 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       _error = _translateError(e.message);
       notifyListeners();
+      await _handleFailedAttempt();
       return false;
     } catch (e) {
       _isLoading = false;
       _error = 'حدث خطأ غير متوقع';
       notifyListeners();
+      await _handleFailedAttempt();
       return false;
     }
+  }
+
+  /// Handle a failed login attempt — update counters and check lockout.
+  Future<void> _handleFailedAttempt() async {
+    final lockDuration = await SecurityService.recordFailedAttempt();
+    _remainingAttempts = await SecurityService.getRemainingAttempts();
+
+    if (lockDuration != null) {
+      _isLockedOut = true;
+      _lockoutRemaining = lockDuration;
+      final mins = lockDuration.inMinutes;
+      _error = 'تم قفل الحساب لمدة $mins دقيقة بسبب المحاولات الخاطئة';
+    }
+
+    notifyListeners();
   }
 
   Future<void> signOut() async {
@@ -93,6 +189,13 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     // Switch DatabaseService back to offline mode
     DatabaseService.goOffline();
+    // Clear stored offline credentials for security
+    await SecurityService.clearOfflineCredentials();
+    // Reset security state
+    await SecurityService.resetFailedAttempts();
+    _remainingAttempts = SecurityService.maxAttempts;
+    _isLockedOut = false;
+    _lockoutRemaining = Duration.zero;
     notifyListeners();
   }
 

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/security_service.dart';
 import '../utils/app_colors.dart';
 import 'main_screen.dart';
 
@@ -16,11 +18,22 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  Timer? _lockoutTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Check security state on init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().checkSecurityState();
+    });
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _lockoutTimer?.cancel();
     super.dispose();
   }
 
@@ -37,7 +50,26 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainScreen()),
       );
+    } else if (mounted && authProvider.isLockedOut) {
+      _startLockoutCountdown();
     }
+  }
+
+  void _startLockoutCountdown() {
+    _lockoutTimer?.cancel();
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) {
+        _lockoutTimer?.cancel();
+        return;
+      }
+      final auth = context.read<AuthProvider>();
+      if (auth.lockoutRemaining.inSeconds <= 0) {
+        _lockoutTimer?.cancel();
+        auth.checkSecurityState();
+      } else {
+        auth.checkSecurityState();
+      }
+    });
   }
 
   Future<void> _showResetPasswordDialog() async {
@@ -204,10 +236,19 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 32),
 
+                              // ── Lockout Warning ──
+                              Consumer<AuthProvider>(
+                                builder: (ctx, auth, _) {
+                                  return _buildLockoutBanner(auth);
+                                },
+                              ),
+
                               // Error Banner
                               Consumer<AuthProvider>(
                                 builder: (ctx, auth, _) {
                                   if (auth.error == null) return const SizedBox.shrink();
+                                  // Don't show error if locked out (lockout banner is shown instead)
+                                  if (auth.isLockedOut) return const SizedBox.shrink();
                                   return Container(
                                     margin: const EdgeInsets.only(bottom: 20),
                                     padding: const EdgeInsets.symmetric(
@@ -333,15 +374,19 @@ class _LoginScreenState extends State<LoginScreen> {
                               // Login Button
                               Consumer<AuthProvider>(
                                 builder: (ctx, auth, _) {
+                                  final isLocked = auth.isLockedOut;
                                   return SizedBox(
                                     height: 54,
                                     child: ElevatedButton(
-                                      onPressed:
-                                          auth.isLoading ? null : _submit,
+                                      onPressed: (auth.isLoading || isLocked)
+                                          ? null
+                                          : _submit,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary,
+                                        backgroundColor: isLocked
+                                            ? AppColors.textHint
+                                            : AppColors.primary,
                                         disabledBackgroundColor:
-                                            AppColors.primary.withOpacity(0.6),
+                                            AppColors.textHint.withOpacity(0.6),
                                         foregroundColor: Colors.white,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
@@ -360,19 +405,104 @@ class _LoginScreenState extends State<LoginScreen> {
                                                         Color>(Colors.white),
                                               ),
                                             )
-                                          : const Text(
-                                              'تسجيل الدخول',
-                                              style: TextStyle(
-                                                fontFamily: 'Cairo',
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w700,
-                                              ),
+                                          : Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                const Text(
+                                                  'تسجيل الدخول',
+                                                  style: TextStyle(
+                                                    fontFamily: 'Cairo',
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                                if (auth.remainingAttempts < 5 &&
+                                                    !isLocked) ...[
+                                                  const SizedBox(width: 8),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.all(4),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white
+                                                          .withOpacity(0.2),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              6),
+                                                    ),
+                                                    child: Text(
+                                                      '${auth.remainingAttempts}',
+                                                      style: const TextStyle(
+                                                        fontFamily: 'Cairo',
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
                                             ),
                                     ),
                                   );
                                 },
                               ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 12),
+
+                              // ── Remaining Attempts Warning ──
+                              Consumer<AuthProvider>(
+                                builder: (ctx, auth, _) {
+                                  if (auth.isLockedOut) return const SizedBox.shrink();
+                                  if (auth.remainingAttempts >= 4) return const SizedBox.shrink();
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: (auth.remainingAttempts <= 2
+                                              ? AppColors.error
+                                              : AppColors.warning)
+                                          .withOpacity(0.08),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: (auth.remainingAttempts <= 2
+                                                ? AppColors.error
+                                                : AppColors.warning)
+                                            .withOpacity(0.2),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          auth.remainingAttempts <= 2
+                                              ? Icons.warning_amber
+                                              : Icons.info_outline,
+                                          size: 16,
+                                          color: auth.remainingAttempts <= 2
+                                              ? AppColors.error
+                                              : AppColors.warning,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'محاولات متبقية: ${auth.remainingAttempts} من ${SecurityService.maxAttempts}',
+                                          style: TextStyle(
+                                            fontFamily: 'Cairo',
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: auth.remainingAttempts <= 2
+                                                ? AppColors.error
+                                                : AppColors.warning,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 8),
 
                               // Contact Admin hint
                               const Align(
@@ -386,6 +516,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(height: 16),
+
+                              // ── Security Info ──
+                              _buildSecurityBadge(),
                               const SizedBox(height: 24),
                             ],
                           ),
@@ -398,6 +532,126 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// Build the lockout banner with countdown timer.
+  Widget _buildLockoutBanner(AuthProvider auth) {
+    if (!auth.isLockedOut) return const SizedBox.shrink();
+
+    final remaining = auth.lockoutRemaining;
+    final mins = remaining.inMinutes;
+    final secs = remaining.inSeconds.remainder(60);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.error.withOpacity(0.1),
+            AppColors.error.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.error.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Lock icon
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.lock_clock,
+              color: AppColors.error,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Title
+          const Text(
+            'تم قفل الحساب مؤقتاً',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.error,
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Countdown
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$mins:${secs.toString().padLeft(2, '0')}',
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: AppColors.error,
+                letterSpacing: 2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Description
+          const Text(
+            'بسبب nhiều المحاولات الخاطئة. حاول مرة أخرى بعد انتهاء العداد.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 12,
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Security badge showing encryption and protection status.
+  Widget _buildSecurityBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.success.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(
+            Icons.verified_user,
+            size: 14,
+            color: AppColors.success,
+          ),
+          SizedBox(width: 6),
+          Text(
+            'حماية متقدمة • تشفير SHA-256',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11,
+              color: AppColors.success,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
