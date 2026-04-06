@@ -34,3 +34,27 @@ Key Architecture Decisions:
 - Material 3 with custom theming (modern, professional)
 - CupertinoPageTransitionsBuilder (smooth iOS-like animations)
 - No heavy dependencies (minimal package count for stability)
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Remove independent Driver Management section and merge driver data into vehicles
+
+Work Log:
+- Deleted driver model file (lib/models/driver.dart)
+- Deleted driver provider file (lib/providers/driver_provider.dart)
+- Deleted 3 driver screen files (drivers_screen.dart, driver_details_screen.dart, add_driver_screen.dart)
+- Removed all Driver CRUD methods from database_service.dart (getAllDrivers, getDriverById, searchDrivers, insertDriver, updateDriver, deleteDriver, getDriverByVehicleId)
+- Removed _memDrivers list, _dt table constant, and _seedDrivers() method from database_service.dart
+- Updated driver_violation.dart to remove Driver model reference (now vehicle-only)
+- Replaced getViolationsByDriverId with getViolationsByVehicleId in database_service.dart
+- Updated violation seed data to use vehicleId only (no driverId)
+- Updated getAllViolations to not reference drivers
+- Pushed commit 26de837 to GitHub (main branch)
+
+Stage Summary:
+- Driver data is now fully embedded in Vehicle model (driverName, driverPhone, driverLicenseNumber, driverLicenseExpiry, driverStatus)
+- No independent driver module remains
+- 7 files changed, 2,259 lines removed
+- Vehicle add/edit screen already had driver fields from previous session
+- Vehicle details screen already showed driver info card from previous session
