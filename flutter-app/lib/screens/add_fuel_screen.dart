@@ -7,6 +7,7 @@ import '../providers/vehicle_provider.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../widgets/attachment_picker_widget.dart';
 
 class AddFuelScreen extends StatefulWidget {
   final FuelRecord? record;
@@ -476,6 +477,20 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
                 alignLabelWithHint: true,
               ),
             ),
+            // Attachments (only when editing an existing record)
+            if (_isEditing && widget.record!.id != null) ...[
+              const SizedBox(height: 20),
+              _buildSectionTitle('مرفقات الوقود'),
+              const SizedBox(height: 8),
+              AttachmentPickerWidget(
+                entityType: 'fuel',
+                entityId: widget.record!.id!,
+                onAttachmentsChanged: (paths) {
+                  debugPrint('Fuel attachments updated: ${paths.length}');
+                },
+                maxAttachments: 3,
+              ),
+            ],
             const SizedBox(height: 32),
 
             // ── Save Button ──

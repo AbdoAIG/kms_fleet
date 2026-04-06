@@ -7,6 +7,7 @@ import '../widgets/maintenance_card.dart';
 import '../widgets/empty_state_widget.dart';
 import '../widgets/loading_widget.dart';
 import '../providers/maintenance_provider.dart';
+import '../providers/vehicle_provider.dart';
 import '../providers/work_order_provider.dart';
 import '../models/work_order.dart';
 import 'add_work_order_screen.dart';
@@ -288,7 +289,15 @@ class _MaintenanceScreenState extends State<MaintenanceScreen>
                     final record = provider.records[index];
                     return MaintenanceCard(
                       record: record,
-                      onTap: () {},
+                      onTap: () {
+                        final vehicle = record.vehicle ?? context.read<VehicleProvider>().vehicles.cast<Vehicle?>().firstWhere(
+                              (v) => v?.id == record.vehicleId,
+                              orElse: () => null,
+                            );
+                        if (vehicle != null) {
+                          Navigator.pushNamed(context, '/vehicle-details', arguments: vehicle);
+                        }
+                      },
                       onEdit: () => Navigator.pushNamed(
                           context, '/add-maintenance',
                           arguments: record),

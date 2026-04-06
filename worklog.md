@@ -225,3 +225,109 @@ Stage Summary:
 - Registration completely removed from the app
 - User needs to disable sign-ups in Supabase Dashboard: Authentication → Settings → turn OFF "Allow sign ups"
 
+---
+Task ID: 7
+Agent: Main Agent
+Task: Add proper error handling with user-visible error states and retry buttons
+
+Work Log:
+- Added `String? _error` state variable to dashboard_screen.dart
+- Updated dashboard `_loadData()` catch block to set Arabic error message instead of silently swallowing
+- Added `_buildErrorState()` method to dashboard_screen.dart matching vehicle_details_screen pattern (error icon, message, retry button)
+- Added `String? _error` state variable to reports_screen.dart
+- Updated reports `_loadData()` catch block to set Arabic error message
+- Added `_buildErrorState()` method to reports_screen.dart with same pattern
+- Fixed maintenance_screen.dart: changed `onTap: () {}` on MaintenanceCard to navigate to vehicle details screen using `record.vehicle` or fallback lookup via VehicleProvider
+- Added VehicleProvider import to maintenance_screen.dart for the fallback vehicle lookup
+- Removed dead code from vehicles_screen.dart: empty `_searchController.addListener(() {})` in initState
+
+Stage Summary:
+- 4 files changed: dashboard_screen.dart, reports_screen.dart, maintenance_screen.dart, vehicles_screen.dart
+- Error states now display Arabic error messages with retry buttons on Dashboard and Reports screens
+- Maintenance records are now tappable and navigate to the associated vehicle's details screen
+- Dead listener code removed from Vehicles screen
+- All error UI patterns match the existing vehicle_details_screen.dart template
+
+---
+## Task ID: 8 - notification-enhancement
+### Work Task
+Enhance the notification system in `lib/providers/notification_provider.dart` by adding 4 new comprehensive alert types for maintenance, insurance, and periodic vehicle checks.
+
+### Work Summary
+Added 4 new notification types (bringing the total from 6 to 10) inside the `generateNotifications()` method of `notification_provider.dart`:
+
+1. **Upcoming Maintenance (#7)**: Alerts when a completed maintenance record has a `nextMaintenanceDate` within 7 days or already passed. Uses `Icons.build_outlined`, `AppColors.warning`, type `upcoming_maintenance`, DJB2 hash prefix `upcoming_maint_`.
+
+2. **Vehicle Inactive Too Long (#8)**: Alerts when a vehicle with status `'inactive'` has been so for more than 30 days (calculated from `vehicle.updatedAt`). Uses `Icons.report_problem_outlined`, `AppColors.info`, type `vehicle_inactive`, DJB2 hash prefix `vinactive_`.
+
+3. **High Odometer Alert (#9)**: Alerts when a vehicle's `currentOdometer` exceeds 300,000 km, indicating a need for comprehensive inspection. Uses `Icons.speed`, `AppColors.accent`, type `high_odometer`, DJB2 hash prefix `high_odom_`. Displays formatted odometer reading via `AppFormatters.formatOdometer()`.
+
+4. **Overdue Maintenance (#10)**: Alerts when ALL maintenance records for a vehicle are `'completed'` but the latest `nextMaintenanceDate` has passed by more than 7 days. Finds the latest `nextMaintenanceDate` per vehicle by sorting records with null-safety. Uses `Icons.warning_amber_rounded`, `AppColors.error`, type `overdue_maintenance`, DJB2 hash prefix `overdue_maint_`.
+
+All implementations follow the existing code patterns: deterministic IDs via `_djb2Hash()`, read state persistence via `readIds.contains(id)`, Arabic text throughout, proper null safety, and use of `_getVehicleName()` helper. The `AppNotification.type` comment was also updated to document all 10 types.
+
+File changed: `lib/providers/notification_provider.dart` (488 → 488 lines, ~110 lines added)
+
+---
+## Task ID: 9 - attachment-integration
+### Work Task
+Add the existing `AttachmentPickerWidget` to 4 screens so users can attach photos when creating/editing maintenance records, fuel records, work orders, and viewing vehicle details.
+
+### Work Summary
+Integrated `AttachmentPickerWidget` (already at `lib/widgets/attachment_picker_widget.dart`) into 4 screens:
+
+1. **`lib/screens/add_maintenance_screen.dart`**
+   - Added import for `AttachmentPickerWidget`
+   - Inserted widget between the notes field and the save button
+   - Only visible when editing an existing record (`_isEditing && widget.record!.id != null`)
+   - Entity type: `'maintenance'`, max attachments: 5, title: `'مرفقات الصيانة'`
+
+2. **`lib/screens/add_fuel_screen.dart`**
+   - Added import for `AttachmentPickerWidget`
+   - Inserted widget between the notes field and the save button
+   - Only visible when editing an existing record (`_isEditing && widget.record!.id != null`)
+   - Entity type: `'fuel'`, max attachments: 3, title: `'مرفقات الوقود'`
+
+3. **`lib/screens/add_work_order_screen.dart`**
+   - Added import for `AttachmentPickerWidget`
+   - Inserted widget between the notes field and the save button
+   - Only visible when editing an existing record (`_isEditing && widget.workOrder!.id != null`)
+   - Entity type: `'work_order'`, max attachments: 5, title: `'مرفقات أمر العمل'`
+
+4. **`lib/screens/vehicle_details_screen.dart`**
+   - Added import for `AttachmentPickerWidget`
+   - Inserted widget at the bottom of the screen, after maintenance history section
+   - Always visible when vehicle has an ID (`widget.vehicle.id != null`)
+   - Entity type: `'vehicle'`, max attachments: 10, title: `'صور المركبة'`
+
+All add/edit screens use conditional rendering (`if (_isEditing ...)` pattern) to only show the attachment picker when editing existing records, since new records don't have IDs yet for the local file storage system. The `onAttachmentsChanged` callback uses `debugPrint` for logging. Each widget is wrapped with `const SizedBox(height: 20)` spacing and uses `_buildSectionTitle()` for consistent section headers matching the existing form styling.
+
+4 files changed, ~40 lines added total.
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Implement 4 features for KMS Fleet app delivery readiness
+
+Work Log:
+- Audited entire codebase (60 dart files) for delivery readiness
+- Added error handling to dashboard_screen.dart (error state + retry button)
+- Added error handling to reports_screen.dart (error state + retry button)  
+- Fixed maintenance_screen.dart tap navigation (was empty onTap)
+- Removed dead code from vehicles_screen.dart (empty addListener)
+- Verified individual vehicle PDF/Excel export already exists in report_service.dart
+- Added 4 new notification types to notification_provider.dart:
+  - upcoming_maintenance: warns when next maintenance date is within 7 days
+  - vehicle_inactive: alerts for vehicles inactive > 30 days
+  - high_odometer: warns for vehicles with > 300,000 km
+  - overdue_maintenance: alerts when maintenance is overdue > 7 days
+- Added AttachmentPickerWidget to add_maintenance_screen.dart (when editing)
+- Added AttachmentPickerWidget to add_fuel_screen.dart (when editing)
+- Added AttachmentPickerWidget to add_work_order_screen.dart (when editing)
+- Added AttachmentPickerWidget to vehicle_details_screen.dart (always)
+
+Stage Summary:
+- Error handling: Dashboard and Reports screens now show error UI with retry
+- Vehicle export: Already existed (PDF + Excel for individual vehicle)
+- Notifications: Now 10 notification types covering maintenance, license, fuel, work orders, violations, vehicle status, upcoming maintenance, inactive vehicles, high odometer, overdue maintenance
+- Attachments: Users can now attach photos when editing maintenance, fuel, and work order records, and view/attach photos on vehicle details

@@ -23,9 +23,6 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() {
-      // Clear icon state handled in build
-    });
   }
 
   @override

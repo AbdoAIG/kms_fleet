@@ -7,6 +7,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../providers/vehicle_provider.dart';
 import '../providers/work_order_provider.dart';
+import '../widgets/attachment_picker_widget.dart';
 
 class AddWorkOrderScreen extends StatefulWidget {
   final WorkOrder? workOrder;
@@ -352,6 +353,20 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                 alignLabelWithHint: true,
               ),
             ),
+            // Attachments (only when editing an existing record)
+            if (_isEditing && widget.workOrder!.id != null) ...[
+              const SizedBox(height: 20),
+              _buildSectionTitle('مرفقات أمر العمل'),
+              const SizedBox(height: 8),
+              AttachmentPickerWidget(
+                entityType: 'work_order',
+                entityId: widget.workOrder!.id!,
+                onAttachmentsChanged: (paths) {
+                  debugPrint('Work order attachments updated: ${paths.length}');
+                },
+                maxAttachments: 5,
+              ),
+            ],
             const SizedBox(height: 32),
 
             // ── Save Button ──

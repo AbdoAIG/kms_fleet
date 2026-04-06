@@ -26,6 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<MaintenanceRecord> _recentRecords = [];
   List<MaintenanceRecord> _upcomingRecords = [];
   bool _isLoading = true;
+  String? _error;
 
   final _searchController = TextEditingController();
   List<Vehicle> _searchResults = [];
@@ -67,7 +68,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _error = 'تعذر تحميل البيانات. تحقق من اتصال الإنترنت.';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -125,7 +131,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: _isLoading ? _buildLoadingState() : RefreshIndicator(
+      body: _isLoading
+          ? _buildLoadingState()
+          : _error != null
+              ? _buildErrorState()
+              : RefreshIndicator(
         onRefresh: _loadData,
         color: AppColors.primary,
         backgroundColor: AppColors.surface,
@@ -165,6 +175,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 12),
           const Text('جاري تحميل البيانات...', style: TextStyle(fontSize: 14, color: AppColors.textHint, fontWeight: FontWeight.w500)),
         ],
+      ),
+    );
+  }
+
+  // ── Error State ────────────────────────────────────────────────────────
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+            const SizedBox(height: 16),
+            const Text('حدث خطأ في تحميل البيانات',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text(_error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadData,
+              child: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
       ),
     );
   }

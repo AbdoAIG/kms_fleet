@@ -8,6 +8,7 @@ import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
 import '../widgets/maintenance_card.dart';
+import '../widgets/attachment_picker_widget.dart';
 
 class VehicleDetailsScreen extends StatefulWidget {
   final Vehicle vehicle;
@@ -269,6 +270,19 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                     )
                   else
                     ..._records.map((record) => MaintenanceCard(record: record)),
+                  const SizedBox(height: 24),
+
+                  // Vehicle Photos
+                  if (widget.vehicle.id != null)
+                    AttachmentPickerWidget(
+                      entityType: 'vehicle',
+                      entityId: widget.vehicle.id!,
+                      onAttachmentsChanged: (paths) {
+                        debugPrint('Vehicle attachments updated: ${paths.length}');
+                      },
+                      maxAttachments: 10,
+                      title: 'صور المركبة',
+                    ),
                   const SizedBox(height: 24),
                 ],
               ),

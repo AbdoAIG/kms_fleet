@@ -16,7 +16,7 @@ class AppNotification {
   final int id;
   final String title;
   final String body;
-  final String type; // 'maintenance', 'license', 'fuel', 'work_order', 'violation', 'vehicle_status'
+  final String type; // 'maintenance', 'license', 'fuel', 'work_order', 'violation', 'vehicle_status', 'upcoming_maintenance', 'vehicle_inactive', 'high_odometer', 'overdue_maintenance'
   final IconData icon;
   final Color color;
   final DateTime time;
@@ -349,6 +349,116 @@ class NotificationProvider extends ChangeNotifier {
               time: vehicle.updatedAt,
               isRead: readIds.contains(id),
             ));
+          }
+        }
+      }
+
+      // ── 7. Upcoming maintenance: nextMaintenanceDate within 7 days or passed, status='completed' ──
+      for (final record in maintenanceRecords) {
+        if (record.status == 'completed' && record.nextMaintenanceDate != null) {
+          final nextDate = record.nextMaintenanceDate!;
+          final today = DateTime(now.year, now.month, now.day);
+          final nextDay = DateTime(nextDate.year, nextDate.month, nextDate.day);
+          final daysUntil = nextDay.difference(today).inDays;
+
+          if (daysUntil <= 7) {
+            final vehicleName = _getVehicleName(vehicles, record.vehicleId);
+            final id = _djb2Hash('upcoming_maint_${record.id}');
+            newNotifications.add(AppNotification(
+              id: id,
+              title: 'صيانة دورية قادمة',
+              body:
+                  '$vehicleName - صيانة ${record.type} مستحقة في ${AppFormatters.formatDate(nextDate)}',
+              type: 'upcoming_maintenance',
+              icon: Icons.build_outlined,
+              color: AppColors.warning,
+              time: now,
+              isRead: readIds.contains(id),
+            ));
+          }
+        }
+      }
+
+      // ── 8. Vehicle inactive for more than 30 days ──
+      for (final vehicle in vehicles) {
+        if (vehicle.status == 'inactive') {
+          final daysInactive = now.difference(vehicle.updatedAt).inDays;
+          if (daysInactive > 30) {
+            final id = _djb2Hash('vinactive_${vehicle.id}');
+            newNotifications.add(AppNotification(
+              id: id,
+              title: 'مركبة غير نشطة لفترة طويلة',
+              body:
+                  '${vehicle.make} ${vehicle.model} (${vehicle.plateNumber}) - منذ $daysInactive يوم',
+              type: 'vehicle_inactive',
+              icon: Icons.report_problem_outlined,
+              color: AppColors.info,
+              time: vehicle.updatedAt,
+              isRead: readIds.contains(id),
+            ));
+          }
+        }
+      }
+
+      // ── 9. High odometer alert: currentOdometer > 300,000 km ──
+      for (final vehicle in vehicles) {
+        if (vehicle.currentOdometer > 300000) {
+          final id = _djb2Hash('high_odom_${vehicle.id}');
+          newNotifications.add(AppNotification(
+            id: id,
+            title: 'عداد كيلومتر مرتفع',
+            body:
+                '${vehicle.make} ${vehicle.model} (${vehicle.plateNumber}) - ${AppFormatters.formatOdometer(vehicle.currentOdometer)} (يحتاج كشف شامل)',
+            type: 'high_odometer',
+            icon: Icons.speed,
+            color: AppColors.accent,
+            time: vehicle.updatedAt,
+            isRead: readIds.contains(id),
+          ));
+        }
+      }
+
+      // ── 10. Overdue maintenance: all records completed but latest nextMaintenanceDate passed by >7 days ──
+      for (final vehicle in vehicles) {
+        final vehicleRecords = maintenanceRecords
+            .where((r) => r.vehicleId == vehicle.id)
+            .toList();
+
+        if (vehicleRecords.isNotEmpty &&
+            vehicleRecords.every((r) => r.status == 'completed')) {
+          // Find the record with the latest nextMaintenanceDate
+          final sorted = List<MaintenanceRecord>.from(vehicleRecords)
+            ..sort((a, b) {
+              final aDate = a.nextMaintenanceDate;
+              final bDate = b.nextMaintenanceDate;
+              if (aDate == null && bDate == null) return 0;
+              if (aDate == null) return 1;
+              if (bDate == null) return -1;
+              return bDate.compareTo(aDate);
+            });
+
+          final latestNext = sorted.first.nextMaintenanceDate;
+          if (latestNext != null) {
+            final today = DateTime(now.year, now.month, now.day);
+            final latestDay =
+                DateTime(latestNext.year, latestNext.month, latestNext.day);
+            final daysOverdue = today.difference(latestDay).inDays;
+
+            if (daysOverdue > 7) {
+              final vehicleName = _getVehicleName(vehicles, vehicle.id!);
+              final id = _djb2Hash('overdue_maint_${vehicle.id}');
+              newNotifications.add(AppNotification(
+                id: id,
+                title: 'صيانة دورية متأخرة',
+                body:
+                    '$vehicleName - كان من المفترض إجراء صيانة في ${AppFormatters.formatDate(latestNext)}',
+                type: 'overdue_maintenance',
+                icon: Icons.warning_amber_rounded,
+                color: AppColors.error,
+                time: latestNext,
+                isRead: readIds.contains(id),
+              ));
+            }
           }
         }
       }

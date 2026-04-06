@@ -7,6 +7,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../providers/maintenance_provider.dart';
 import '../providers/vehicle_provider.dart';
+import '../widgets/attachment_picker_widget.dart';
 
 class AddMaintenanceScreen extends StatefulWidget {
   final MaintenanceRecord? record;
@@ -432,6 +433,20 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
                 alignLabelWithHint: true,
               ),
             ),
+            // Attachments (only when editing an existing record)
+            if (_isEditing && widget.record!.id != null) ...[
+              const SizedBox(height: 20),
+              _buildSectionTitle('مرفقات الصيانة'),
+              const SizedBox(height: 8),
+              AttachmentPickerWidget(
+                entityType: 'maintenance',
+                entityId: widget.record!.id!,
+                onAttachmentsChanged: (paths) {
+                  debugPrint('Maintenance attachments updated: ${paths.length}');
+                },
+                maxAttachments: 5,
+              ),
+            ],
             const SizedBox(height: 32),
 
             // Save Button

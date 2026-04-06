@@ -15,6 +15,7 @@ class ReportsScreen extends StatefulWidget {
 
 class _ReportsScreenState extends State<ReportsScreen> {
   bool _isLoading = true;
+  String? _error;
   bool _isSyncing = false;
   List<Map<String, dynamic>> _typeData = [];
   List<Map<String, dynamic>> _monthlyData = [];
@@ -43,7 +44,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      setState(() {
+        _error = 'تعذر تحميل التقارير. تحقق من اتصال الإنترنت.';
+        _isLoading = false;
+      });
     }
   }
 
@@ -125,7 +129,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Scaffold(
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : RefreshIndicator(
+          : _error != null
+              ? _buildErrorState()
+              : RefreshIndicator(
               onRefresh: _loadData,
               color: AppColors.primary,
               child: CustomScrollView(
@@ -189,6 +195,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  // ── Error State ────────────────────────────────────────────────────────
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+            const SizedBox(height: 16),
+            const Text('حدث خطأ في تحميل البيانات',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text(_error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadData,
+              child: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
