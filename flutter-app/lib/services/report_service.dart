@@ -58,11 +58,43 @@ class ReportService {
   ///
   /// Writing to disk (instead of using XFile.fromData) ensures Android
   /// recognises the file type, preventing the "saved as .bin" issue.
+  // ── Temp file cleanup ────────────────────────────────────────────────
+
+  /// Deletes report temp files older than 1 hour from the temporary directory.
+  ///
+  /// Only targets files matching known report prefixes with .pdf or .xlsx extensions:
+  /// `تقرير_*.pdf`, `تقرير_*.xlsx`, `سجلات_*.xlsx`, `قوائم_*.xlsx`, `تصدير_*.xlsx`.
+  static Future<void> _cleanupOldTempFiles() async {
+    try {
+      final dir = await getTemporaryDirectory();
+      final cutoff = DateTime.now().subtract(const Duration(hours: 1));
+      final prefixes = ['تقرير_', 'سجلات_', 'قوائم_', 'تصدير_'];
+
+      await for (final entity in dir.list()) {
+        if (entity is! File) continue;
+        final name = entity.uri.pathSegments.last;
+        final isReport = prefixes.any((p) => name.startsWith(p));
+        if (!isReport) continue;
+        if (!name.endsWith('.pdf') && !name.endsWith('.xlsx')) continue;
+
+        final stat = await entity.stat();
+        if (stat.modified.isBefore(cutoff)) {
+          await entity.delete();
+        }
+      }
+    } catch (e) {
+      debugPrint('ReportService: error cleaning temp files: $e');
+    }
+  }
+
   static Future<String> _shareBytes(
     List<int> bytes,
     String fileName,
   ) async {
     try {
+      // Clean up old report temp files (fire-and-forget, don't block sharing)
+      _cleanupOldTempFiles();
+
       final dir = await getTemporaryDirectory();
       // Sanitise file name: keep only safe characters
       final safeName = fileName.replaceAll(RegExp(r'[^\w\.\-\u0600-\u06FF]'), '_');
@@ -350,14 +382,14 @@ class ReportService {
             r.consumptionRate != null ? '${r.consumptionRate!.toStringAsFixed(1)} كم/لتر' : '';
 
         final values = <CellValue>[
-          TextCellValue('${row + 1}'),
+          IntCellValue(row + 1),
           TextCellValue(vehicleLabel),
           TextCellValue(plateLabel),
           TextCellValue(dateLabel),
-          TextCellValue('${r.odometerReading}'),
-          TextCellValue(r.liters.toStringAsFixed(1)),
-          TextCellValue(r.costPerLiter.toStringAsFixed(2)),
-          TextCellValue(r.totalCost.toStringAsFixed(2)),
+          IntCellValue(r.odometerReading),
+          DoubleCellValue(r.liters),
+          DoubleCellValue(r.costPerLiter),
+          DoubleCellValue(r.totalCost),
           TextCellValue(fuelLabel),
           TextCellValue(r.stationName ?? ''),
           TextCellValue(r.stationLocation ?? ''),
@@ -431,17 +463,17 @@ class ReportService {
         final statusLabel = AppConstants.maintenanceStatuses[c.status] ?? c.status;
 
         final values = <CellValue>[
-          TextCellValue('${row + 1}'),
+          IntCellValue(row + 1),
           TextCellValue(vehicleLabel),
           TextCellValue(plateLabel),
           TextCellValue(typeLabel),
           TextCellValue(dateLabel),
-          TextCellValue('${c.odometerReading}'),
+          IntCellValue(c.odometerReading),
           TextCellValue(c.inspectorName ?? ''),
-          TextCellValue('${c.items.length}'),
-          TextCellValue('${c.checkedCount}'),
-          TextCellValue('${c.defectCount}'),
-          TextCellValue(c.overallScore.toStringAsFixed(1)),
+          IntCellValue(c.items.length),
+          IntCellValue(c.checkedCount),
+          IntCellValue(c.defectCount),
+          DoubleCellValue(c.overallScore),
           TextCellValue(statusLabel),
           TextCellValue(c.notes ?? ''),
         ];
@@ -1064,15 +1096,15 @@ class ReportService {
 
       writeHeaders(summarySheet, ['البند', 'القيمة']);
       writeRow(summarySheet, 1, [TextCellValue('تاريخ التقرير'), TextCellValue(DateFormat('yyyy-MM-dd').format(DateTime.now()))]);
-      writeRow(summarySheet, 2, [TextCellValue('إجمالي المركبات'), TextCellValue('${vehicles.length}')]);
-      writeRow(summarySheet, 3, [TextCellValue('المركبات النشطة'), TextCellValue('$activeCount')]);
-      writeRow(summarySheet, 4, [TextCellValue('إجمالي تكاليف الصيانة'), TextCellValue('${totalMaintenanceCost.toStringAsFixed(2)} ج.م')]);
-      writeRow(summarySheet, 5, [TextCellValue('إجمالي تكاليف الوقود'), TextCellValue('${totalFuelCost.toStringAsFixed(2)} ج.م')]);
-      writeRow(summarySheet, 6, [TextCellValue('إجمالي المصروفات'), TextCellValue('${totalExpenseCost.toStringAsFixed(2)} ج.م')]);
-      writeRow(summarySheet, 7, [TextCellValue('إجمالي التكاليف الكلية'), TextCellValue('${totalAllCosts.toStringAsFixed(2)} ج.م')]);
-      writeRow(summarySheet, 8, [TextCellValue('عدد سجلات الصيانة'), TextCellValue('${maintenanceRecords.length}')]);
-      writeRow(summarySheet, 9, [TextCellValue('عدد سجلات الوقود'), TextCellValue('${fuelRecords.length}')]);
-      writeRow(summarySheet, 10, [TextCellValue('عدد أوامر العمل'), TextCellValue('${workOrders.length}')]);
+      writeRow(summarySheet, 2, [TextCellValue('إجمالي المركبات'), IntCellValue(vehicles.length)]);
+      writeRow(summarySheet, 3, [TextCellValue('المركبات النشطة'), IntCellValue(activeCount)]);
+      writeRow(summarySheet, 4, [TextCellValue('إجمالي تكاليف الصيانة'), DoubleCellValue(totalMaintenanceCost)]);
+      writeRow(summarySheet, 5, [TextCellValue('إجمالي تكاليف الوقود'), DoubleCellValue(totalFuelCost)]);
+      writeRow(summarySheet, 6, [TextCellValue('إجمالي المصروفات'), DoubleCellValue(totalExpenseCost)]);
+      writeRow(summarySheet, 7, [TextCellValue('إجمالي التكاليف الكلية'), DoubleCellValue(totalAllCosts)]);
+      writeRow(summarySheet, 8, [TextCellValue('عدد سجلات الصيانة'), IntCellValue(maintenanceRecords.length)]);
+      writeRow(summarySheet, 9, [TextCellValue('عدد سجلات الوقود'), IntCellValue(fuelRecords.length)]);
+      writeRow(summarySheet, 10, [TextCellValue('عدد أوامر العمل'), IntCellValue(workOrders.length)]);
 
       // ═══════════════════════════════════════════════════════════════════
       //  Sheet 2: المركبات
@@ -1085,14 +1117,14 @@ class ReportService {
       for (var row = 0; row < vehicles.length; row++) {
         final v = vehicles[row];
         writeRow(vehiclesSheet, row + 1, [
-          TextCellValue('${row + 1}'),
+          IntCellValue(row + 1),
           TextCellValue(v.plateNumber),
           TextCellValue(v.make),
           TextCellValue(v.model),
-          TextCellValue('${v.year}'),
+          IntCellValue(v.year),
           TextCellValue(AppConstants.vehicleColors[v.color] ?? v.color),
           TextCellValue(AppConstants.fuelTypes[v.fuelType] ?? v.fuelType),
-          TextCellValue('${v.currentOdometer}'),
+          IntCellValue(v.currentOdometer),
           TextCellValue(AppConstants.vehicleStatuses[v.status] ?? v.status),
           TextCellValue(v.driverName ?? ''),
           TextCellValue(v.driverLicenseNumber ?? ''),
@@ -1110,13 +1142,13 @@ class ReportService {
       for (var row = 0; row < maintenanceRecords.length; row++) {
         final r = maintenanceRecords[row];
         writeRow(maintenanceSheet, row + 1, [
-          TextCellValue('${row + 1}'),
+          IntCellValue(row + 1),
           TextCellValue(r.vehicle != null ? '${r.vehicle!.make} ${r.vehicle!.model}' : 'غير معروف'),
           TextCellValue(r.vehicle?.plateNumber ?? ''),
           TextCellValue(DateFormat('dd/MM/yyyy').format(r.maintenanceDate)),
           TextCellValue(r.description),
           TextCellValue(AppConstants.maintenanceTypes[r.type] ?? r.type),
-          TextCellValue(r.totalCost.toStringAsFixed(2)),
+          DoubleCellValue(r.totalCost),
           TextCellValue(AppConstants.maintenanceStatuses[r.status] ?? r.status),
           TextCellValue(AppConstants.priorities[r.priority] ?? r.priority),
         ]);
@@ -1133,14 +1165,14 @@ class ReportService {
       for (var row = 0; row < fuelRecords.length; row++) {
         final r = fuelRecords[row];
         writeRow(fuelSheet, row + 1, [
-          TextCellValue('${row + 1}'),
+          IntCellValue(row + 1),
           TextCellValue(r.vehicle != null ? '${r.vehicle!.make} ${r.vehicle!.model}' : 'غير معروف'),
           TextCellValue(r.vehicle?.plateNumber ?? ''),
           TextCellValue(DateFormat('dd/MM/yyyy').format(r.fillDate)),
-          TextCellValue('${r.odometerReading}'),
-          TextCellValue(r.liters.toStringAsFixed(1)),
-          TextCellValue(r.costPerLiter.toStringAsFixed(2)),
-          TextCellValue(r.totalCost.toStringAsFixed(2)),
+          IntCellValue(r.odometerReading),
+          DoubleCellValue(r.liters),
+          DoubleCellValue(r.costPerLiter),
+          DoubleCellValue(r.totalCost),
           TextCellValue(AppConstants.fuelTypes[r.fuelType] ?? r.fuelType),
           TextCellValue(r.stationName ?? ''),
         ]);
@@ -1157,12 +1189,12 @@ class ReportService {
       for (var row = 0; row < expenses.length; row++) {
         final e = expenses[row];
         writeRow(expensesSheet, row + 1, [
-          TextCellValue('${row + 1}'),
+          IntCellValue(row + 1),
           TextCellValue(e.vehicle != null ? '${e.vehicle!.make} ${e.vehicle!.model}' : 'غير معروف'),
           TextCellValue(e.vehicle?.plateNumber ?? ''),
           TextCellValue(DateFormat('dd/MM/yyyy').format(e.date)),
           TextCellValue(AppConstants.expenseTypes[e.type] ?? e.type),
-          TextCellValue(e.amount.toStringAsFixed(2)),
+          DoubleCellValue(e.amount),
           TextCellValue(e.description),
           TextCellValue(e.serviceProvider ?? ''),
           TextCellValue(e.invoiceNumber ?? ''),
@@ -1184,16 +1216,16 @@ class ReportService {
         final act = o.actualCost ?? 0;
         final diff = act - est;
         writeRow(ordersSheet, row + 1, [
-          TextCellValue('${row + 1}'),
+          IntCellValue(row + 1),
           TextCellValue(o.vehicle != null ? '${o.vehicle!.make} ${o.vehicle!.model}' : 'غير معروف'),
           TextCellValue(o.vehicle?.plateNumber ?? ''),
           TextCellValue(_workOrderTypeLabel(o.type)),
           TextCellValue(_workOrderStatusLabel(o.status)),
           TextCellValue(AppConstants.priorities[o.priority] ?? o.priority),
           TextCellValue(o.technicianName ?? ''),
-          TextCellValue(est.toStringAsFixed(2)),
-          TextCellValue(act.toStringAsFixed(2)),
-          TextCellValue(diff.toStringAsFixed(2)),
+          DoubleCellValue(est),
+          DoubleCellValue(act),
+          DoubleCellValue(diff),
           TextCellValue(o.startDate != null ? DateFormat('dd/MM/yyyy').format(o.startDate!) : ''),
           TextCellValue(o.completedDate != null ? DateFormat('dd/MM/yyyy').format(o.completedDate!) : ''),
           TextCellValue(o.notes ?? ''),

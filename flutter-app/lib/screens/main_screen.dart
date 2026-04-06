@@ -6,6 +6,8 @@ import '../utils/constants.dart';
 import '../utils/formatters.dart';
 import '../providers/theme_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/user_provider.dart';
+import '../providers/notification_provider.dart';
 import '../widgets/developer_credit.dart';
 import '../services/supabase_service.dart';
 import '../services/supabase_sync_service.dart';
@@ -28,8 +30,6 @@ class _MainScreenState extends State<MainScreen>
   int _currentIndex = 0;
   bool _isSyncing = false;
   bool _sidebarExpanded = true;
-  List<AppNotification> _notifications = [];
-  Timer? _notificationTimer;
 
   late final List<Widget> _screens = [
     DashboardScreen(onNavigateToTab: _switchToTab),
@@ -54,92 +54,7 @@ class _MainScreenState extends State<MainScreen>
   }
 
   @override
-  void initState() {
-    super.initState();
-    _generateNotifications();
-    _notificationTimer = Timer.periodic(const Duration(minutes: 5), (_) {
-      _generateNotifications();
-    });
-  }
-
-  @override
-  void dispose() {
-    _notificationTimer?.cancel();
-    super.dispose();
-  }
-
-  void _generateNotifications() {
-    final now = DateTime.now();
-    final notifications = <AppNotification>[];
-
-    notifications.add(AppNotification(
-      id: 1,
-      title: 'تذكير بالصيانة الدورية',
-      body: 'مركبة تويوتا كامري (أ ب ج 1234) تحتاج صيانة دورية خلال 3 أيام',
-      icon: Icons.build_circle_outlined,
-      color: AppColors.warning,
-      time: now.subtract(const Duration(minutes: 30)),
-      isRead: false,
-    ));
-
-    notifications.add(AppNotification(
-      id: 2,
-      title: 'تنبيه عاجل',
-      body: 'مركبة مرسيدس C-Class في الصيانة منذ 5 أيام - يرجى المتابعة',
-      icon: Icons.warning_amber_rounded,
-      color: AppColors.error,
-      time: now.subtract(const Duration(hours: 2)),
-      isRead: false,
-    ));
-
-    notifications.add(AppNotification(
-      id: 3,
-      title: 'تنبيه وقود',
-      body: 'مركبة نيسان صني (ز ح ط 9012) - العداد تجاوز 85,000 كم بدون تغيير زيت',
-      icon: Icons.local_gas_station_outlined,
-      color: AppColors.info,
-      time: now.subtract(const Duration(hours: 5)),
-      isRead: true,
-    ));
-
-    if (supabaseReady) {
-      notifications.add(AppNotification(
-        id: 4,
-        title: 'تمت المزامنة بنجاح',
-        body: 'تم مزامنة جميع البيانات مع السيرفر بنجاح',
-        icon: Icons.cloud_done,
-        color: AppColors.success,
-        time: now.subtract(const Duration(hours: 8)),
-        isRead: true,
-      ));
-    } else {
-      notifications.add(AppNotification(
-        id: 4,
-        title: 'وضع بدون اتصال',
-        body: 'لا يوجد اتصال بالسيرفر - البيانات محفوظة محلياً',
-        icon: Icons.cloud_off,
-        color: AppColors.warning,
-        time: now.subtract(const Duration(hours: 1)),
-        isRead: false,
-      ));
-    }
-
-    notifications.add(AppNotification(
-      id: 5,
-      title: 'مركبة جديدة',
-      body: 'تم إضافة مركبة هيونداي إلنترا (ر ش ت 6789) - السائق: عبدالله حسن',
-      icon: Icons.directions_car_outlined,
-      color: AppColors.primary,
-      time: now.subtract(const Duration(days: 1)),
-      isRead: true,
-    ));
-
-    setState(() {
-      _notifications = notifications;
-    });
-  }
-
-  int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+  bool get wantKeepAlive => true;
 
   Future<void> _performSync() async {
     if (_isSyncing) return;
@@ -185,9 +100,6 @@ class _MainScreenState extends State<MainScreen>
   }
 
   @override
-  bool get wantKeepAlive => true;
-
-  @override
   Widget build(BuildContext context) {
     super.build(context);
     final isWide = MediaQuery.of(context).size.width > 768;
@@ -195,9 +107,7 @@ class _MainScreenState extends State<MainScreen>
     return Scaffold(
       body: Column(
         children: [
-          // ── Top Header Bar ──
           _buildTopHeader(),
-          // ── Body ──
           Expanded(
             child: Row(
               children: [
@@ -240,14 +150,12 @@ class _MainScreenState extends State<MainScreen>
           ),
         ],
       ),
-      // SafeArea ensures content is below the status bar while gradient extends behind it
       child: SafeArea(
         bottom: false,
         child: Padding(
           padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 12),
           child: Row(
             children: [
-              // App logo
               Container(
                 width: 38,
                 height: 38,
@@ -284,13 +192,10 @@ class _MainScreenState extends State<MainScreen>
                 ],
               ),
               const Spacer(),
-              // Sync status
               _buildSyncIndicator(),
               const SizedBox(width: 10),
-              // Notifications bell
               _buildNotificationBell(),
               const SizedBox(width: 8),
-              // User avatar
               GestureDetector(
                 onTap: _showProfileMenu,
                 child: Container(
@@ -325,6 +230,8 @@ class _MainScreenState extends State<MainScreen>
     final displayName = auth.user?.userMetadata?['display_name'] ??
         auth.user?.email?.split('@').first ?? 'المدير';
     final email = auth.user?.email ?? '';
+    final userProvider = context.read<UserProvider>();
+    final roleLabel = UserProvider.getRoleLabel(userProvider.currentRole ?? 'admin');
 
     showModalBottomSheet(
       context: context,
@@ -362,25 +269,50 @@ class _MainScreenState extends State<MainScreen>
             ),
             if (email.isNotEmpty)
               Text(email, style: const TextStyle(fontSize: 13, color: AppColors.textHint)),
-            const SizedBox(height: 20),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primaryContainer,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.shield_outlined, size: 14, color: AppColors.primary),
+                  const SizedBox(width: 4),
+                  Text(roleLabel, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (userProvider.canManageUsers)
+              ListTile(
+                leading: const Icon(Icons.admin_panel_settings, color: AppColors.primary),
+                title: const Text('إدارة المستخدمين', style: TextStyle(fontWeight: FontWeight.w600)),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(color: AppColors.primaryContainer, borderRadius: BorderRadius.circular(10)),
+                  child: Text('${userProvider.totalUsers}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).pushNamed('/user-management');
+                },
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ListTile(
               leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
               title: const Text('الإشعارات', style: TextStyle(fontWeight: FontWeight.w600)),
-              trailing: _unreadCount > 0
+              trailing: context.select<NotificationProvider, int>((p) => p.unreadCount, 0) > 0
                   ? Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(10)),
-                      child: Text('$_unreadCount جديد', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                      child: Text('${context.select<NotificationProvider, int>((p) => p.unreadCount, 0)} جديد', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
                     )
                   : null,
               onTap: () { Navigator.pop(context); _showNotificationsPanel(); },
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings_outlined, color: AppColors.textSecondary),
-              title: const Text('الإعدادات', style: TextStyle(fontWeight: FontWeight.w600)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              onTap: () => Navigator.pop(context),
             ),
             const Divider(height: 24),
             ListTile(
@@ -442,6 +374,7 @@ class _MainScreenState extends State<MainScreen>
   }
 
   Widget _buildNotificationBell() {
+    final unreadCount = context.select<NotificationProvider, int>((p) => p.unreadCount);
     return InkWell(
       onTap: _showNotificationsPanel,
       borderRadius: BorderRadius.circular(10),
@@ -454,7 +387,7 @@ class _MainScreenState extends State<MainScreen>
         child: Stack(
           children: [
             Icon(Icons.notifications_outlined, size: 20, color: Colors.white.withOpacity(0.9)),
-            if (_unreadCount > 0)
+            if (unreadCount > 0)
               Positioned(
                 left: 0,
                 top: 0,
@@ -467,7 +400,7 @@ class _MainScreenState extends State<MainScreen>
                   ),
                   child: Center(
                     child: Text(
-                      _unreadCount > 9 ? '9+' : '$_unreadCount',
+                      unreadCount > 9 ? '9+' : '$unreadCount',
                       style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: Colors.white),
                     ),
                   ),
@@ -485,13 +418,12 @@ class _MainScreenState extends State<MainScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _NotificationsPanel(
-        notifications: _notifications,
         onMarkAllRead: () {
-          setState(() { for (var n in _notifications) { n.isRead = true; } });
+          context.read<NotificationProvider>().markAllAsRead();
           Navigator.pop(context);
         },
         onClear: () {
-          setState(() => _notifications = []);
+          context.read<NotificationProvider>().clearAll();
           Navigator.pop(context);
         },
       ),
@@ -714,36 +646,13 @@ class _NavItem {
   const _NavItem(this.icon, this.activeIcon, this.label);
 }
 
-// ── Notification Model ───────────────────────────────────────────────────
-
-class AppNotification {
-  final int id;
-  final String title;
-  final String body;
-  final IconData icon;
-  final Color color;
-  final DateTime time;
-  bool isRead;
-
-  AppNotification({
-    required this.id,
-    required this.title,
-    required this.body,
-    required this.icon,
-    required this.color,
-    required this.time,
-    this.isRead = false,
-  });
-}
-
 // ── Notifications Panel ──────────────────────────────────────────────────
 
 class _NotificationsPanel extends StatelessWidget {
-  final List<AppNotification> notifications;
   final VoidCallback onMarkAllRead;
   final VoidCallback onClear;
 
-  const _NotificationsPanel({required this.notifications, required this.onMarkAllRead, required this.onClear});
+  const _NotificationsPanel({required this.onMarkAllRead, required this.onClear});
 
   String _formatTime(DateTime time) {
     final diff = DateTime.now().difference(time);
@@ -756,7 +665,9 @@ class _NotificationsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unreadCount = notifications.where((n) => !n.isRead).length;
+    final notifications = context.watch<NotificationProvider>().notifications;
+    final unreadCount = context.select<NotificationProvider, int>((p) => p.unreadCount);
+
     return DraggableScrollableSheet(
       initialChildSize: 0.6, minChildSize: 0.3, maxChildSize: 0.9, expand: false,
       builder: (context, scrollController) {

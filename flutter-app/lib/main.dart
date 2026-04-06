@@ -11,6 +11,8 @@ import 'providers/checklist_provider.dart';
 import 'providers/fuel_provider.dart';
 import 'providers/work_order_provider.dart';
 import 'providers/trip_tracking_provider.dart';
+import 'providers/user_provider.dart';
+import 'providers/notification_provider.dart';
 import 'services/database_service.dart';
 import 'services/supabase_service.dart';
 import 'utils/app_theme.dart';
@@ -33,6 +35,7 @@ import 'screens/work_order_details_screen.dart';
 import 'screens/gps_map_screen.dart';
 import 'screens/trip_history_screen.dart';
 import 'screens/trip_tracking_screen.dart';
+import 'screens/user_management_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +61,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => FuelProvider()),
         ChangeNotifierProvider(create: (_) => WorkOrderProvider()),
         ChangeNotifierProvider(create: (_) => TripTrackingProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: const KmsFleetApp(),
     ),
@@ -179,6 +184,11 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
           if (settings.name == '/trip-tracking' && settings.arguments is Vehicle) {
             return MaterialPageRoute(
               builder: (_) => TripTrackingScreen(vehicle: settings.arguments as Vehicle),
+            );
+          }
+          if (settings.name == '/user-management') {
+            return MaterialPageRoute(
+              builder: (_) => const UserManagementScreen(),
             );
           }
           return MaterialPageRoute(builder: (_) => const MainScreen());

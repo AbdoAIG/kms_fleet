@@ -30,6 +30,9 @@ dependencies:
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
 
+  # Image Picker
+  image_picker: ^1.0.7
+
   # Reports
   pdf: ^3.11.1
   excel: ^4.0.6

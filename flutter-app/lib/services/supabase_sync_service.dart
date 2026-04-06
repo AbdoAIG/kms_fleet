@@ -5,7 +5,8 @@
 // Bidirectional sync between the local SQLite database and Supabase PostgreSQL.
 //
 // Data is stored in Supabase tables: vehicles, maintenance_records, checklists,
-// fuel_records — each scoped to the authenticated user via user_id column.
+// fuel_records, work_orders, driver_violations, expenses, trip_trackings —
+// each scoped to the authenticated user via user_id column.
 //
 // The sync strategy is "last-write-wins" based on updated_at timestamps.
 
@@ -17,6 +18,10 @@ import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
 import '../models/checklist.dart';
 import '../models/fuel_record.dart';
+import '../models/work_order.dart';
+import '../models/driver_violation.dart';
+import '../models/expense.dart';
+import '../models/trip_tracking.dart';
 import 'database_service.dart';
 import 'supabase_service.dart';
 
@@ -271,6 +276,206 @@ class SupabaseSyncService {
     }
   }
 
+  // ── Work Orders ────────────────────────────────────────────────────────
+
+  static Future<void> syncWorkOrders() async {
+    try {
+      if (_uid == null) {
+        debugPrint('SyncService: cannot sync work orders – user not signed in');
+        return;
+      }
+
+      final localWorkOrders = await DatabaseService.getAllWorkOrders();
+      for (final w in localWorkOrders) {
+        final map = _workOrderToMap(w);
+        await supabase.from('work_orders').upsert(
+          map,
+          onConflict: 'id',
+        );
+      }
+
+      final response = await supabase
+          .from('work_orders')
+          .select()
+          .eq('user_id', _uid!)
+          .order('updated_at', ascending: false);
+
+      for (final row in response) {
+        final workOrder = _workOrderFromRow(row);
+        try {
+          await DatabaseService.insertWorkOrder(workOrder);
+        } catch (_) {
+          await DatabaseService.updateWorkOrder(workOrder);
+        }
+      }
+
+      debugPrint('SyncService: work orders synced (${localWorkOrders.length} local)');
+    } catch (e) {
+      debugPrint('SyncService: error syncing work orders: $e');
+    }
+  }
+
+  /// Delete a work order from Supabase by ID.
+  static Future<void> deleteWorkOrderFromSupabase(int id) async {
+    try {
+      if (_uid == null) return;
+      await supabase.from('work_orders').delete().eq('id', id).eq('user_id', _uid!);
+      debugPrint('SyncService: deleted work order $id from Supabase');
+    } catch (e) {
+      debugPrint('SyncService: error deleting work order from Supabase: $e');
+    }
+  }
+
+  // ── Driver Violations ────────────────────────────────────────────────────
+
+  static Future<void> syncViolations() async {
+    try {
+      if (_uid == null) {
+        debugPrint('SyncService: cannot sync violations – user not signed in');
+        return;
+      }
+
+      final localViolations = await DatabaseService.getAllViolations();
+      for (final v in localViolations) {
+        final map = _violationToMap(v);
+        await supabase.from('driver_violations').upsert(
+          map,
+          onConflict: 'id',
+        );
+      }
+
+      final response = await supabase
+          .from('driver_violations')
+          .select()
+          .eq('user_id', _uid!)
+          .order('updated_at', ascending: false);
+
+      for (final row in response) {
+        final violation = _violationFromRow(row);
+        try {
+          await DatabaseService.insertViolation(violation);
+        } catch (_) {
+          await DatabaseService.updateViolation(violation);
+        }
+      }
+
+      debugPrint('SyncService: violations synced (${localViolations.length} local)');
+    } catch (e) {
+      debugPrint('SyncService: error syncing violations: $e');
+    }
+  }
+
+  /// Delete a driver violation from Supabase by ID.
+  static Future<void> deleteViolationFromSupabase(int id) async {
+    try {
+      if (_uid == null) return;
+      await supabase.from('driver_violations').delete().eq('id', id).eq('user_id', _uid!);
+      debugPrint('SyncService: deleted violation $id from Supabase');
+    } catch (e) {
+      debugPrint('SyncService: error deleting violation from Supabase: $e');
+    }
+  }
+
+  // ── Expenses ─────────────────────────────────────────────────────────────
+
+  static Future<void> syncExpenses() async {
+    try {
+      if (_uid == null) {
+        debugPrint('SyncService: cannot sync expenses – user not signed in');
+        return;
+      }
+
+      final localExpenses = await DatabaseService.getAllExpenses();
+      for (final e in localExpenses) {
+        final map = _expenseToMap(e);
+        await supabase.from('expenses').upsert(
+          map,
+          onConflict: 'id',
+        );
+      }
+
+      final response = await supabase
+          .from('expenses')
+          .select()
+          .eq('user_id', _uid!)
+          .order('updated_at', ascending: false);
+
+      for (final row in response) {
+        final expense = _expenseFromRow(row);
+        try {
+          await DatabaseService.insertExpense(expense);
+        } catch (_) {
+          await DatabaseService.updateExpense(expense);
+        }
+      }
+
+      debugPrint('SyncService: expenses synced (${localExpenses.length} local)');
+    } catch (e) {
+      debugPrint('SyncService: error syncing expenses: $e');
+    }
+  }
+
+  /// Delete an expense from Supabase by ID.
+  static Future<void> deleteExpenseFromSupabase(int id) async {
+    try {
+      if (_uid == null) return;
+      await supabase.from('expenses').delete().eq('id', id).eq('user_id', _uid!);
+      debugPrint('SyncService: deleted expense $id from Supabase');
+    } catch (e) {
+      debugPrint('SyncService: error deleting expense from Supabase: $e');
+    }
+  }
+
+  // ── Trip Trackings ───────────────────────────────────────────────────────
+
+  static Future<void> syncTrips() async {
+    try {
+      if (_uid == null) {
+        debugPrint('SyncService: cannot sync trips – user not signed in');
+        return;
+      }
+
+      final localTrips = await DatabaseService.getAllTrips();
+      for (final t in localTrips) {
+        final map = _tripToMap(t);
+        await supabase.from('trip_trackings').upsert(
+          map,
+          onConflict: 'id',
+        );
+      }
+
+      final response = await supabase
+          .from('trip_trackings')
+          .select()
+          .eq('user_id', _uid!)
+          .order('updated_at', ascending: false);
+
+      for (final row in response) {
+        final trip = _tripFromRow(row);
+        try {
+          await DatabaseService.insertTrip(trip);
+        } catch (_) {
+          await DatabaseService.updateTrip(trip);
+        }
+      }
+
+      debugPrint('SyncService: trips synced (${localTrips.length} local)');
+    } catch (e) {
+      debugPrint('SyncService: error syncing trips: $e');
+    }
+  }
+
+  /// Delete a trip from Supabase by ID.
+  static Future<void> deleteTripFromSupabase(int id) async {
+    try {
+      if (_uid == null) return;
+      await supabase.from('trip_trackings').delete().eq('id', id).eq('user_id', _uid!);
+      debugPrint('SyncService: deleted trip $id from Supabase');
+    } catch (e) {
+      debugPrint('SyncService: error deleting trip from Supabase: $e');
+    }
+  }
+
   // ── Sync All ─────────────────────────────────────────────────────────────
 
   static Future<void> syncAll() async {
@@ -279,6 +484,10 @@ class SupabaseSyncService {
       await syncMaintenance();
       await syncChecklists();
       await syncFuel();
+      await syncWorkOrders();
+      await syncViolations();
+      await syncExpenses();
+      await syncTrips();
       await _setLastSyncTime();
       debugPrint('SyncService: full sync completed');
     } catch (e) {
@@ -380,5 +589,80 @@ class SupabaseSyncService {
       row['is_abnormal'] = (row['is_abnormal'] as bool) ? 1 : 0;
     }
     return FuelRecord.fromMap(row);
+  }
+
+  // ── Work Order ───────────────────────────────────────────────────────────
+
+  static Map<String, dynamic> _workOrderToMap(WorkOrder w) {
+    final map = w.toMap();
+    map['user_id'] = _uid;
+    if (map['id'] == null) map.remove('id');
+    return map;
+  }
+
+  static WorkOrder _workOrderFromRow(Map<String, dynamic> row) {
+    return WorkOrder.fromMap(row);
+  }
+
+  // ── Driver Violation ─────────────────────────────────────────────────────
+
+  static Map<String, dynamic> _violationToMap(DriverViolation v) {
+    final map = v.toMap();
+    map['user_id'] = _uid;
+    if (map['id'] == null) map.remove('id');
+    return map;
+  }
+
+  static DriverViolation _violationFromRow(Map<String, dynamic> row) {
+    return DriverViolation.fromMap(row);
+  }
+
+  // ── Expense ──────────────────────────────────────────────────────────────
+
+  static Map<String, dynamic> _expenseToMap(Expense e) {
+    final map = e.toMap();
+    map['user_id'] = _uid;
+    if (map['id'] == null) map.remove('id');
+    return map;
+  }
+
+  static Expense _expenseFromRow(Map<String, dynamic> row) {
+    return Expense.fromMap(row);
+  }
+
+  // ── Trip Tracking ────────────────────────────────────────────────────────
+
+  static Map<String, dynamic> _tripToMap(TripTracking t) {
+    final map = t.toMap();
+    map['user_id'] = _uid;
+
+    // Convert JSON-encoded trip points string to a native List for Supabase JSON column
+    final rawPoints = map['trip_points_json'];
+    if (rawPoints is String && rawPoints.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawPoints) as List<dynamic>;
+        map['trip_points_json'] = decoded.map((e) => e as Map<String, dynamic>).toList();
+      } catch (_) {}
+    }
+    if (map['id'] == null) map.remove('id');
+    return map;
+  }
+
+  static TripTracking _tripFromRow(Map<String, dynamic> row) {
+    // Supabase may return trip_points_json as a List or as a parsed JSON
+    final rawPoints = row['trip_points_json'];
+    if (rawPoints is List) {
+      try {
+        final list = rawPoints
+            .map((e) => e is Map<String, dynamic> ? e : <String, dynamic>{})
+            .toList();
+        row['trip_points_json'] = jsonEncode(list);
+      } catch (_) {
+        row['trip_points_json'] = '[]';
+      }
+    } else if (rawPoints == null) {
+      row['trip_points_json'] = '[]';
+    }
+    return TripTracking.fromMap(row);
   }
 }
