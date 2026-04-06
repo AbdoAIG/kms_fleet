@@ -85,45 +85,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> signUp(String email, String password, String displayName, {String role = 'driver'}) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-    try {
-      if (!supabaseReady) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        _offlineMode = true;
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      }
-      final response = await supabase.auth.signUp(
-        email: email,
-        password: password,
-        data: {
-          'display_name': displayName,
-          'role': role,
-        },
-      );
-      _user = response.user;
-      _offlineMode = false;
-      await DatabaseService.goOnline();
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } on AuthException catch (e) {
-      _isLoading = false;
-      _error = _translateError(e.message);
-      notifyListeners();
-      return false;
-    } catch (e) {
-      _isLoading = false;
-      _error = 'حدث خطأ غير متوقع';
-      notifyListeners();
-      return false;
-    }
-  }
-
   Future<void> signOut() async {
     try {
       await supabase.auth.signOut();
