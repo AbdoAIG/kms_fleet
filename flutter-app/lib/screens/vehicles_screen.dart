@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/vehicle.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
-import '../widgets/vehicle_card.dart';
+import '../widgets/vehicle_3d_card.dart';
 import '../widgets/empty_state_widget.dart';
 import '../widgets/loading_widget.dart';
 import '../providers/vehicle_provider.dart';
@@ -33,8 +33,6 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width > 500;
-
     return Scaffold(
       body: Column(
         children: [
@@ -159,7 +157,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
           ),
           const SizedBox(height: 8),
 
-          // ── Vehicles Grid/List ──
+          // ── Vehicles List ──
           Expanded(
             child: Consumer<VehicleProvider>(
               builder: (context, provider, child) {
@@ -179,47 +177,12 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                   );
                 }
 
-                if (isWide) {
-                  return GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 1.1,
-                    ),
-                    itemCount: provider.vehicles.length,
-                    itemBuilder: (context, index) {
-                      final vehicle = provider.vehicles[index];
-                      return VehicleCard(
-                        vehicle: vehicle,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          '/vehicle-details',
-                          arguments: vehicle,
-                        ),
-                        onEdit: () => Navigator.pushNamed(
-                          context,
-                          '/add-vehicle',
-                          arguments: vehicle,
-                        ),
-                        onMaintenance: () => Navigator.pushNamed(
-                          context,
-                          '/add-maintenance',
-                          arguments: vehicle,
-                        ),
-                        onDelete: () => _confirmDelete(context, vehicle),
-                      );
-                    },
-                  );
-                }
-
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
                   itemCount: provider.vehicles.length,
                   itemBuilder: (context, index) {
                     final vehicle = provider.vehicles[index];
-                    return VehicleCard(
+                    return Vehicle3DCard(
                       vehicle: vehicle,
                       onTap: () => Navigator.pushNamed(
                         context,
