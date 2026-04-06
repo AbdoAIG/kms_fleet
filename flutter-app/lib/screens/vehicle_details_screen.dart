@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
@@ -7,6 +6,7 @@ import '../services/report_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
+import '../utils/vehicle_type_config.dart';
 import '../widgets/maintenance_card.dart';
 import '../widgets/attachment_picker_widget.dart';
 
@@ -25,6 +25,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   double _totalCost = 0;
   String? _error;
   bool _isExporting = false;
+  String? _expandedPointId;
 
   @override
   void initState() {
@@ -65,6 +66,36 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       }
     }
     return faults;
+  }
+
+  /// Returns a set of all maintenance types that have any records (history)
+  Set<String> get _allRecordTypes {
+    return _records.map((r) => r.type).toSet();
+  }
+
+  /// Get the vehicle type config for the current vehicle
+  VehicleTypeConfig get _typeConfig =>
+      getVehicleTypeConfig(widget.vehicle.vehicleType);
+
+  /// Determine inspection point status: 'healthy', 'warning', 'unknown'
+  String _getPointStatus(InspectionPoint point) {
+    if (point.maintenanceType == null) return 'unknown';
+    if (_activeFaults.contains(point.maintenanceType)) return 'warning';
+    if (_allRecordTypes.contains(point.maintenanceType)) return 'healthy';
+    return 'unknown';
+  }
+
+  /// Get the active fault record for an inspection point
+  MaintenanceRecord? _getFaultRecord(InspectionPoint point) {
+    if (point.maintenanceType == null) return null;
+    try {
+      return _records.firstWhere(
+        (r) => r.type == point.maintenanceType &&
+            (r.status == 'pending' || r.status == 'in_progress'),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -159,11 +190,11 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             )
           : RefreshIndicator(
               onRefresh: _loadRecords,
-              color: AppColors.primary,
+              color: _typeConfig.color,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // Vehicle Info Card
+                  // Vehicle Info Card (type-specific)
                   _buildVehicleInfoCard(statusColor),
                   const SizedBox(height: 16),
 
@@ -171,8 +202,8 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                   _buildDriverInfoCard(),
                   const SizedBox(height: 16),
 
-                  // Interactive Vehicle Diagram
-                  _buildVehicleDiagram(),
+                  // Type-Specific Inspection Checkpoints
+                  _buildTypeSpecificInspection(),
                   const SizedBox(height: 16),
 
                   // Faults Legend
@@ -290,36 +321,53 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Vehicle Info Card — Type-Specific Header
+  // ═══════════════════════════════════════════════════════════════════════════════
+
   Widget _buildVehicleInfoCard(Color statusColor) {
     final vehicle = widget.vehicle;
+    final config = _typeConfig;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryLight],
+          colors: [config.color, config.color.withOpacity(0.75)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: config.color.withOpacity(0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         children: [
+          // Top row: icon + name + badges
           Row(
             children: [
+              // Large type-specific icon
               Container(
-                width: 64,
-                height: 64,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
                 ),
-                child: const Icon(
-                  Icons.directions_car,
+                child: Icon(
+                  config.icon,
                   color: Colors.white,
-                  size: 32,
+                  size: 36,
                 ),
               ),
               const SizedBox(width: 16),
+              // Name + plate + type badge
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,9 +396,34 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    // Type badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(config.icon, color: Colors.white70, size: 12),
+                          const SizedBox(width: 4),
+                          Text(
+                            config.shortLabel,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
+              // Status badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
@@ -371,6 +444,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
           const SizedBox(height: 20),
           const Divider(color: Colors.white24),
           const SizedBox(height: 16),
+          // Info row: odometer, fuel, color, year, capacity
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -390,12 +464,353 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                 label: 'اللون',
                 value: AppConstants.vehicleColors[vehicle.color] ?? '',
               ),
+              _InfoItem(
+                icon: Icons.calendar_today,
+                label: 'السنة',
+                value: '${vehicle.year}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Capacity row (type-specific)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.straighten, color: Colors.white60, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                config.capacityLabel,
+                style: const TextStyle(fontSize: 11, color: Colors.white60),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                config.capacityValue(vehicle.toMap()),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
             ],
           ),
         ],
       ),
     );
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Type-Specific Inspection Checkpoints (replaces old vehicle diagram)
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  Widget _buildTypeSpecificInspection() {
+    final config = _typeConfig;
+    final points = config.inspectionPoints;
+    final hasAnyFaults = points.any((p) => _getPointStatus(p) == 'warning');
+    final allHealthy = points.every((p) => _getPointStatus(p) == 'healthy');
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Row(
+            children: [
+              Icon(config.detailIcon, color: config.color, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'معاينة حالة المركبة',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              if (hasAnyFaults)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.warning, color: AppColors.warning, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_activeFaults.length} عطل',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.warning,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (allHealthy)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle, color: AppColors.success, size: 14),
+                      SizedBox(width: 4),
+                      Text(
+                        'سليمة 100%',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.textHint.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.help_outline, color: AppColors.textHint, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${points.length} نقطة فحص',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textHint,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          // "100% healthy" banner when no faults
+          if (allHealthy && points.isNotEmpty)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.success.withOpacity(0.08),
+                    AppColors.success.withOpacity(0.04),
+                  ],
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.success.withOpacity(0.2), width: 1),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.verified, color: AppColors.success, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'سليمة 100% — جميع الأجزاء بحالة جيدة',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.success,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Inspection points grid
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1.0,
+            ),
+            itemCount: points.length,
+            itemBuilder: (context, index) {
+              final point = points[index];
+              final status = _getPointStatus(point);
+              final faultRecord = _getFaultRecord(point);
+              final isExpanded = _expandedPointId == point.id;
+
+              return _buildInspectionCard(
+                point: point,
+                status: status,
+                faultRecord: faultRecord,
+                isExpanded: isExpanded,
+                onTap: () {
+                  setState(() {
+                    _expandedPointId = isExpanded ? null : point.id;
+                  });
+                  if (faultRecord != null) {
+                    debugPrint(
+                      'Inspection point tapped: ${point.label} — '
+                      '${faultRecord.description} (status: ${faultRecord.status})',
+                    );
+                  }
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInspectionCard({
+    required InspectionPoint point,
+    required String status,
+    required MaintenanceRecord? faultRecord,
+    required bool isExpanded,
+    required VoidCallback onTap,
+  }) {
+    Color statusColor;
+    Color backgroundColor;
+    Color borderColor;
+
+    switch (status) {
+      case 'healthy':
+        statusColor = AppColors.success;
+        backgroundColor = AppColors.success.withOpacity(0.06);
+        borderColor = AppColors.success.withOpacity(0.15);
+        break;
+      case 'warning':
+        statusColor = AppColors.warning;
+        backgroundColor = AppColors.warning.withOpacity(0.08);
+        borderColor = AppColors.warning.withOpacity(0.25);
+        break;
+      default: // 'unknown'
+        statusColor = AppColors.textHint;
+        backgroundColor = AppColors.surfaceVariant;
+        borderColor = AppColors.border;
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isExpanded
+              ? statusColor.withOpacity(0.12)
+              : backgroundColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isExpanded
+                ? statusColor.withOpacity(0.5)
+                : borderColor,
+            width: isExpanded ? 1.5 : 0.5,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icon with status indicator
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: point.color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    point.icon,
+                    color: point.color,
+                    size: 20,
+                  ),
+                ),
+                // Status dot
+                Positioned(
+                  top: -2,
+                  left: -2,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.surface,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            // Label
+            Text(
+              point.label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: status == 'unknown'
+                    ? AppColors.textHint
+                    : AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            // Expanded fault description
+            if (isExpanded && faultRecord != null) ...[
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  faultRecord.description,
+                  style: TextStyle(
+                    fontSize: 8,
+                    color: statusColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Driver Info Card (unchanged)
+  // ═══════════════════════════════════════════════════════════════════════════════
 
   Widget _buildDriverInfoCard() {
     final vehicle = widget.vehicle;
@@ -498,96 +913,10 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     );
   }
 
-  /// Interactive Vehicle Diagram
-  Widget _buildVehicleDiagram() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border, width: 0.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.car_repair, color: AppColors.primary, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'معاينة حالة المركبة',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const Spacer(),
-              if (_activeFaults.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.warning, color: AppColors.error, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${_activeFaults.length} عطل',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.error,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.check_circle, color: AppColors.success, size: 14),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'سليمة',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.success,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 220,
-            child: CustomPaint(
-              size: const Size(double.infinity, 220),
-              painter: _VehicleDiagramPainter(
-                activeFaults: _activeFaults,
-                allRecordTypes: _records.map((r) => r.type).toSet(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Faults Legend (unchanged)
+  // ═══════════════════════════════════════════════════════════════════════════════
 
-  /// Faults Legend
   Widget _buildFaultsLegend() {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -671,7 +1000,10 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     );
   }
 
-  /// GPS Trip Actions Card
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // GPS Trip Actions Card (unchanged)
+  // ═══════════════════════════════════════════════════════════════════════════════
+
   Widget _buildGpsActions(Vehicle vehicle) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -739,7 +1071,10 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     );
   }
 
-  /// Depreciation (نولون) Calculator
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Depreciation (نولون) Calculator (unchanged)
+  // ═══════════════════════════════════════════════════════════════════════════════
+
   Widget _buildDepreciationCard() {
     final vehicle = widget.vehicle;
     final now = DateTime.now();
@@ -959,6 +1294,10 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Stat Box (unchanged)
+  // ═══════════════════════════════════════════════════════════════════════════════
+
   Widget _buildStatBox(String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -998,6 +1337,10 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Helper Widgets (unchanged)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class _InfoItem extends StatelessWidget {
   final IconData icon;
@@ -1137,212 +1480,4 @@ class _DepreciationResult {
     required this.depreciationRate,
     required this.yearlyDepreciation,
   });
-}
-
-// ========================
-// Vehicle Diagram Painter
-// ========================
-
-class _VehicleDiagramPainter extends CustomPainter {
-  final Set<String> activeFaults;
-  final Set<String> allRecordTypes;
-
-  _VehicleDiagramPainter({
-    required this.activeFaults,
-    required this.allRecordTypes,
-  });
-
-  bool _hasFault(String type) => activeFaults.contains(type);
-  bool _hasHistory(String type) => allRecordTypes.contains(type);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final cx = w / 2;
-
-    // Paints
-    final bodyPaint = Paint()
-      ..color = const Color(0xFF4A90D9)
-      ..style = PaintingStyle.fill;
-
-    final bodyOutlinePaint = Paint()
-      ..color = const Color(0xFF2C5F8A)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
-    final windowPaint = Paint()
-      ..color = const Color(0xFFB3D4FC)
-      ..style = PaintingStyle.fill;
-
-    final normalPartPaint = Paint()
-      ..color = const Color(0xFF6B7280)
-      ..style = PaintingStyle.fill;
-
-    final faultPartPaint = Paint()
-      ..color = AppColors.error
-      ..style = PaintingStyle.fill;
-
-    final historyPartPaint = Paint()
-      ..color = AppColors.accent
-      ..style = PaintingStyle.fill;
-
-    final labelPaint = Paint()
-      ..color = const Color(0xFF1A1A2E)
-      ..style = PaintingStyle.fill;
-
-    final whiteTextPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    // ========== Car Body ==========
-    final bodyRect = RRect.fromRectAndCorners(
-      Rect.fromCenter(center: Offset(cx, h * 0.55), width: w * 0.7, height: h * 0.3),
-      bottomLeft: const Radius.circular(20),
-      bottomRight: const Radius.circular(20),
-      topLeft: const Radius.circular(8),
-      topRight: const Radius.circular(8),
-    );
-    canvas.drawRRect(bodyRect, bodyPaint);
-    canvas.drawRRect(bodyRect, bodyOutlinePaint);
-
-    // ========== Cabin/Windows ==========
-    final cabinRect = RRect.fromRectAndCorners(
-      Rect.fromCenter(center: Offset(cx, h * 0.38), width: w * 0.4, height: h * 0.22),
-      topLeft: const Radius.circular(16),
-      topRight: const Radius.circular(16),
-    );
-    canvas.drawRRect(cabinRect, windowPaint);
-
-    // Cabin outline
-    final cabinOutlinePaint = Paint()
-      ..color = const Color(0xFF2C5F8A)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawRRect(cabinRect, cabinOutlinePaint);
-
-    // ========== Headlights ==========
-    final headlightLeftPaint = _hasFault('electrical') ? faultPartPaint : normalPartPaint;
-    canvas.drawCircle(Offset(cx + w * 0.32, h * 0.52), 8, headlightLeftPaint);
-    final headlightRightPaint = _hasFault('electrical') ? faultPartPaint : normalPartPaint;
-    canvas.drawCircle(Offset(cx - w * 0.32, h * 0.52), 8, headlightRightPaint);
-
-    // ========== Tires ==========
-    final tireRadius = 18.0;
-    final tirePositions = [
-      Offset(cx + w * 0.32, h * 0.72), // front-right
-      Offset(cx - w * 0.32, h * 0.72), // front-left
-      Offset(cx + w * 0.28, h * 0.80), // rear-right
-      Offset(cx - w * 0.28, h * 0.80), // rear-left
-    ];
-
-    for (final pos in tirePositions) {
-      final tirePaint = _hasFault('tires') ? faultPartPaint : normalPartPaint;
-      canvas.drawCircle(pos, tireRadius, tirePaint);
-      // Hubcap
-      final hubPaint = Paint()..color = const Color(0xFFD1D5DB);
-      canvas.drawCircle(pos, tireRadius * 0.5, hubPaint);
-    }
-
-    // ========== Engine (front) ==========
-    final enginePaint = _hasFault('oil_change') || _hasFault('mechanical')
-        ? faultPartPaint
-        : _hasHistory('oil_change') || _hasHistory('mechanical')
-            ? historyPartPaint
-            : normalPartPaint;
-    final engineRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(cx + w * 0.22, h * 0.48), width: 36, height: 24),
-      const Radius.circular(6),
-    );
-    canvas.drawRRect(engineRect, enginePaint);
-
-    // ========== Battery ==========
-    final batteryPaint = _hasFault('battery') ? faultPartPaint : normalPartPaint;
-    final batteryRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(cx + w * 0.08, h * 0.38), width: 28, height: 18),
-      const Radius.circular(4),
-    );
-    canvas.drawRRect(batteryRect, batteryPaint);
-
-    // ========== Brakes (at wheels) ==========
-    final brakePaint = _hasFault('brakes') ? faultPartPaint : normalPartPaint;
-    // Draw brake indicators near front tires
-    canvas.drawCircle(Offset(cx + w * 0.37, h * 0.66), 6, brakePaint);
-    canvas.drawCircle(Offset(cx - w * 0.37, h * 0.66), 6, brakePaint);
-
-    // ========== AC ==========
-    final acPaint = _hasFault('ac') ? faultPartPaint : normalPartPaint;
-    canvas.drawCircle(Offset(cx - w * 0.08, h * 0.38), 8, acPaint);
-
-    // ========== Transmission ==========
-    final transPaint = _hasFault('transmission') ? faultPartPaint : normalPartPaint;
-    final transRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(cx, h * 0.62), width: 30, height: 16),
-      const Radius.circular(4),
-    );
-    canvas.drawRRect(transRect, transPaint);
-
-    // ========== Filter ==========
-    final filterPaint = _hasFault('filter') ? faultPartPaint : normalPartPaint;
-    canvas.drawCircle(Offset(cx + w * 0.12, h * 0.58), 7, filterPaint);
-
-    // ========== Body (hood/trunk indicator) ==========
-    final bodyPaintIndicator = _hasFault('body') ? faultPartPaint : normalPartPaint;
-    canvas.drawCircle(Offset(cx + w * 0.28, h * 0.42), 6, bodyPaintIndicator);
-    canvas.drawCircle(Offset(cx - w * 0.28, h * 0.42), 6, bodyPaintIndicator);
-
-    // ========== Labels ==========
-    final smallTextStyle = const TextStyle(color: Color(0xFF6B7280), fontSize: 9, fontFamily: 'Cairo');
-    final faultTextStyle = const TextStyle(color: AppColors.error, fontSize: 9, fontWeight: FontWeight.w700, fontFamily: 'Cairo');
-
-    _drawLabel(canvas, 'ماتور', cx + w * 0.22, h * 0.33,
-        _hasFault('oil_change') || _hasFault('mechanical') ? faultTextStyle : smallTextStyle);
-    _drawLabel(canvas, 'إطارات', cx + w * 0.22, h * 0.90,
-        _hasFault('tires') ? faultTextStyle : smallTextStyle);
-    _drawLabel(canvas, 'بطارية', cx + w * 0.08, h * 0.28,
-        _hasFault('battery') ? faultTextStyle : smallTextStyle);
-    _drawLabel(canvas, 'فرامل', cx - w * 0.22, h * 0.90,
-        _hasFault('brakes') ? faultTextStyle : smallTextStyle);
-    _drawLabel(canvas, 'تكييف', cx - w * 0.08, h * 0.28,
-        _hasFault('ac') ? faultTextStyle : smallTextStyle);
-    _drawLabel(canvas, 'ناقل', cx, h * 0.74,
-        _hasFault('transmission') ? faultTextStyle : smallTextStyle);
-    _drawLabel(canvas, 'فلتر', cx + w * 0.12, h * 0.52,
-        _hasFault('filter') ? faultTextStyle : smallTextStyle);
-    _drawLabel(canvas, 'هيكل', cx - w * 0.22, h * 0.33,
-        _hasFault('body') ? faultTextStyle : smallTextStyle);
-    _drawLabel(canvas, 'كهرباء', cx - w * 0.30, h * 0.45,
-        _hasFault('electrical') ? faultTextStyle : smallTextStyle);
-
-    // ========== Pulsing red circle for faults ==========
-    if (activeFaults.isNotEmpty) {
-      final pulsePaint = Paint()
-        ..color = AppColors.error.withOpacity(0.15)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(Offset(cx, h * 0.5), w * 0.38, pulsePaint);
-    }
-  }
-
-  void _drawLabel(Canvas canvas, String text, double x, double y, TextStyle style) {
-    final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
-      textDirection: TextDirection.rtl,
-      fontSize: style.fontSize,
-      fontFamily: style.fontFamily,
-      fontWeight: style.fontWeight,
-    ))
-      ..pushStyle(ui.TextStyle(color: style.color))
-      ..addText(text);
-    final paragraph = paragraphBuilder.build();
-    paragraph.layout(ui.ParagraphConstraints(width: 60));
-    canvas.drawParagraph(
-      paragraph,
-      Offset(x - paragraph.width / 2, y - paragraph.height / 2),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _VehicleDiagramPainter oldDelegate) {
-    return oldDelegate.activeFaults != activeFaults ||
-        oldDelegate.allRecordTypes != allRecordTypes;
-  }
 }
