@@ -186,3 +186,25 @@ Stage Summary:
 - Updated: lib/screens/reports_screen.dart (removed sync service)
 - Files no longer needed: db_native.dart, db_stub.dart, supabase_sync_service.dart (can be deleted)
 
+---
+Task ID: 5
+Agent: Main Agent
+Task: Add vehicle categories and update card layout
+
+Work Log:
+- Updated AppConstants.vehicleTypes with 6 categories: عربيه نص نقل (دبابه), عربيه نقل جامبو, عربيه دبل كابينه, أوتوبيسات, ميكروباص, كلارك
+- Updated AppConstants.vehicleTypeIcons with appropriate icons for each type
+- Updated AppConstants.vehicleTypeColors with distinct colors per type
+- Modified Vehicle model: displayName always shows "make model year", added driverDisplayName and shortName getters
+- Rewrote VehicleCard widget: vehicle name shown prominently, driver name moved below, vehicle type badge in bottom row, dynamic icon/color based on type
+- Updated VehiclesScreen: added vehicle type filter chips above status filters, empty state message adapts to active type filter
+- Updated VehicleProvider: added _typeFilter field, setTypeFilter() method, _applyFilters() now checks type
+- Updated AddVehicleScreen: added vehicle type dropdown with icon/color preview, saves vehicleType to model
+- Updated seed data: 12 vehicles now have appropriate vehicle types (half_truck, jumbo_truck, double_cabin, bus, microbus, forklift)
+- Created MIGRATION_VEHICLE_TYPES.sql for user to run in Supabase SQL Editor
+
+Stage Summary:
+- 8 files changed, 249 insertions, 62 deletions
+- Commit 47e1a2a pushed to GitHub
+- User needs to run MIGRATION_VEHICLE_TYPES.sql in Supabase SQL Editor to update existing vehicles with old type values
+
