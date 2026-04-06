@@ -10,7 +10,6 @@ import '../providers/user_provider.dart';
 import '../providers/notification_provider.dart';
 import '../widgets/developer_credit.dart';
 import '../services/supabase_service.dart';
-import '../services/supabase_sync_service.dart';
 import 'dashboard_screen.dart';
 import 'vehicles_screen.dart';
 import 'maintenance_screen.dart';
@@ -60,7 +59,23 @@ class _MainScreenState extends State<MainScreen>
     if (_isSyncing) return;
     setState(() => _isSyncing = true);
     try {
-      await SupabaseSyncService.syncNow();
+      // Refresh all data from Supabase
+      final vehicleProvider = context.read<VehicleProvider>();
+      final maintenanceProvider = context.read<MaintenanceProvider>();
+      final fuelProvider = context.read<FuelProvider>();
+      final checklistProvider = context.read<ChecklistProvider>();
+      final workOrderProvider = context.read<WorkOrderProvider>();
+      final tripProvider = context.read<TripTrackingProvider>();
+
+      await Future.wait([
+        vehicleProvider.loadVehicles(),
+        maintenanceProvider.loadRecords(),
+        fuelProvider.loadFuelRecords(),
+        checklistProvider.loadChecklists(),
+        workOrderProvider.loadOrders(),
+        tripProvider.loadTrips(),
+      ]);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -68,7 +83,7 @@ class _MainScreenState extends State<MainScreen>
               children: [
                 Icon(Icons.cloud_done, color: Colors.white, size: 20),
                 SizedBox(width: 8),
-                Expanded(child: Text('تمت المزامنة بنجاح', style: TextStyle(fontFamily: 'Cairo'))),
+                Expanded(child: Text('تم تحديث البيانات بنجاح', style: TextStyle(fontFamily: 'Cairo'))),
               ],
             ),
             backgroundColor: AppColors.primary,
@@ -85,7 +100,7 @@ class _MainScreenState extends State<MainScreen>
               children: [
                 Icon(Icons.cloud_off, color: Colors.white, size: 20),
                 SizedBox(width: 8),
-                Expanded(child: Text('فشلت المزامنة - تحقق من الاتصال', style: TextStyle(fontFamily: 'Cairo'))),
+                Expanded(child: Text('فشل التحديث - تحقق من الاتصال', style: TextStyle(fontFamily: 'Cairo'))),
               ],
             ),
             backgroundColor: AppColors.error,

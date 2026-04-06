@@ -88,6 +88,7 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
 
   Future<void> _init() async {
     try {
+      // Initialize DatabaseService (uses Supabase if signed in, memory fallback otherwise)
       await DatabaseService.initialize();
       if (mounted) setState(() => _ready = true);
     } catch (e) {

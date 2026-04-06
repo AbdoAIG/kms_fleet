@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 import '../services/report_service.dart';
-import '../services/supabase_sync_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
@@ -51,17 +50,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Future<void> _syncData() async {
     setState(() => _isSyncing = true);
     try {
-      await SupabaseSyncService.syncNow();
       await _loadData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تمت المزامنة بنجاح ✅'), backgroundColor: AppColors.success),
+          const SnackBar(content: Text('تم تحديث البيانات بنجاح ✅'), backgroundColor: AppColors.success),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('فشلت المزامنة: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('فشل التحديث: $e'), backgroundColor: AppColors.error),
         );
       }
     } finally {

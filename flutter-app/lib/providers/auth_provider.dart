@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
+import '../services/database_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
@@ -29,6 +30,10 @@ class AuthProvider extends ChangeNotifier {
       supabase.auth.onAuthStateChange.listen((event) {
         _user = supabase.auth.currentUser;
         _offlineMode = false;
+        if (_user != null) {
+          // Switch DatabaseService to Supabase online mode
+          DatabaseService.goOnline();
+        }
         notifyListeners();
       });
 
@@ -62,6 +67,8 @@ class AuthProvider extends ChangeNotifier {
       );
       _user = response.user;
       _offlineMode = false;
+      // Switch DatabaseService to online mode
+      await DatabaseService.goOnline();
       _isLoading = false;
       notifyListeners();
       return true;
@@ -78,7 +85,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> signUp(String email, String password, String displayName) async {
+  Future<bool> signUp(String email, String password, String displayName, {String role = 'driver'}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -93,10 +100,14 @@ class AuthProvider extends ChangeNotifier {
       final response = await supabase.auth.signUp(
         email: email,
         password: password,
-        data: {'display_name': displayName},
+        data: {
+          'display_name': displayName,
+          'role': role,
+        },
       );
       _user = response.user;
       _offlineMode = false;
+      await DatabaseService.goOnline();
       _isLoading = false;
       notifyListeners();
       return true;
@@ -119,6 +130,8 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {}
     _offlineMode = false;
     _user = null;
+    // Switch DatabaseService back to offline mode
+    DatabaseService.goOffline();
     notifyListeners();
   }
 

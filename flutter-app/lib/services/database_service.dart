@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
 import '../models/checklist.dart';
@@ -9,15 +9,20 @@ import '../models/driver_violation.dart';
 import '../models/expense.dart';
 import '../models/work_order.dart';
 import '../models/trip_tracking.dart';
-import '../utils/constants.dart';
+import '../models/app_user.dart';
+import 'supabase_service.dart';
 
-// Conditional import: use native sqflite on Android/iOS, stub on web/desktop.
-// dart.library.io is TRUE on all native platforms (Android, iOS, Windows, macOS, Linux)
-// and FALSE on web (both dart2js and dart2wasm).
-import 'db_stub.dart' if (dart.library.io) 'db_native.dart';
+// ═══════════════════════════════════════════════════════════════════════════════
+// DatabaseService — Supabase-primary with offline memory fallback
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// When Supabase is available (user signed in + network), all CRUD goes to
+// Supabase directly.  When offline or not signed in, data is held in memory
+// with seed data so the UI stays functional.
 
 class DatabaseService {
-  static bool _useMemory = true;
+  // ── Offline memory storage ────────────────────────────────────────────────
+  static bool _offline = true;
   static List<Vehicle> _memVehicles = [];
   static List<MaintenanceRecord> _memRecords = [];
   static List<Checklist> _memChecklists = [];
@@ -26,29 +31,50 @@ class DatabaseService {
   static List<Expense> _memExpenses = [];
   static List<WorkOrder> _memWorkOrders = [];
   static List<TripTracking> _memTrips = [];
-  static const _vt = 'vehicles';
-  static const _mt = 'maintenance_records';
-  static const _ct = 'checklists';
-  static const _ft = 'fuel_records';
-  static const _vt2 = 'driver_violations';
-  static const _et = 'expenses';
-  static const _wot = 'work_orders';
-  static const _tt = 'trip_trackings';
+  static List<AppUser> _memUsers = [];
+
+  // ── Supabase convenience ──────────────────────────────────────────────────
+  static String? get _uid => currentUserId;
+  static bool get _isOnline => !_offline && supabaseReady && _uid != null;
+  static final _db = Supabase.instance.client;
 
   DatabaseService._();
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  INITIALIZATION
+  // ═══════════════════════════════════════════════════════════════════════════
+
   static Future<void> initialize() async {
     try {
-      await initNativeDb();
-      if (nativeDbAvailable) {
-        _useMemory = false;
+      if (supabaseReady && currentUserId != null) {
+        _offline = false;
+        debugPrint('DB: Using Supabase as primary database');
         return;
       }
     } catch (e) {
-      debugPrint('DB init error, fallback to memory: $e');
+      debugPrint('DB: Supabase not available, using offline mode: $e');
     }
-    _useMemory = true;
+    _offline = true;
     _seedMemory();
+  }
+
+  /// Call after sign-in to switch from offline to Supabase.
+  static Future<void> goOnline() async {
+    try {
+      if (supabaseReady && currentUserId != null) {
+        _offline = false;
+        debugPrint('DB: Switched to Supabase online mode');
+      }
+    } catch (e) {
+      debugPrint('DB: Failed to go online: $e');
+    }
+  }
+
+  /// Call after sign-out to switch back to offline mode.
+  static void goOffline() {
+    _offline = true;
+    _seedMemory();
+    debugPrint('DB: Switched to offline mode');
   }
 
   static void _seedMemory() {
@@ -60,7 +86,12 @@ class DatabaseService {
     _memExpenses = _seedExpenses();
     _memWorkOrders = _seedWorkOrders();
     _memTrips = _seedTrips();
+    _memUsers = _seedUsers();
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  SEED DATA (offline fallback)
+  // ═══════════════════════════════════════════════════════════════════════════
 
   static List<Vehicle> _seedVehicles() {
     final n = DateTime.now();
@@ -154,7 +185,6 @@ class DatabaseService {
     ];
   }
 
-  // ===== Violation seed =====
   static List<DriverViolation> _seedViolations() {
     final n = DateTime.now();
     return [
@@ -164,7 +194,6 @@ class DatabaseService {
     ];
   }
 
-  // ===== Expense seed =====
   static List<Expense> _seedExpenses() {
     final n = DateTime.now();
     return [
@@ -179,7 +208,6 @@ class DatabaseService {
     ];
   }
 
-  // ===== Work Order seed =====
   static List<WorkOrder> _seedWorkOrders() {
     final n = DateTime.now();
     return [
@@ -192,83 +220,93 @@ class DatabaseService {
     ];
   }
 
-  // ===== Trip Tracking seed =====
   static List<TripTracking> _seedTrips() {
     final n = DateTime.now();
     return [
-      TripTracking(
-        id: 1, vehicleId: 1, status: 'completed',
-        startLat: 30.0444, startLng: 31.2357,
-        endLat: 30.0846, endLng: 31.2436,
-        startAddress: 'القاهرة - المعادي', endAddress: 'القاهرة - مدينة نصر',
-        distanceKm: 12.5, durationMinutes: 35,
-        startOdometer: 44800, endOdometer: 44813,
-        driverName: 'أحمد محمود',
-        notes: 'رحلة صباحية للمكتب',
-        createdAt: n.subtract(const Duration(days: 2)),
-        updatedAt: n.subtract(const Duration(days: 2)),
-      ),
-      TripTracking(
-        id: 2, vehicleId: 2, status: 'completed',
-        startLat: 30.0561, startLng: 31.2243,
-        endLat: 29.9858, endLng: 31.2812,
-        startAddress: 'الجيزة - الدقي', endAddress: 'القاهرة - المعادي',
-        distanceKm: 18.3, durationMinutes: 45,
-        startOdometer: 61700, endOdometer: 61718,
-        driverName: 'محمد علي',
-        createdAt: n.subtract(const Duration(days: 1)),
-        updatedAt: n.subtract(const Duration(days: 1)),
-      ),
-      TripTracking(
-        id: 3, vehicleId: 6, status: 'completed',
-        startLat: 30.0444, startLng: 31.2357,
-        endLat: 30.1219, endLng: 31.4056,
-        startAddress: 'القاهرة - وسط البلد', endAddress: 'القاهرة - التجمع الخامس',
-        distanceKm: 35.7, durationMinutes: 55,
-        startOdometer: 119500, endOdometer: 119536,
-        driverName: 'ياسر أحمد',
-        notes: 'توصيل بضائع',
-        createdAt: n.subtract(const Duration(hours: 8)),
-        updatedAt: n.subtract(const Duration(hours: 7)),
-      ),
-      TripTracking(
-        id: 4, vehicleId: 3, status: 'active',
-        startLat: 30.0846, startLng: 31.2436,
-        startAddress: 'القاهرة - مدينة نصر',
-        distanceKm: 5.2, durationMinutes: 12,
-        startOdometer: 88200,
-        driverName: 'حسن إبراهيم',
-        createdAt: n.subtract(const Duration(minutes: 12)),
-        updatedAt: n,
-      ),
+      TripTracking(id: 1, vehicleId: 1, status: 'completed', startLat: 30.0444, startLng: 31.2357, endLat: 30.0846, endLng: 31.2436, startAddress: 'القاهرة - المعادي', endAddress: 'القاهرة - مدينة نصر', distanceKm: 12.5, durationMinutes: 35, startOdometer: 44800, endOdometer: 44813, driverName: 'أحمد محمود', notes: 'رحلة صباحية للمكتب', createdAt: n.subtract(const Duration(days: 2)), updatedAt: n.subtract(const Duration(days: 2))),
+      TripTracking(id: 2, vehicleId: 2, status: 'completed', startLat: 30.0561, startLng: 31.2243, endLat: 29.9858, endLng: 31.2812, startAddress: 'الجيزة - الدقي', endAddress: 'القاهرة - المعادي', distanceKm: 18.3, durationMinutes: 45, startOdometer: 61700, endOdometer: 61718, driverName: 'محمد علي', createdAt: n.subtract(const Duration(days: 1)), updatedAt: n.subtract(const Duration(days: 1))),
+      TripTracking(id: 3, vehicleId: 6, status: 'completed', startLat: 30.0444, startLng: 31.2357, endLat: 30.1219, endLng: 31.4056, startAddress: 'القاهرة - وسط البلد', endAddress: 'القاهرة - التجمع الخامس', distanceKm: 35.7, durationMinutes: 55, startOdometer: 119500, endOdometer: 119536, driverName: 'ياسر أحمد', notes: 'توصيل بضائع', createdAt: n.subtract(const Duration(hours: 8)), updatedAt: n.subtract(const Duration(hours: 7))),
+      TripTracking(id: 4, vehicleId: 3, status: 'active', startLat: 30.0846, startLng: 31.2436, startAddress: 'القاهرة - مدينة نصر', distanceKm: 5.2, durationMinutes: 12, startOdometer: 88200, driverName: 'حسن إبراهيم', createdAt: n.subtract(const Duration(minutes: 12)), updatedAt: n),
     ];
   }
 
-  // ===== Vehicle CRUD =====
+  static List<AppUser> _seedUsers() {
+    final n = DateTime.now();
+    return [
+      AppUser(id: 1, email: 'admin@kmsfleet.com', displayName: 'مدير النظام', role: 'admin', phone: '01000000000', isActive: true, createdAt: n, updatedAt: n),
+      AppUser(id: 2, email: 'supervisor@kmsfleet.com', displayName: 'المشرف أحمد', role: 'supervisor', phone: '01100000000', isActive: true, createdAt: n, updatedAt: n),
+    ];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  SUPABASE HELPERS — convert between Supabase rows and model maps
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Convert a model's toMap() output to a Supabase-compatible row (adds user_id).
+  static Map<String, dynamic> _toSupabaseRow(Map<String, dynamic> map) {
+    final row = Map<String, dynamic>.from(map);
+    row['user_id'] = _uid;
+    // Don't send null id for inserts — let Postgres auto-generate BIGSERIAL
+    if (row['id'] == null) row.remove('id');
+    return row;
+  }
+
+  /// Convert a Supabase row back to a model-compatible map.
+  /// Handles JSONB columns and boolean↔int conversions.
+  static Map<String, dynamic> _fromSupabaseRow(Map<String, dynamic> row) {
+    // Checklist items: JSONB → JSON string
+    final rawItems = row['items'];
+    if (rawItems is List) {
+      row['items'] = jsonEncode(rawItems);
+    } else if (rawItems == null) {
+      row['items'] = '[]';
+    }
+    // Trip points: JSONB → JSON string
+    final rawPoints = row['trip_points_json'];
+    if (rawPoints is List) {
+      row['trip_points_json'] = jsonEncode(rawPoints);
+    } else if (rawPoints == null) {
+      row['trip_points_json'] = null;
+    }
+    // Fuel booleans
+    if (row['full_tank'] is bool) {
+      row['full_tank'] = (row['full_tank'] as bool) ? 1 : 0;
+    }
+    if (row['is_abnormal'] is bool) {
+      row['is_abnormal'] = (row['is_abnormal'] as bool) ? 1 : 0;
+    }
+    // AppUser booleans
+    if (row['is_active'] is bool) {
+      row['is_active'] = (row['is_active'] as bool) ? 1 : 0;
+    }
+    return row;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  VEHICLE CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
   static Future<List<Vehicle>> getAllVehicles() async {
-    if (_useMemory) return List.from(_memVehicles);
+    if (_offline) return List.from(_memVehicles);
     try {
-      final maps = await nativeQuery(_vt, orderBy: 'created_at DESC');
-      return maps.map((m) => Vehicle.fromMap(m)).toList();
+      final response = await _db.from('vehicles').select().eq('user_id', _uid!).order('created_at', ascending: false);
+      return response.map((r) => Vehicle.fromMap(_fromSupabaseRow(r))).toList();
     } catch (e) {
+      debugPrint('DB: Error fetching vehicles: $e');
       return List.from(_memVehicles);
     }
   }
 
   static Future<Vehicle?> getVehicleById(int id) async {
-    if (_useMemory) {
-      for (final v in _memVehicles) {
-        if (v.id == id) return v;
-      }
+    if (_offline) {
+      for (final v in _memVehicles) { if (v.id == id) return v; }
       return null;
     }
     try {
-      final maps = await nativeQuery(_vt, where: 'id = ?', whereArgs: [id]);
-      if (maps.isEmpty) return null;
-      return Vehicle.fromMap(maps.first);
-    } catch (e) {
-      return null;
-    }
+      final response = await _db.from('vehicles').select().eq('id', id).eq('user_id', _uid!).maybeSingle();
+      if (response == null) return null;
+      return Vehicle.fromMap(_fromSupabaseRow(response));
+    } catch (e) { return null; }
   }
 
   static Future<List<Vehicle>> searchVehicles(String query) async {
@@ -282,261 +320,260 @@ class DatabaseService {
   }
 
   static Future<int> insertVehicle(Vehicle v) async {
-    if (_useMemory) {
+    if (_offline) {
       final maxId = _memVehicles.isEmpty ? 0 : _memVehicles.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memVehicles.insert(0, v.copyWith(id: maxId + 1));
       return maxId + 1;
     }
     try {
-      return nativeInsert(_vt, v.toMap());
-    } catch (e) { return -1; }
+      final row = _toSupabaseRow(v.toMap());
+      final response = await _db.from('vehicles').insert(row).select('id').single();
+      return (response['id'] as int?) ?? -1;
+    } catch (e) { debugPrint('DB: Error inserting vehicle: $e'); return -1; }
   }
 
   static Future<int> updateVehicle(Vehicle v) async {
-    if (_useMemory) {
+    if (_offline) {
       for (int i = 0; i < _memVehicles.length; i++) {
         if (_memVehicles[i].id == v.id) { _memVehicles[i] = v; return 1; }
       }
       return 0;
     }
     try {
-      return nativeUpdate(_vt, v.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [v.id]);
-    } catch (e) { return 0; }
+      await _db.from('vehicles').update(v.toMap()).eq('id', v.id).eq('user_id', _uid!);
+      return 1;
+    } catch (e) { debugPrint('DB: Error updating vehicle: $e'); return 0; }
   }
 
   static Future<int> deleteVehicle(int id) async {
-    if (_useMemory) {
+    if (_offline) {
       _memVehicles.removeWhere((v) => v.id == id);
       return 1;
     }
     try {
-      return nativeDelete(_vt, where: 'id = ?', whereArgs: [id]);
-    } catch (e) { return 0; }
+      await _db.from('vehicles').delete().eq('id', id).eq('user_id', _uid!);
+      return 1;
+    } catch (e) { debugPrint('DB: Error deleting vehicle: $e'); return 0; }
   }
 
-  // ===== Maintenance CRUD =====
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  MAINTENANCE CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
   static Future<List<MaintenanceRecord>> getAllMaintenanceRecords() async {
     final vehicles = await getAllVehicles();
-    if (_useMemory) {
+    if (_offline) {
       return _memRecords.map((r) {
-        for (final v in vehicles) {
-          if (v.id == r.vehicleId) return r.copyWith(vehicle: v);
-        }
+        for (final v in vehicles) { if (v.id == r.vehicleId) return r.copyWith(vehicle: v); }
         return r;
       }).toList();
     }
     try {
-      final maps = await nativeQuery(_mt, orderBy: 'maintenance_date DESC');
-      return maps.map((m) {
-        final vid = (m['vehicle_id'] as int?) ?? 0;
-        Vehicle? veh;
-        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-        return MaintenanceRecord.fromMap(m).copyWith(vehicle: veh);
-      }).toList();
+      final response = await _db.from('maintenance_records').select().eq('user_id', _uid!).order('maintenance_date', ascending: false);
+      return _joinVehicles(response.map((m) => MaintenanceRecord.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
     } catch (e) {
+      debugPrint('DB: Error fetching maintenance: $e');
       return List.from(_memRecords);
     }
   }
 
   static Future<List<MaintenanceRecord>> getMaintenanceByVehicleId(int vid) async {
     final v = await getVehicleById(vid);
-    if (_useMemory) {
+    if (_offline) {
       return _memRecords.where((r) => r.vehicleId == vid).map((r) => r.copyWith(vehicle: v)).toList();
     }
     try {
-      final maps = await nativeQuery(_mt, where: 'vehicle_id = ?', whereArgs: [vid], orderBy: 'maintenance_date DESC');
-      return maps.map((m) => MaintenanceRecord.fromMap(m).copyWith(vehicle: v)).toList();
+      final response = await _db.from('maintenance_records').select().eq('user_id', _uid!).eq('vehicle_id', vid).order('maintenance_date', ascending: false);
+      return response.map((m) => MaintenanceRecord.fromMap(_fromSupabaseRow(m)).copyWith(vehicle: v)).toList();
     } catch (e) { return []; }
   }
 
   static Future<int> insertMaintenanceRecord(MaintenanceRecord r) async {
-    if (_useMemory) {
+    if (_offline) {
       final maxId = _memRecords.isEmpty ? 0 : _memRecords.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memRecords.insert(0, r.copyWith(id: maxId + 1));
       return maxId + 1;
     }
     try {
-      return nativeInsert(_mt, r.toMap());
-    } catch (e) { return -1; }
+      final row = _toSupabaseRow(r.toMap());
+      final response = await _db.from('maintenance_records').insert(row).select('id').single();
+      return (response['id'] as int?) ?? -1;
+    } catch (e) { debugPrint('DB: Error inserting maintenance: $e'); return -1; }
   }
 
   static Future<int> updateMaintenanceRecord(MaintenanceRecord r) async {
-    if (_useMemory) {
+    if (_offline) {
       for (int i = 0; i < _memRecords.length; i++) {
         if (_memRecords[i].id == r.id) { _memRecords[i] = r; return 1; }
       }
       return 0;
     }
     try {
-      return nativeUpdate(_mt, r.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [r.id]);
+      await _db.from('maintenance_records').update(r.toMap()).eq('id', r.id).eq('user_id', _uid!);
+      return 1;
     } catch (e) { return 0; }
   }
 
   static Future<int> deleteMaintenanceRecord(int id) async {
-    if (_useMemory) {
-      _memRecords.removeWhere((r) => r.id == id);
-      return 1;
-    }
+    if (_offline) { _memRecords.removeWhere((r) => r.id == id); return 1; }
     try {
-      return nativeDelete(_mt, where: 'id = ?', whereArgs: [id]);
+      await _db.from('maintenance_records').delete().eq('id', id).eq('user_id', _uid!);
+      return 1;
     } catch (e) { return 0; }
   }
 
-  // ===== Checklist CRUD =====
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  CHECKLIST CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
   static Future<List<Checklist>> getAllChecklists() async {
     final vehicles = await getAllVehicles();
-    if (_useMemory) {
+    if (_offline) {
       return _memChecklists.map((c) {
-        for (final v in vehicles) {
-          if (v.id == c.vehicleId) return c.copyWith(vehicle: v);
-        }
+        for (final v in vehicles) { if (v.id == c.vehicleId) return c.copyWith(vehicle: v); }
         return c;
       }).toList();
     }
     try {
-      final maps = await nativeQuery(_ct, orderBy: 'inspection_date DESC');
-      return maps.map((m) {
-        final vid = (m['vehicle_id'] as int?) ?? 0;
-        Vehicle? veh;
-        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-        return Checklist.fromMap(m).copyWith(vehicle: veh);
-      }).toList();
+      final response = await _db.from('checklists').select().eq('user_id', _uid!).order('inspection_date', ascending: false);
+      return _joinVehiclesChecklists(response.map((m) => Checklist.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
     } catch (e) {
+      debugPrint('DB: Error fetching checklists: $e');
       return List.from(_memChecklists);
     }
   }
 
   static Future<Checklist?> getChecklistById(int id) async {
     final vehicles = await getAllVehicles();
-    if (_useMemory) {
+    if (_offline) {
       for (final c in _memChecklists) {
         if (c.id == id) {
-          for (final v in vehicles) {
-            if (v.id == c.vehicleId) return c.copyWith(vehicle: v);
-          }
+          for (final v in vehicles) { if (v.id == c.vehicleId) return c.copyWith(vehicle: v); }
           return c;
         }
       }
       return null;
     }
     try {
-      final maps = await nativeQuery(_ct, where: 'id = ?', whereArgs: [id]);
-      if (maps.isEmpty) return null;
-      final vid = (maps.first['vehicle_id'] as int?) ?? 0;
+      final response = await _db.from('checklists').select().eq('id', id).eq('user_id', _uid!).maybeSingle();
+      if (response == null) return null;
+      final vid = (response['vehicle_id'] as int?) ?? 0;
       Vehicle? veh;
       for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-      return Checklist.fromMap(maps.first).copyWith(vehicle: veh);
-    } catch (e) {
-      return null;
-    }
+      return Checklist.fromMap(_fromSupabaseRow(response)).copyWith(vehicle: veh);
+    } catch (e) { return null; }
   }
 
   static Future<List<Checklist>> getChecklistsByVehicleId(int vid) async {
     final v = await getVehicleById(vid);
-    if (_useMemory) {
+    if (_offline) {
       return _memChecklists.where((c) => c.vehicleId == vid).map((c) => c.copyWith(vehicle: v)).toList();
     }
     try {
-      final maps = await nativeQuery(_ct, where: 'vehicle_id = ?', whereArgs: [vid], orderBy: 'inspection_date DESC');
-      return maps.map((m) => Checklist.fromMap(m).copyWith(vehicle: v)).toList();
+      final response = await _db.from('checklists').select().eq('user_id', _uid!).eq('vehicle_id', vid).order('inspection_date', ascending: false);
+      return response.map((m) => Checklist.fromMap(_fromSupabaseRow(m)).copyWith(vehicle: v)).toList();
     } catch (e) { return []; }
   }
 
   static Future<int> insertChecklist(Checklist c) async {
-    if (_useMemory) {
+    if (_offline) {
       final maxId = _memChecklists.isEmpty ? 0 : _memChecklists.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memChecklists.insert(0, c.copyWith(id: maxId + 1));
       return maxId + 1;
     }
     try {
-      return nativeInsert(_ct, c.toMap());
-    } catch (e) { return -1; }
+      final map = _toSupabaseRow(c.toMap());
+      // Convert JSON string items to List for JSONB column
+      final rawItems = map['items'];
+      if (rawItems is String && rawItems.isNotEmpty) {
+        try { map['items'] = jsonDecode(rawItems); } catch (_) {}
+      }
+      final response = await _db.from('checklists').insert(map).select('id').single();
+      return (response['id'] as int?) ?? -1;
+    } catch (e) { debugPrint('DB: Error inserting checklist: $e'); return -1; }
   }
 
   static Future<int> updateChecklist(Checklist c) async {
-    if (_useMemory) {
+    if (_offline) {
       for (int i = 0; i < _memChecklists.length; i++) {
         if (_memChecklists[i].id == c.id) { _memChecklists[i] = c; return 1; }
       }
       return 0;
     }
     try {
-      return nativeUpdate(_ct, c.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [c.id]);
+      final map = c.toMap();
+      final rawItems = map['items'];
+      if (rawItems is String && rawItems.isNotEmpty) {
+        try { map['items'] = jsonDecode(rawItems); } catch (_) {}
+      }
+      await _db.from('checklists').update(map).eq('id', c.id).eq('user_id', _uid!);
+      return 1;
     } catch (e) { return 0; }
   }
 
   static Future<int> deleteChecklist(int id) async {
-    if (_useMemory) {
-      _memChecklists.removeWhere((c) => c.id == id);
-      return 1;
-    }
+    if (_offline) { _memChecklists.removeWhere((c) => c.id == id); return 1; }
     try {
-      return nativeDelete(_ct, where: 'id = ?', whereArgs: [id]);
+      await _db.from('checklists').delete().eq('id', id).eq('user_id', _uid!);
+      return 1;
     } catch (e) { return 0; }
   }
 
-  // ===== FuelRecord CRUD =====
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  FUEL RECORD CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
   static Future<List<FuelRecord>> getAllFuelRecords() async {
     final vehicles = await getAllVehicles();
-    if (_useMemory) {
+    if (_offline) {
       return _memFuelRecords.map((f) {
-        for (final v in vehicles) {
-          if (v.id == f.vehicleId) return f.copyWith(vehicle: v);
-        }
+        for (final v in vehicles) { if (v.id == f.vehicleId) return f.copyWith(vehicle: v); }
         return f;
       }).toList();
     }
     try {
-      final maps = await nativeQuery(_ft, orderBy: 'fill_date DESC');
-      return maps.map((m) {
-        final vid = (m['vehicle_id'] as int?) ?? 0;
-        Vehicle? veh;
-        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-        return FuelRecord.fromMap(m).copyWith(vehicle: veh);
-      }).toList();
+      final response = await _db.from('fuel_records').select().eq('user_id', _uid!).order('fill_date', ascending: false);
+      return _joinVehiclesFuel(response.map((m) => FuelRecord.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
     } catch (e) {
+      debugPrint('DB: Error fetching fuel: $e');
       return List.from(_memFuelRecords);
     }
   }
 
   static Future<FuelRecord?> getFuelRecordById(int id) async {
     final vehicles = await getAllVehicles();
-    if (_useMemory) {
+    if (_offline) {
       for (final f in _memFuelRecords) {
         if (f.id == id) {
-          for (final v in vehicles) {
-            if (v.id == f.vehicleId) return f.copyWith(vehicle: v);
-          }
+          for (final v in vehicles) { if (v.id == f.vehicleId) return f.copyWith(vehicle: v); }
           return f;
         }
       }
       return null;
     }
     try {
-      final maps = await nativeQuery(_ft, where: 'id = ?', whereArgs: [id]);
-      if (maps.isEmpty) return null;
-      final vid = (maps.first['vehicle_id'] as int?) ?? 0;
+      final response = await _db.from('fuel_records').select().eq('id', id).eq('user_id', _uid!).maybeSingle();
+      if (response == null) return null;
+      final vid = (response['vehicle_id'] as int?) ?? 0;
       Vehicle? veh;
       for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-      return FuelRecord.fromMap(maps.first).copyWith(vehicle: veh);
-    } catch (e) {
-      return null;
-    }
+      return FuelRecord.fromMap(_fromSupabaseRow(response)).copyWith(vehicle: veh);
+    } catch (e) { return null; }
   }
 
   static Future<List<FuelRecord>> getFuelRecordsByVehicleId(int vid) async {
     final v = await getVehicleById(vid);
-    if (_useMemory) {
+    if (_offline) {
       return _memFuelRecords.where((f) => f.vehicleId == vid).map((f) => f.copyWith(vehicle: v)).toList();
     }
     try {
-      final maps = await nativeQuery(_ft, where: 'vehicle_id = ?', whereArgs: [vid], orderBy: 'fill_date DESC');
-      return maps.map((m) => FuelRecord.fromMap(m).copyWith(vehicle: v)).toList();
+      final response = await _db.from('fuel_records').select().eq('user_id', _uid!).eq('vehicle_id', vid).order('fill_date', ascending: false);
+      return response.map((m) => FuelRecord.fromMap(_fromSupabaseRow(m)).copyWith(vehicle: v)).toList();
     } catch (e) { return []; }
   }
 
   static Future<int> insertFuelRecord(FuelRecord f) async {
-    if (_useMemory) {
+    if (_offline) {
       final maxId = _memFuelRecords.isEmpty ? 0 : _memFuelRecords.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       final record = f.copyWith(id: maxId + 1);
       _memFuelRecords.insert(0, record);
@@ -544,49 +581,51 @@ class DatabaseService {
       return maxId + 1;
     }
     try {
-      final id = await nativeInsert(_ft, f.toMap());
-      return id;
-    } catch (e) { return -1; }
+      final map = _toSupabaseRow(f.toMap());
+      // Convert int booleans to real booleans for Supabase
+      if (map['full_tank'] is int) map['full_tank'] = (map['full_tank'] as int) != 0;
+      if (map['is_abnormal'] is int) map['is_abnormal'] = (map['is_abnormal'] as int) != 0;
+      final response = await _db.from('fuel_records').insert(map).select('id').single();
+      return (response['id'] as int?) ?? -1;
+    } catch (e) { debugPrint('DB: Error inserting fuel: $e'); return -1; }
   }
 
   static Future<int> updateFuelRecord(FuelRecord f) async {
-    if (_useMemory) {
+    if (_offline) {
       for (int i = 0; i < _memFuelRecords.length; i++) {
         if (_memFuelRecords[i].id == f.id) { _memFuelRecords[i] = f; return 1; }
       }
       return 0;
     }
     try {
-      return nativeUpdate(_ft, f.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [f.id]);
+      final map = f.toMap();
+      if (map['full_tank'] is int) map['full_tank'] = (map['full_tank'] as int) != 0;
+      if (map['is_abnormal'] is int) map['is_abnormal'] = (map['is_abnormal'] as int) != 0;
+      await _db.from('fuel_records').update(map).eq('id', f.id).eq('user_id', _uid!);
+      return 1;
     } catch (e) { return 0; }
   }
 
   static Future<int> deleteFuelRecord(int id) async {
-    if (_useMemory) {
-      _memFuelRecords.removeWhere((f) => f.id == id);
-      return 1;
-    }
+    if (_offline) { _memFuelRecords.removeWhere((f) => f.id == id); return 1; }
     try {
-      return nativeDelete(_ft, where: 'id = ?', whereArgs: [id]);
+      await _db.from('fuel_records').delete().eq('id', id).eq('user_id', _uid!);
+      return 1;
     } catch (e) { return 0; }
   }
 
-  // ===== Fuel Consumption Rate Calculation =====
+  // ── Fuel Consumption Rate Calculation ──
 
   static const double _abnormalThreshold = 0.20;
 
-  static void _calculateAndUpdateConsumptionRate(
-      FuelRecord newRecord, List<FuelRecord> allRecords) {
-    final vehicleRecords = allRecords
-        .where((r) => r.vehicleId == newRecord.vehicleId)
-        .toList()
+  static void _calculateAndUpdateConsumptionRate(FuelRecord newRecord, List<FuelRecord> allRecords) {
+    final vehicleRecords = allRecords.where((r) => r.vehicleId == newRecord.vehicleId).toList()
       ..sort((a, b) => a.odometerReading.compareTo(b.odometerReading));
     _applyConsumptionRates(vehicleRecords);
   }
 
   static void _applyConsumptionRates(List<FuelRecord> records) {
     if (records.isEmpty) return;
-
     final List<double> rates = [];
     for (int i = 1; i < records.length; i++) {
       final prev = records[i - 1];
@@ -600,12 +639,10 @@ class DatabaseService {
         }
       }
     }
-
     if (rates.length >= 2) {
       double sum = 0;
       for (final r in rates) { sum += r; }
       final avg = sum / rates.length;
-
       for (int i = 0; i < records.length; i++) {
         final r = records[i];
         if (r.consumptionRate != null && r.consumptionRate! > 0) {
@@ -616,560 +653,513 @@ class DatabaseService {
     }
   }
 
-  // ===== Fuel Consumption Stats =====
   static Future<Map<int, Map<String, dynamic>>> getFuelConsumptionStats() async {
     final records = await getAllFuelRecords();
     final Map<int, List<FuelRecord>> byVehicle = {};
-    for (final r in records) {
-      byVehicle.putIfAbsent(r.vehicleId, () => []);
-      byVehicle[r.vehicleId]!.add(r);
-    }
-
+    for (final r in records) { byVehicle.putIfAbsent(r.vehicleId, () => []).add(r); }
     final Map<int, Map<String, dynamic>> stats = {};
     byVehicle.forEach((vid, recs) {
       recs.sort((a, b) => a.odometerReading.compareTo(b.odometerReading));
-
       final List<double> consumptionRates = [];
-      double totalLiters = 0;
-      double totalCost = 0;
+      double totalLiters = 0, totalCost = 0;
       int abnormalCount = 0;
-
-      for (final r in recs) {
-        totalLiters += r.liters;
-        totalCost += r.totalCost;
-      }
-
+      for (final r in recs) { totalLiters += r.liters; totalCost += r.totalCost; }
       for (int i = 1; i < recs.length; i++) {
-        final prev = recs[i - 1];
-        final curr = recs[i];
+        final prev = recs[i - 1], curr = recs[i];
         if (prev.fullTank && curr.fullTank && curr.liters > 0) {
           final distance = curr.odometerReading - prev.odometerReading;
-          if (distance > 0) {
-            final rate = distance / curr.liters;
-            consumptionRates.add(rate);
-          }
+          if (distance > 0) consumptionRates.add(distance / curr.liters);
         }
       }
-
       double avgRate = 0;
       if (consumptionRates.isNotEmpty) {
-        double sum = 0;
-        for (final r in consumptionRates) { sum += r; }
+        double sum = 0; for (final r in consumptionRates) { sum += r; }
         avgRate = sum / consumptionRates.length;
-
         for (final r in consumptionRates) {
-          if (r > 0 && (avgRate - r) / r > 0.20) {
-            abnormalCount++;
-          }
+          if (r > 0 && (avgRate - r) / r > 0.20) abnormalCount++;
         }
       }
-
       stats[vid] = {
-        'vehicleId': vid,
-        'totalFillUps': recs.length,
-        'totalLiters': totalLiters,
-        'totalCost': totalCost,
-        'avgConsumptionRate': avgRate,
-        'consumptionRates': consumptionRates,
-        'abnormalCount': abnormalCount,
-        'fullTankFillUps': recs.where((r) => r.fullTank).length,
+        'vehicleId': vid, 'totalFillUps': recs.length, 'totalLiters': totalLiters,
+        'totalCost': totalCost, 'avgConsumptionRate': avgRate, 'consumptionRates': consumptionRates,
+        'abnormalCount': abnormalCount, 'fullTankFillUps': recs.where((r) => r.fullTank).length,
       };
     });
-
     return stats;
   }
 
-  // ===== DriverViolation CRUD =====
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  DRIVER VIOLATION CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
   static Future<List<DriverViolation>> getAllViolations() async {
     final vehicles = await getAllVehicles();
-    if (_useMemory) {
+    if (_offline) {
       return _memViolations.map((v) {
-        Vehicle? veh;
-        for (final vv in vehicles) { if (vv.id == v.vehicleId) { veh = vv; break; } }
+        Vehicle? veh; for (final vv in vehicles) { if (vv.id == v.vehicleId) { veh = vv; break; } }
         return v.copyWith(vehicle: veh);
       }).toList();
     }
     try {
-      final maps = await nativeQuery(_vt2, orderBy: 'date DESC');
-      return maps.map((m) {
-        final vid = (m['vehicle_id'] as int?) ?? 0;
-        Vehicle? veh;
-        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-        return DriverViolation.fromMap(m).copyWith(vehicle: veh);
-      }).toList();
+      final response = await _db.from('driver_violations').select().eq('user_id', _uid!).order('date', ascending: false);
+      return _joinVehiclesViolations(response.map((m) => DriverViolation.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
     } catch (e) {
+      debugPrint('DB: Error fetching violations: $e');
       return List.from(_memViolations);
     }
   }
 
   static Future<List<DriverViolation>> getViolationsByVehicleId(int vehicleId) async {
     final vehicles = await getAllVehicles();
-    Vehicle? veh;
-    for (final v in vehicles) { if (v.id == vehicleId) { veh = v; break; } }
-
-    if (_useMemory) {
-      return _memViolations.where((v) => v.vehicleId == vehicleId).map((v) {
-        return v.copyWith(vehicle: veh);
-      }).toList();
+    Vehicle? veh; for (final v in vehicles) { if (v.id == vehicleId) { veh = v; break; } }
+    if (_offline) {
+      return _memViolations.where((v) => v.vehicleId == vehicleId).map((v) => v.copyWith(vehicle: veh)).toList();
     }
     try {
-      final maps = await nativeQuery(_vt2, where: 'vehicle_id = ?', whereArgs: [vehicleId], orderBy: 'date DESC');
-      return maps.map((m) {
-        return DriverViolation.fromMap(m).copyWith(vehicle: veh);
-      }).toList();
+      final response = await _db.from('driver_violations').select().eq('user_id', _uid!).eq('vehicle_id', vehicleId).order('date', ascending: false);
+      return response.map((m) => DriverViolation.fromMap(_fromSupabaseRow(m)).copyWith(vehicle: veh)).toList();
     } catch (e) { return []; }
   }
 
   static Future<int> insertViolation(DriverViolation v) async {
-    if (_useMemory) {
+    if (_offline) {
       final maxId = _memViolations.isEmpty ? 0 : _memViolations.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memViolations.insert(0, v.copyWith(id: maxId + 1));
       return maxId + 1;
     }
     try {
-      return nativeInsert(_vt2, v.toMap());
-    } catch (e) { return -1; }
+      final row = _toSupabaseRow(v.toMap());
+      final response = await _db.from('driver_violations').insert(row).select('id').single();
+      return (response['id'] as int?) ?? -1;
+    } catch (e) { debugPrint('DB: Error inserting violation: $e'); return -1; }
   }
 
   static Future<int> updateViolation(DriverViolation v) async {
-    if (_useMemory) {
+    if (_offline) {
       for (int i = 0; i < _memViolations.length; i++) {
         if (_memViolations[i].id == v.id) { _memViolations[i] = v; return 1; }
       }
       return 0;
     }
     try {
-      return nativeUpdate(_vt2, v.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [v.id]);
+      await _db.from('driver_violations').update(v.toMap()).eq('id', v.id).eq('user_id', _uid!);
+      return 1;
     } catch (e) { return 0; }
   }
 
   static Future<int> deleteViolation(int id) async {
-    if (_useMemory) {
-      _memViolations.removeWhere((v) => v.id == id);
+    if (_offline) { _memViolations.removeWhere((v) => v.id == id); return 1; }
+    try {
+      await _db.from('driver_violations').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
-    }
-    try {
-      return nativeDelete(_vt2, where: 'id = ?', whereArgs: [id]);
     } catch (e) { return 0; }
   }
 
-  // ===== Work Order CRUD =====
-  static Future<List<WorkOrder>> getAllWorkOrders() async {
-    final vehicles = await getAllVehicles();
-    if (_useMemory) {
-      return _memWorkOrders.map((o) {
-        Vehicle? veh;
-        for (final v in vehicles) { if (v.id == o.vehicleId) { veh = v; break; } }
-        return o.copyWith(vehicle: veh);
-      }).toList();
-    }
-    try {
-      final maps = await nativeQuery(_wot, orderBy: 'created_at DESC');
-      return maps.map((m) {
-        final vid = (m['vehicle_id'] as int?) ?? 0;
-        Vehicle? veh;
-        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-        return WorkOrder.fromMap(m).copyWith(vehicle: veh);
-      }).toList();
-    } catch (e) {
-      return List.from(_memWorkOrders);
-    }
-  }
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  EXPENSE CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  static Future<List<WorkOrder>> getWorkOrdersByVehicleId(int vid) async {
-    final v = await getVehicleById(vid);
-    if (_useMemory) {
-      return _memWorkOrders.where((o) => o.vehicleId == vid).map((o) => o.copyWith(vehicle: v)).toList();
-    }
-    try {
-      final maps = await nativeQuery(_wot, where: 'vehicle_id = ?', whereArgs: [vid], orderBy: 'created_at DESC');
-      return maps.map((m) => WorkOrder.fromMap(m).copyWith(vehicle: v)).toList();
-    } catch (e) { return []; }
-  }
-
-  static Future<int> insertWorkOrder(WorkOrder o) async {
-    if (_useMemory) {
-      final maxId = _memWorkOrders.isEmpty ? 0 : _memWorkOrders.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
-      _memWorkOrders.insert(0, o.copyWith(id: maxId + 1));
-      return maxId + 1;
-    }
-    try {
-      return nativeInsert(_wot, o.toMap());
-    } catch (e) { return -1; }
-  }
-
-  static Future<int> updateWorkOrder(WorkOrder o) async {
-    if (_useMemory) {
-      for (int i = 0; i < _memWorkOrders.length; i++) {
-        if (_memWorkOrders[i].id == o.id) { _memWorkOrders[i] = o; return 1; }
-      }
-      return 0;
-    }
-    try {
-      return nativeUpdate(_wot, o.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [o.id]);
-    } catch (e) { return 0; }
-  }
-
-  static Future<int> deleteWorkOrder(int id) async {
-    if (_useMemory) {
-      _memWorkOrders.removeWhere((o) => o.id == id);
-      return 1;
-    }
-    try {
-      return nativeDelete(_wot, where: 'id = ?', whereArgs: [id]);
-    } catch (e) { return 0; }
-  }
-
-  // ===== Expense CRUD =====
   static Future<List<Expense>> getAllExpenses() async {
     final vehicles = await getAllVehicles();
-    if (_useMemory) {
+    if (_offline) {
       return _memExpenses.map((e) {
-        for (final v in vehicles) {
-          if (v.id == e.vehicleId) return e.copyWith(vehicle: v);
-        }
-        return e;
+        Vehicle? veh; for (final v in vehicles) { if (v.id == e.vehicleId) { veh = v; break; } }
+        return e.copyWith(vehicle: veh);
       }).toList();
     }
     try {
-      final maps = await nativeQuery(_et, orderBy: 'date DESC');
-      return maps.map((m) {
-        final vid = (m['vehicle_id'] as int?) ?? 0;
-        Vehicle? veh;
-        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-        return Expense.fromMap(m).copyWith(vehicle: veh);
-      }).toList();
+      final response = await _db.from('expenses').select().eq('user_id', _uid!).order('date', ascending: false);
+      return _joinVehiclesExpenses(response.map((m) => Expense.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
     } catch (e) {
+      debugPrint('DB: Error fetching expenses: $e');
       return List.from(_memExpenses);
     }
   }
 
-  static Future<List<Expense>> getExpensesByVehicleId(int vid) async {
-    final v = await getVehicleById(vid);
-    if (_useMemory) {
-      return _memExpenses.where((e) => e.vehicleId == vid).map((e) => e.copyWith(vehicle: v)).toList();
+  static Future<List<Expense>> getExpensesByVehicleId(int vehicleId) async {
+    final vehicles = await getAllVehicles();
+    Vehicle? veh; for (final v in vehicles) { if (v.id == vehicleId) { veh = v; break; } }
+    if (_offline) {
+      return _memExpenses.where((e) => e.vehicleId == vehicleId).map((e) => e.copyWith(vehicle: veh)).toList();
     }
     try {
-      final maps = await nativeQuery(_et, where: 'vehicle_id = ?', whereArgs: [vid], orderBy: 'date DESC');
-      return maps.map((m) => Expense.fromMap(m).copyWith(vehicle: v)).toList();
+      final response = await _db.from('expenses').select().eq('user_id', _uid!).eq('vehicle_id', vehicleId).order('date', ascending: false);
+      return response.map((m) => Expense.fromMap(_fromSupabaseRow(m)).copyWith(vehicle: veh)).toList();
     } catch (e) { return []; }
   }
 
   static Future<List<Expense>> getExpensesByType(String type) async {
-    final vehicles = await getAllVehicles();
-    if (_useMemory) {
-      return _memExpenses.where((e) => e.type == type).map((e) {
-        for (final v in vehicles) {
-          if (v.id == e.vehicleId) return e.copyWith(vehicle: v);
-        }
-        return e;
-      }).toList();
-    }
-    try {
-      final maps = await nativeQuery(_et, where: 'type = ?', whereArgs: [type], orderBy: 'date DESC');
-      return maps.map((m) {
-        final vid = (m['vehicle_id'] as int?) ?? 0;
-        Vehicle? veh;
-        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-        return Expense.fromMap(m).copyWith(vehicle: veh);
-      }).toList();
-    } catch (e) { return []; }
+    final all = await getAllExpenses();
+    return all.where((e) => e.type == type).toList();
   }
 
   static Future<int> insertExpense(Expense e) async {
-    if (_useMemory) {
+    if (_offline) {
       final maxId = _memExpenses.isEmpty ? 0 : _memExpenses.map((x) => x.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memExpenses.insert(0, e.copyWith(id: maxId + 1));
       return maxId + 1;
     }
     try {
-      return nativeInsert(_et, e.toMap());
-    } catch (e) { return -1; }
+      final row = _toSupabaseRow(e.toMap());
+      final response = await _db.from('expenses').insert(row).select('id').single();
+      return (response['id'] as int?) ?? -1;
+    } catch (ex) { debugPrint('DB: Error inserting expense: $ex'); return -1; }
   }
 
   static Future<int> updateExpense(Expense e) async {
-    if (_useMemory) {
+    if (_offline) {
       for (int i = 0; i < _memExpenses.length; i++) {
         if (_memExpenses[i].id == e.id) { _memExpenses[i] = e; return 1; }
       }
       return 0;
     }
     try {
-      return nativeUpdate(_et, e.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [e.id]);
-    } catch (e) { return 0; }
+      await _db.from('expenses').update(e.toMap()).eq('id', e.id).eq('user_id', _uid!);
+      return 1;
+    } catch (ex) { return 0; }
   }
 
   static Future<int> deleteExpense(int id) async {
-    if (_useMemory) {
-      _memExpenses.removeWhere((e) => e.id == id);
+    if (_offline) { _memExpenses.removeWhere((e) => e.id == id); return 1; }
+    try {
+      await _db.from('expenses').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
+    } catch (ex) { return 0; }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  WORK ORDER CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  static Future<List<WorkOrder>> getAllWorkOrders() async {
+    final vehicles = await getAllVehicles();
+    if (_offline) {
+      return _memWorkOrders.map((o) {
+        Vehicle? veh; for (final v in vehicles) { if (v.id == o.vehicleId) { veh = v; break; } }
+        return o.copyWith(vehicle: veh);
+      }).toList();
     }
     try {
-      return nativeDelete(_et, where: 'id = ?', whereArgs: [id]);
+      final response = await _db.from('work_orders').select().eq('user_id', _uid!).order('created_at', ascending: false);
+      return _joinVehiclesWorkOrders(response.map((m) => WorkOrder.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
+    } catch (e) {
+      debugPrint('DB: Error fetching work orders: $e');
+      return List.from(_memWorkOrders);
+    }
+  }
+
+  static Future<List<WorkOrder>> getWorkOrdersByVehicleId(int vid) async {
+    final v = await getVehicleById(vid);
+    if (_offline) {
+      return _memWorkOrders.where((o) => o.vehicleId == vid).map((o) => o.copyWith(vehicle: v)).toList();
+    }
+    try {
+      final response = await _db.from('work_orders').select().eq('user_id', _uid!).eq('vehicle_id', vid).order('created_at', ascending: false);
+      return response.map((m) => WorkOrder.fromMap(_fromSupabaseRow(m)).copyWith(vehicle: v)).toList();
+    } catch (e) { return []; }
+  }
+
+  static Future<int> insertWorkOrder(WorkOrder o) async {
+    if (_offline) {
+      final maxId = _memWorkOrders.isEmpty ? 0 : _memWorkOrders.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+      _memWorkOrders.insert(0, o.copyWith(id: maxId + 1));
+      return maxId + 1;
+    }
+    try {
+      final row = _toSupabaseRow(o.toMap());
+      final response = await _db.from('work_orders').insert(row).select('id').single();
+      return (response['id'] as int?) ?? -1;
+    } catch (e) { debugPrint('DB: Error inserting work order: $e'); return -1; }
+  }
+
+  static Future<int> updateWorkOrder(WorkOrder o) async {
+    if (_offline) {
+      for (int i = 0; i < _memWorkOrders.length; i++) {
+        if (_memWorkOrders[i].id == o.id) { _memWorkOrders[i] = o; return 1; }
+      }
+      return 0;
+    }
+    try {
+      await _db.from('work_orders').update(o.toMap()).eq('id', o.id).eq('user_id', _uid!);
+      return 1;
     } catch (e) { return 0; }
   }
 
-  // ===== Statistics =====
-  static Future<Map<String, dynamic>> getExpenseStats() async {
-    final expenses = await getAllExpenses();
-    double totalExpenses = 0;
-    double tollCost = 0;
-    double violationCost = 0;
-    double insuranceCost = 0;
-    double miscCost = 0;
-    double maintenanceCost = 0;
-    double fuelCost = 0;
-
-    for (final e in expenses) {
-      totalExpenses += e.amount;
-      switch (e.type) {
-        case 'toll':
-          tollCost += e.amount;
-          break;
-        case 'violation':
-          violationCost += e.amount;
-          break;
-        case 'insurance':
-          insuranceCost += e.amount;
-          break;
-        case 'miscellaneous':
-          miscCost += e.amount;
-          break;
-        case 'maintenance':
-          maintenanceCost += e.amount;
-          break;
-        case 'fuel':
-          fuelCost += e.amount;
-          break;
-      }
-    }
-
-    return {
-      'totalExpenses': totalExpenses,
-      'tollCost': tollCost,
-      'violationCost': violationCost,
-      'insuranceCost': insuranceCost,
-      'miscCost': miscCost,
-      'maintenanceCost': maintenanceCost,
-      'fuelCost': fuelCost,
-    };
-  }
-
-  static Future<Map<String, dynamic>> getDriverStats() async {
-    final vehicles = await getAllVehicles();
-    final now = DateTime.now();
-    int totalDrivers = 0;
-    int activeDrivers = 0;
-    int suspendedDrivers = 0;
-    int nearExpiryCount = 0;
-    int expiredCount = 0;
-
-    for (final v in vehicles) {
-      if (v.driverName != null && v.driverName!.isNotEmpty) {
-        totalDrivers++;
-        if (v.driverStatus == 'suspended') {
-          suspendedDrivers++;
-        } else {
-          activeDrivers++;
-        }
-        if (v.driverLicenseExpiry != null) {
-          final diff = v.driverLicenseExpiry!.difference(now).inDays;
-          if (diff < 0) {
-            expiredCount++;
-          } else if (diff <= 30) {
-            nearExpiryCount++;
-          }
-        }
-      }
-    }
-
-    return {
-      'totalDrivers': totalDrivers,
-      'activeDrivers': activeDrivers,
-      'suspendedDrivers': suspendedDrivers,
-      'nearExpiryCount': nearExpiryCount,
-      'expiredCount': expiredCount,
-    };
-  }
-
-  // ===== Statistics (pure Dart, no SQL) =====
-  static Future<Map<String, dynamic>> getDashboardStats() async {
-    final vehicles = await getAllVehicles();
-    final records = await getAllMaintenanceRecords();
-    final completed = records.where((r) => r.status == 'completed').toList();
-    double totalCost = 0;
-    for (final r in completed) { totalCost += r.totalCost; }
-    int pendingCount = 0;
-    int inProgressCount = 0;
-    int urgentCount = 0;
-    for (final r in records) {
-      if (r.status == 'pending') pendingCount++;
-      if (r.status == 'in_progress') inProgressCount++;
-      if (r.priority == 'urgent' && r.status != 'completed' && r.status != 'cancelled') urgentCount++;
-    }
-    int activeCount = 0;
-    int maintCount = 0;
-    for (final v in vehicles) {
-      if (v.status == 'active') activeCount++;
-      if (v.status == 'maintenance') maintCount++;
-    }
-    return {
-      'vehicleCount': vehicles.length,
-      'activeVehicles': activeCount,
-      'maintenanceVehicles': maintCount,
-      'totalCost': totalCost,
-      'thisMonthCost': 0.0,
-      'lastMonthCost': 0.0,
-      'pendingRecords': pendingCount,
-      'inProgressRecords': inProgressCount,
-      'urgentRecords': urgentCount,
-    };
-  }
-
-  static Future<List<Map<String, dynamic>>> getMaintenanceByType() async {
-    final records = await getAllMaintenanceRecords();
-    final Map<String, List<double>> typeCosts = {};
-    for (final r in records) {
-      if (r.status != 'completed') continue;
-      typeCosts.putIfAbsent(r.type, () => []);
-      typeCosts[r.type]!.add(r.totalCost);
-    }
-    final list = <Map<String, dynamic>>[];
-    typeCosts.forEach((type, costs) {
-      double total = 0;
-      for (final c in costs) { total += c; }
-      list.add({'type': type, 'count': costs.length, 'total_cost': total});
-    });
-    list.sort((a, b) => ((b['total_cost'] as double?) ?? 0).compareTo((a['total_cost'] as double?) ?? 0));
-    return list;
-  }
-
-  static Future<List<Map<String, dynamic>>> getMonthlyCosts() async {
-    final records = await getAllMaintenanceRecords();
-    final Map<String, List<double>> monthCosts = {};
-    for (final r in records) {
-      if (r.status != 'completed') continue;
-      final key = r.maintenanceDate.toIso8601String().substring(0, 7);
-      monthCosts.putIfAbsent(key, () => []);
-      monthCosts[key]!.add(r.totalCost);
-    }
-    final list = <Map<String, dynamic>>[];
-    monthCosts.forEach((month, costs) {
-      double total = 0;
-      for (final c in costs) { total += c; }
-      list.add({'month': month, 'total_cost': total, 'count': costs.length});
-    });
-    list.sort((a, b) => ((a['month'] as String?) ?? '').compareTo((b['month'] as String?) ?? ''));
-    return list.reversed.toList();
-  }
-
-  static Future<List<Map<String, dynamic>>> getVehicleMaintenanceCosts() async {
-    final vehicles = await getAllVehicles();
-    final records = await getAllMaintenanceRecords();
-    final completed = records.where((r) => r.status == 'completed').toList();
-    final list = <Map<String, dynamic>>[];
-    for (final v in vehicles) {
-      double total = 0;
-      int count = 0;
-      for (final r in completed) {
-        if (r.vehicleId == v.id) { total += r.totalCost; count++; }
-      }
-      list.add({
-        'plate_number': v.plateNumber,
-        'make': v.make,
-        'model': v.model,
-        'record_count': count,
-        'total_cost': total,
-      });
-    }
-    list.sort((a, b) => ((b['total_cost'] as double?) ?? 0).compareTo((a['total_cost'] as double?) ?? 0));
-    if (list.length > 10) return list.sublist(0, 10);
-    return list;
-  }
-
-  // ===== Trip Tracking CRUD =====
-  static Future<List<TripTracking>> getAllTrips() async {
-    final vehicles = await getAllVehicles();
-    if (_useMemory) {
-      return _memTrips.map((t) {
-        Vehicle? veh;
-        for (final v in vehicles) { if (v.id == t.vehicleId) { veh = v; break; } }
-        return t.copyWith(vehicle: veh);
-      }).toList();
-    }
+  static Future<int> deleteWorkOrder(int id) async {
+    if (_offline) { _memWorkOrders.removeWhere((o) => o.id == id); return 1; }
     try {
-      final maps = await nativeQuery(_tt, orderBy: 'created_at DESC');
-      return maps.map((m) {
-        final vid = (m['vehicle_id'] as int?) ?? 0;
-        Vehicle? veh;
-        for (final v in vehicles) { if (v.id == vid) { veh = v; break; } }
-        return TripTracking.fromMap(m).copyWith(vehicle: veh);
-      }).toList();
+      await _db.from('work_orders').delete().eq('id', id).eq('user_id', _uid!);
+      return 1;
+    } catch (e) { return 0; }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  TRIP TRACKING CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  static Future<List<TripTracking>> getAllTrips() async {
+    if (_offline) return List.from(_memTrips);
+    try {
+      final response = await _db.from('trip_trackings').select().eq('user_id', _uid!).order('created_at', ascending: false);
+      return response.map((m) => TripTracking.fromMap(_fromSupabaseRow(m))).toList();
     } catch (e) {
+      debugPrint('DB: Error fetching trips: $e');
       return List.from(_memTrips);
     }
   }
 
   static Future<List<TripTracking>> getTripsByVehicleId(int vid) async {
-    final v = await getVehicleById(vid);
-    if (_useMemory) {
-      return _memTrips.where((t) => t.vehicleId == vid).map((t) => t.copyWith(vehicle: v)).toList();
-    }
+    if (_offline) return _memTrips.where((t) => t.vehicleId == vid).toList();
     try {
-      final maps = await nativeQuery(_tt, where: 'vehicle_id = ?', whereArgs: [vid], orderBy: 'created_at DESC');
-      return maps.map((m) => TripTracking.fromMap(m).copyWith(vehicle: v)).toList();
+      final response = await _db.from('trip_trackings').select().eq('user_id', _uid!).eq('vehicle_id', vid).order('created_at', ascending: false);
+      return response.map((m) => TripTracking.fromMap(_fromSupabaseRow(m))).toList();
     } catch (e) { return []; }
   }
 
   static Future<int> insertTrip(TripTracking t) async {
-    if (_useMemory) {
+    if (_offline) {
       final maxId = _memTrips.isEmpty ? 0 : _memTrips.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memTrips.insert(0, t.copyWith(id: maxId + 1));
       return maxId + 1;
     }
     try {
-      return nativeInsert(_tt, t.toMap());
-    } catch (e) { return -1; }
+      final map = _toSupabaseRow(t.toMap());
+      // Convert JSON string trip_points to List for JSONB column
+      final rawPoints = map['trip_points_json'];
+      if (rawPoints is String && rawPoints.isNotEmpty) {
+        try { map['trip_points_json'] = jsonDecode(rawPoints); } catch (_) {}
+      }
+      final response = await _db.from('trip_trackings').insert(map).select('id').single();
+      return (response['id'] as int?) ?? -1;
+    } catch (e) { debugPrint('DB: Error inserting trip: $e'); return -1; }
   }
 
   static Future<int> updateTrip(TripTracking t) async {
-    if (_useMemory) {
+    if (_offline) {
       for (int i = 0; i < _memTrips.length; i++) {
         if (_memTrips[i].id == t.id) { _memTrips[i] = t; return 1; }
       }
       return 0;
     }
     try {
-      return nativeUpdate(_tt, t.copyWith(updatedAt: DateTime.now()).toMap(), where: 'id = ?', whereArgs: [t.id]);
+      final map = t.toMap();
+      final rawPoints = map['trip_points_json'];
+      if (rawPoints is String && rawPoints.isNotEmpty) {
+        try { map['trip_points_json'] = jsonDecode(rawPoints); } catch (_) {}
+      }
+      await _db.from('trip_trackings').update(map).eq('id', t.id).eq('user_id', _uid!);
+      return 1;
     } catch (e) { return 0; }
   }
 
   static Future<int> deleteTrip(int id) async {
-    if (_useMemory) {
-      _memTrips.removeWhere((t) => t.id == id);
-      return 1;
-    }
+    if (_offline) { _memTrips.removeWhere((t) => t.id == id); return 1; }
     try {
-      return nativeDelete(_tt, where: 'id = ?', whereArgs: [id]);
+      await _db.from('trip_trackings').delete().eq('id', id).eq('user_id', _uid!);
+      return 1;
     } catch (e) { return 0; }
   }
 
-  // Trip Stats
-  static Future<Map<String, dynamic>> getTripStatsByVehicleId(int vid) async {
-    final trips = await getTripsByVehicleId(vid);
-    final completed = trips.where((t) => t.status == 'completed').toList();
-    double totalDistance = 0;
-    double totalDuration = 0;
-    for (final t in completed) {
-      totalDistance += t.distanceKm;
-      totalDuration += t.durationMinutes;
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  APP USER CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  static Future<List<AppUser>> getAllUsers() async {
+    if (_offline) return List.from(_memUsers);
+    try {
+      final response = await _db.from('app_users').select().order('created_at', ascending: false);
+      return response.map((r) => AppUser.fromMap(_fromSupabaseRow(r))).toList();
+    } catch (e) {
+      debugPrint('DB: Error fetching users: $e');
+      return List.from(_memUsers);
     }
+  }
+
+  static Future<AppUser?> getCurrentUserProfile() async {
+    if (_offline) return _memUsers.isNotEmpty ? _memUsers.first : null;
+    try {
+      final response = await _db.from('app_users').select().eq('auth_user_id', _uid!).maybeSingle();
+      if (response == null) return null;
+      return AppUser.fromMap(_fromSupabaseRow(response));
+    } catch (e) { return null; }
+  }
+
+  static Future<int> insertUser(AppUser u) async {
+    if (_offline) {
+      final maxId = _memUsers.isEmpty ? 0 : _memUsers.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+      _memUsers.insert(0, u.copyWith(id: maxId + 1));
+      return maxId + 1;
+    }
+    try {
+      final map = _toSupabaseRow(u.toMap());
+      if (map['is_active'] is int) map['is_active'] = (map['is_active'] as int) != 0;
+      final response = await _db.from('app_users').insert(map).select('id').single();
+      return (response['id'] as int?) ?? -1;
+    } catch (e) { debugPrint('DB: Error inserting user: $e'); return -1; }
+  }
+
+  static Future<int> updateUser(AppUser u) async {
+    if (_offline) {
+      for (int i = 0; i < _memUsers.length; i++) {
+        if (_memUsers[i].id == u.id) { _memUsers[i] = u; return 1; }
+      }
+      return 0;
+    }
+    try {
+      final map = u.toMap();
+      if (map['is_active'] is int) map['is_active'] = (map['is_active'] as int) != 0;
+      await _db.from('app_users').update(map).eq('id', u.id);
+      return 1;
+    } catch (e) { return 0; }
+  }
+
+  static Future<int> deleteUser(int id) async {
+    if (_offline) { _memUsers.removeWhere((u) => u.id == id); return 1; }
+    try {
+      await _db.from('app_users').delete().eq('id', id);
+      return 1;
+    } catch (e) { return 0; }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  DASHBOARD STATS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  static Future<Map<String, dynamic>> getDashboardStats() async {
+    final vehicles = await getAllVehicles();
+    final records = await getAllMaintenanceRecords();
+    final workOrders = await getAllWorkOrders();
+
+    final activeCount = vehicles.where((v) => v.status == 'active').length;
+    final maintenanceCount = vehicles.where((v) => v.status == 'maintenance').length;
+    final inactiveCount = vehicles.where((v) => v.status == 'inactive').length;
+    final pendingMaint = records.where((r) => r.status == 'pending').length;
+    final inProgressMaint = records.where((r) => r.status == 'in_progress').length;
+    final urgentMaint = records.where((r) => r.priority == 'urgent' && r.status != 'completed').length;
+    final openWO = workOrders.where((o) => o.status == 'open').length;
+    final inProgressWO = workOrders.where((o) => o.status == 'in_progress').length;
+    final totalMaintCost = records.fold<double>(0, (sum, r) => sum + r.totalCost);
+
     return {
-      'totalTrips': completed.length,
-      'totalDistanceKm': totalDistance,
-      'totalDurationMinutes': totalDuration,
-      'avgDistanceKm': completed.isNotEmpty ? totalDistance / completed.length : 0,
-      'avgDurationMinutes': completed.isNotEmpty ? totalDuration / completed.length : 0,
+      'totalVehicles': vehicles.length,
+      'activeVehicles': activeCount,
+      'maintenanceVehicles': maintenanceCount,
+      'inactiveVehicles': inactiveCount,
+      'totalMaintenance': records.length,
+      'pendingMaintenance': pendingMaint,
+      'inProgressMaintenance': inProgressMaint,
+      'urgentMaintenance': urgentMaint,
+      'totalWorkOrders': workOrders.length,
+      'openWorkOrders': openWO,
+      'inProgressWorkOrders': inProgressWO,
+      'totalMaintenanceCost': totalMaintCost,
     };
+  }
+
+  static Future<Map<String, double>> getExpenseStats() async {
+    final expenses = await getAllExpenses();
+    final stats = <String, double>{
+      'fuel': 0, 'maintenance': 0, 'toll': 0, 'violation': 0, 'insurance': 0, 'miscellaneous': 0,
+    };
+    for (final e in expenses) {
+      stats[e.type] = (stats[e.type] ?? 0) + e.amount;
+    }
+    return stats;
+  }
+
+  static Future<Map<String, double>> getMonthlyCosts() async {
+    final records = await getAllMaintenanceRecords();
+    final expenses = await getAllExpenses();
+    final costs = <String, double>{};
+
+    void addCost(DateTime date, double amount) {
+      final key = '${date.year}-${date.month.toString().padLeft(2, '0')}';
+      costs[key] = (costs[key] ?? 0) + amount;
+    }
+
+    for (final r in records) { addCost(r.maintenanceDate, r.totalCost); }
+    for (final e in expenses) { addCost(e.date, e.amount); }
+
+    return costs;
+  }
+
+  static Future<Map<String, double>> getMaintenanceByType() async {
+    final records = await getAllMaintenanceRecords();
+    final stats = <String, double>{};
+    for (final r in records) {
+      stats[r.type] = (stats[r.type] ?? 0) + r.totalCost;
+    }
+    return stats;
+  }
+
+  static Future<List<Map<String, dynamic>>> getVehicleMaintenanceCosts() async {
+    final records = await getAllMaintenanceRecords();
+    final vehicles = await getAllVehicles();
+    final Map<int, double> costs = {};
+
+    for (final r in records) {
+      costs[r.vehicleId] = (costs[r.vehicleId] ?? 0) + r.totalCost;
+    }
+
+    final sorted = costs.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return sorted.take(10).map((entry) {
+      final v = vehicles.firstWhere(
+        (veh) => veh.id == entry.key,
+        orElse: () => Vehicle(id: entry.key, plateNumber: '???', make: '', model: '', year: 2024, color: '', fuelType: '', currentOdometer: 0, status: 'active'),
+      );
+      return {
+        'vehicle': v,
+        'totalCost': entry.value,
+        'recordCount': records.where((r) => r.vehicleId == entry.key).length,
+      };
+    }).toList();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  VEHICLE JOIN HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  static List<MaintenanceRecord> _joinVehicles(List<MaintenanceRecord> records, List<Vehicle> vehicles) {
+    return records.map((r) {
+      Vehicle? veh; for (final v in vehicles) { if (v.id == r.vehicleId) { veh = v; break; } }
+      return r.copyWith(vehicle: veh);
+    }).toList();
+  }
+
+  static List<Checklist> _joinVehiclesChecklists(List<Checklist> records, List<Vehicle> vehicles) {
+    return records.map((c) {
+      Vehicle? veh; for (final v in vehicles) { if (v.id == c.vehicleId) { veh = v; break; } }
+      return c.copyWith(vehicle: veh);
+    }).toList();
+  }
+
+  static List<FuelRecord> _joinVehiclesFuel(List<FuelRecord> records, List<Vehicle> vehicles) {
+    return records.map((f) {
+      Vehicle? veh; for (final v in vehicles) { if (v.id == f.vehicleId) { veh = v; break; } }
+      return f.copyWith(vehicle: veh);
+    }).toList();
+  }
+
+  static List<DriverViolation> _joinVehiclesViolations(List<DriverViolation> records, List<Vehicle> vehicles) {
+    return records.map((v) {
+      Vehicle? veh; for (final vv in vehicles) { if (vv.id == v.vehicleId) { veh = vv; break; } }
+      return v.copyWith(vehicle: veh);
+    }).toList();
+  }
+
+  static List<Expense> _joinVehiclesExpenses(List<Expense> records, List<Vehicle> vehicles) {
+    return records.map((e) {
+      Vehicle? veh; for (final v in vehicles) { if (v.id == e.vehicleId) { veh = v; break; } }
+      return e.copyWith(vehicle: veh);
+    }).toList();
+  }
+
+  static List<WorkOrder> _joinVehiclesWorkOrders(List<WorkOrder> records, List<Vehicle> vehicles) {
+    return records.map((o) {
+      Vehicle? veh; for (final v in vehicles) { if (v.id == o.vehicleId) { veh = v; break; } }
+      return o.copyWith(vehicle: veh);
+    }).toList();
   }
 }

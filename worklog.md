@@ -159,3 +159,30 @@ Stage Summary:
 - 11 files changed, 3,133 insertions, 174 deletions
 - Commit 1b5560e pushed to GitHub
 - 6 new files created, 5 existing files modified
+---
+Task ID: 1
+Agent: Main Agent
+Task: Migrate KMS Fleet from SQLite to Supabase as primary database
+
+Work Log:
+- Read all existing models (Vehicle, MaintenanceRecord, Checklist, FuelRecord, DriverViolation, Expense, WorkOrder, TripTracking, AppUser)
+- Read all existing providers (VehicleProvider, MaintenanceProvider, FuelProvider, ChecklistProvider, WorkOrderProvider, TripTrackingProvider, AuthProvider, ExpenseProvider)
+- Read existing DatabaseService (SQLite/memory with seed data)
+- Read existing SupabaseSyncService (bidirectional sync)
+- Read main.dart and login_screen.dart
+- Created SUPABASE_SETUP.sql with 11 tables, indexes, RLS policies, and triggers
+- Rewrote database_service.dart to use Supabase as primary with offline memory fallback
+- Updated all 7 providers to remove SupabaseSyncService references
+- Updated AuthProvider to call DatabaseService.goOnline()/goOffline()
+- Updated main.dart to remove old SQLite initialization
+- Fixed main_screen.dart and reports_screen.dart to remove sync service references
+
+Stage Summary:
+- Created: SUPABASE_SETUP.sql (complete SQL schema for Supabase)
+- Rewritten: lib/services/database_service.dart (Supabase-first architecture)
+- Updated: lib/providers/*.dart (all 7 providers cleaned)
+- Updated: lib/main.dart (removed SQLite init)
+- Updated: lib/screens/main_screen.dart (sync → refresh)
+- Updated: lib/screens/reports_screen.dart (removed sync service)
+- Files no longer needed: db_native.dart, db_stub.dart, supabase_sync_service.dart (can be deleted)
+

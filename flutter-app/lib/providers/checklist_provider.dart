@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/checklist.dart';
 import '../services/database_service.dart';
-import '../services/supabase_sync_service.dart';
 
 class ChecklistProvider extends ChangeNotifier {
   List<Checklist> _checklists = [];
@@ -91,24 +90,18 @@ class ChecklistProvider extends ChangeNotifier {
   Future<int> addChecklist(Checklist checklist) async {
     final id = await DatabaseService.insertChecklist(checklist);
     await loadChecklists();
-    // After CRUD operation, sync to Supabase in background
-    SupabaseSyncService.syncNow();
     return id;
   }
 
   Future<bool> updateChecklist(Checklist checklist) async {
     final rows = await DatabaseService.updateChecklist(checklist);
     await loadChecklists();
-    // After CRUD operation, sync to Supabase in background
-    SupabaseSyncService.syncNow();
     return rows > 0;
   }
 
   Future<bool> deleteChecklist(int id) async {
     final rows = await DatabaseService.deleteChecklist(id);
     await loadChecklists();
-    // After CRUD operation, sync to Supabase in background
-    SupabaseSyncService.deleteChecklistFromSupabase(id);
     return rows > 0;
   }
 

@@ -12,21 +12,16 @@ class TripTrackingProvider extends ChangeNotifier {
   List<TripTracking> get vehicleTrips => _vehicleTrips;
   bool get isLoading => _isLoading;
 
-  /// Load all trips from the database
   Future<void> loadTrips() async {
     _isLoading = true;
     notifyListeners();
     try {
       final trips = await DatabaseService.getAllTrips();
-      // Attach vehicle info
       final vehicles = await DatabaseService.getAllVehicles();
       _trips = trips.map((t) {
         Vehicle? veh;
         for (final v in vehicles) {
-          if (v.id == t.vehicleId) {
-            veh = v;
-            break;
-          }
+          if (v.id == t.vehicleId) { veh = v; break; }
         }
         return t.copyWith(vehicle: veh);
       }).toList();
@@ -37,7 +32,6 @@ class TripTrackingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Load trips for a specific vehicle
   Future<void> loadTripsByVehicleId(int vehicleId) async {
     _isLoading = true;
     notifyListeners();
@@ -53,7 +47,6 @@ class TripTrackingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Save a completed trip to the database
   Future<int> saveTrip(TripTracking trip) async {
     try {
       final id = await DatabaseService.insertTrip(trip);
@@ -65,7 +58,6 @@ class TripTrackingProvider extends ChangeNotifier {
     }
   }
 
-  /// Cancel a trip (save as cancelled)
   Future<bool> cancelTrip(TripTracking trip) async {
     try {
       final cancelledTrip = trip.copyWith(
