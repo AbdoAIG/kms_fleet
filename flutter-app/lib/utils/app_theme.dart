@@ -7,18 +7,18 @@ class AppTheme {
 
   static ThemeData get light => ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: AppColors.primary,
         brightness: Brightness.light,
         fontFamily: 'Cairo',
         scaffoldBackgroundColor: AppColors.background,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.surface,
           elevation: 0,
-          centerTitle: true,
+          centerTitle: false,
+          scrolledUnderElevation: 0.5,
           systemOverlayStyle: SystemUiOverlayStyle.dark,
           titleTextStyle: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
           ),
@@ -28,7 +28,7 @@ class AppTheme {
           elevation: 0,
           color: AppColors.surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             side: BorderSide(color: AppColors.border, width: 0.5),
           ),
           margin: EdgeInsets.zero,
@@ -39,23 +39,23 @@ class AppTheme {
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: AppColors.border, width: 1),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: AppColors.border, width: 1),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: AppColors.primary, width: 2),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: AppColors.error, width: 1),
           ),
           focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: AppColors.error, width: 2),
           ),
           hintStyle: const TextStyle(
@@ -85,12 +85,12 @@ class AppTheme {
           elevation: 8,
           selectedLabelStyle: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
           unselectedLabelStyle: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: 12,
+            fontSize: 11,
           ),
         ),
         chipTheme: ChipThemeData(
@@ -114,7 +114,7 @@ class AppTheme {
         dialogTheme: DialogThemeData(
           backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
           ),
           titleTextStyle: const TextStyle(
             fontFamily: 'Cairo',
@@ -127,7 +127,7 @@ class AppTheme {
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.textPrimary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           contentTextStyle: const TextStyle(
             fontFamily: 'Cairo',
@@ -141,22 +141,28 @@ class AppTheme {
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
           },
         ),
+        colorScheme: const ColorScheme.light(
+          primary: AppColors.primary,
+          onPrimary: AppColors.textOnPrimary,
+          secondary: AppColors.accent,
+          error: AppColors.error,
+          surface: AppColors.surface,
+        ),
       );
 
   static ThemeData get dark => ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: AppColors.primary,
         brightness: Brightness.dark,
         fontFamily: 'Cairo',
-        scaffoldBackgroundColor: const Color(0xFF121212),
+        scaffoldBackgroundColor: const Color(0xFF0F172A),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Color(0xFF1E293B),
           elevation: 0,
-          centerTitle: true,
+          centerTitle: false,
           systemOverlayStyle: SystemUiOverlayStyle.light,
           titleTextStyle: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: FontWeight.w700,
             color: Colors.white,
           ),
@@ -164,32 +170,32 @@ class AppTheme {
         ),
         cardTheme: CardThemeData(
           elevation: 0,
-          color: const Color(0xFF1E1E1E),
+          color: const Color(0xFF1E293B),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.white.withOpacity(0.1), width: 0.5),
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.white.withOpacity(0.08), width: 0.5),
           ),
           margin: EdgeInsets.zero,
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFF2A2A2A),
+          fillColor: const Color(0xFF334155),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: AppColors.primaryLight, width: 2),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: AppColors.error, width: 1),
           ),
           hintStyle: TextStyle(
@@ -212,25 +218,25 @@ class AppTheme {
           ),
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
-          backgroundColor: const Color(0xFF1E1E1E),
+          backgroundColor: const Color(0xFF1E293B),
           selectedItemColor: AppColors.primaryLight,
           unselectedItemColor: Colors.white.withOpacity(0.4),
           type: BottomNavigationBarType.fixed,
           elevation: 8,
           selectedLabelStyle: const TextStyle(
             fontFamily: 'Cairo',
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
           unselectedLabelStyle: const TextStyle(
             fontFamily: 'Cairo',
-            fontSize: 12,
+            fontSize: 11,
           ),
         ),
         dialogTheme: DialogThemeData(
-          backgroundColor: const Color(0xFF1E1E1E),
+          backgroundColor: const Color(0xFF1E293B),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
           ),
           titleTextStyle: const TextStyle(
             fontFamily: 'Cairo',
@@ -243,7 +249,7 @@ class AppTheme {
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           contentTextStyle: const TextStyle(
             fontFamily: 'Cairo',
@@ -256,6 +262,13 @@ class AppTheme {
             TargetPlatform.android: CupertinoPageTransitionsBuilder(),
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
           },
+        ),
+        colorScheme: const ColorScheme.dark(
+          primary: AppColors.primaryLight,
+          onPrimary: AppColors.textOnPrimary,
+          secondary: AppColors.accentLight,
+          error: AppColors.error,
+          surface: Color(0xFF1E293B),
         ),
       );
 }

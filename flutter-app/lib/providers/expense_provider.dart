@@ -1,28 +1,68 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../models/expense.dart';
 import '../services/database_service.dart';
 
 class ExpenseProvider extends ChangeNotifier {
   List<Expense> _expenses = [];
-  List<Expense> _filteredExpenses = [];
   bool _isLoading = false;
-  String _searchQuery = '';
-  String _typeFilter = 'all';
+  String _filterType = 'all';
 
   List<Expense> get expenses => _filteredExpenses;
-  List<Expense> get allExpenses => _expenses;
   bool get isLoading => _isLoading;
-  String get searchQuery => _searchQuery;
-  String get typeFilter => _typeFilter;
+  String get filterType => _filterType;
 
-  ExpenseProvider();
+  List<Expense> get _filteredExpenses {
+    if (_filterType == 'all') return _expenses;
+    return _expenses.where((e) => e.type == _filterType).toList();
+  }
+
+  double get totalExpenses {
+    double sum = 0;
+    for (final e in _expenses) { sum += e.amount; }
+    return sum;
+  }
+
+  double get fuelCost {
+    double sum = 0;
+    for (final e in _expenses.where((e) => e.type == 'fuel')) { sum += e.amount; }
+    return sum;
+  }
+
+  double get maintenanceCost {
+    double sum = 0;
+    for (final e in _expenses.where((e) => e.type == 'maintenance')) { sum += e.amount; }
+    return sum;
+  }
+
+  double get tollCost {
+    double sum = 0;
+    for (final e in _expenses.where((e) => e.type == 'toll')) { sum += e.amount; }
+    return sum;
+  }
+
+  double get violationCost {
+    double sum = 0;
+    for (final e in _expenses.where((e) => e.type == 'violation')) { sum += e.amount; }
+    return sum;
+  }
+
+  double get insuranceCost {
+    double sum = 0;
+    for (final e in _expenses.where((e) => e.type == 'insurance')) { sum += e.amount; }
+    return sum;
+  }
+
+  double get miscCost {
+    double sum = 0;
+    for (final e in _expenses.where((e) => e.type == 'miscellaneous')) { sum += e.amount; }
+    return sum;
+  }
 
   Future<void> loadExpenses() async {
     _isLoading = true;
     notifyListeners();
     try {
       _expenses = await DatabaseService.getAllExpenses();
-      _applyFilters();
     } catch (e) {
       debugPrint('Error loading expenses: $e');
     }
@@ -30,31 +70,20 @@ class ExpenseProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void searchExpenses(String query) {
-    _searchQuery = query;
-    _applyFilters();
+  Future<void> loadExpensesByVehicle(int vehicleId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _expenses = await DatabaseService.getExpensesByVehicleId(vehicleId);
+    } catch (e) {
+      debugPrint('Error loading vehicle expenses: $e');
+    }
+    _isLoading = false;
+    notifyListeners();
   }
 
-  void setTypeFilter(String type) {
-    _typeFilter = type;
-    _applyFilters();
-  }
-
-  void _applyFilters() {
-    var result = _expenses;
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      result = result.where((e) {
-        final desc = (e.description ?? '').toLowerCase();
-        final provider = (e.serviceProvider ?? '').toLowerCase();
-        final invoice = (e.invoiceNumber ?? '').toLowerCase();
-        return desc.contains(q) || provider.contains(q) || invoice.contains(q);
-      }).toList();
-    }
-    if (_typeFilter != 'all') {
-      result = result.where((e) => e.type == _typeFilter).toList();
-    }
-    _filteredExpenses = result;
+  void setFilter(String type) {
+    _filterType = type;
     notifyListeners();
   }
 
@@ -64,15 +93,15 @@ class ExpenseProvider extends ChangeNotifier {
     return id;
   }
 
-  Future<bool> updateExpense(Expense expense) async {
-    final rows = await DatabaseService.updateExpense(expense);
-    await loadExpenses();
-    return rows > 0;
+  Future<int> updateExpense(Expense expense) async {
+    final result = await DatabaseService.updateExpense(expense);
+    if (result > 0) await loadExpenses();
+    return result;
   }
 
-  Future<bool> deleteExpense(int id) async {
-    final rows = await DatabaseService.deleteExpense(id);
-    await loadExpenses();
-    return rows > 0;
+  Future<int> deleteExpense(int id) async {
+    final result = await DatabaseService.deleteExpense(id);
+    if (result > 0) await loadExpenses();
+    return result;
   }
 }

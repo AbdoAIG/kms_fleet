@@ -23,6 +23,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   final _yearController = TextEditingController();
   final _odometerController = TextEditingController();
   final _notesController = TextEditingController();
+  final _driverNameController = TextEditingController();
 
   String _selectedColor = 'white';
   String _selectedFuelType = 'petrol';
@@ -44,6 +45,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       _yearController.text = widget.vehicle!.year.toString();
       _odometerController.text = widget.vehicle!.currentOdometer.toString();
       _notesController.text = widget.vehicle!.notes ?? '';
+      _driverNameController.text = widget.vehicle!.driverName ?? '';
       _selectedColor = widget.vehicle!.color;
       _selectedFuelType = widget.vehicle!.fuelType;
       _selectedStatus = widget.vehicle!.status;
@@ -67,6 +69,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     _yearController.dispose();
     _odometerController.dispose();
     _notesController.dispose();
+    _driverNameController.dispose();
     super.dispose();
   }
 
@@ -88,6 +91,9 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         fuelType: _selectedFuelType,
         currentOdometer: int.parse(_odometerController.text.trim()),
         status: _selectedStatus,
+        driverName: _driverNameController.text.trim().isEmpty
+            ? null
+            : _driverNameController.text.trim(),
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
@@ -300,6 +306,16 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               onChanged: (value) {
                 setState(() => _selectedStatus = value ?? 'active');
               },
+            ),
+            const SizedBox(height: 12),
+            // Driver Name
+            TextFormField(
+              controller: _driverNameController,
+              decoration: const InputDecoration(
+                labelText: 'اسم السائق',
+                prefixIcon: Icon(Icons.person),
+                hintText: 'أدخل اسم السائق',
+              ),
             ),
             const SizedBox(height: 12),
             // Notes

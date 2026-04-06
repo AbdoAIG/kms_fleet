@@ -29,13 +29,13 @@ class EmptyStateWidget extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primaryContainer,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 36,
-                color: AppColors.primary.withOpacity(0.5),
+                color: AppColors.primary.withOpacity(0.6),
               ),
             ),
             const SizedBox(height: 20),
@@ -54,6 +54,7 @@ class EmptyStateWidget extends StatelessWidget {
                 subtitle!,
                 style: const TextStyle(
                   fontSize: 13,
+                  fontWeight: FontWeight.w400,
                   color: AppColors.textSecondary,
                 ),
                 textAlign: TextAlign.center,
@@ -68,13 +69,11 @@ class EmptyStateWidget extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  elevation: 0,
                 ),
               ),
             ],

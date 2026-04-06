@@ -172,9 +172,103 @@ class AppConstants {
     'فولكس واجن': ['جولف', 'باسات', 'تيجوان', 'جيتا', 'بولو', 'أطلس'],
   };
 
+  // Vehicle Types
+  static const Map<String, String> vehicleTypes = {
+    'half_truck': 'نص نقل',
+    'jumbo': 'نقل جامبو',
+    'truck': 'كلرك',
+    'microbus': 'ميكروباص',
+    'bus': 'أتوبيس',
+  };
+
+  static const Map<String, IconData> vehicleTypeIcons = {
+    'half_truck': Icons.local_shipping,
+    'jumbo': Icons.airport_shuttle,
+    'truck': Icons.local_shipping,
+    'microbus': Icons.directions_bus,
+    'bus': Icons.bus_alert,
+  };
+
+  static const Map<String, Color> vehicleTypeColors = {
+    'half_truck': Color(0xFF0F766E),
+    'jumbo': Color(0xFFEA580C),
+    'truck': Color(0xFFDC2626),
+    'microbus': Color(0xFF2563EB),
+    'bus': Color(0xFF7C3AED),
+  };
+
+  // Vehicle Purpose
+  static const Map<String, String> vehiclePurposes = {
+    'cargo': 'نقل بضائع',
+    'staff': 'نقل موظفين',
+    'administrative': 'إدارية',
+  };
+
+  // Driver Status
+  static const Map<String, String> driverStatuses = {
+    'active': 'نشط',
+    'suspended': 'موقوف',
+  };
+
+  static const Map<String, Color> driverStatusColors = {
+    'active': AppColors.success,
+    'suspended': AppColors.error,
+  };
+
+  // Expense Types
+  static const Map<String, String> expenseTypes = {
+    'fuel': 'وقود',
+    'maintenance': 'صيانة',
+    'toll': 'رسوم طريق',
+    'violation': 'مخالفة مرورية',
+    'insurance': 'تأمين',
+    'miscellaneous': 'مصروفات متنوعة',
+  };
+
+  static const Map<String, IconData> expenseTypeIcons = {
+    'fuel': Icons.local_gas_station,
+    'maintenance': Icons.build,
+    'toll': Icons.toll,
+    'violation': Icons.gavel,
+    'insurance': Icons.security,
+    'miscellaneous': Icons.receipt_long,
+  };
+
+  static const Map<String, Color> expenseTypeColors = {
+    'fuel': AppColors.primary,
+    'maintenance': AppColors.warning,
+    'toll': Color(0xFF6366F1),
+    'violation': AppColors.error,
+    'insurance': Color(0xFF0EA5E9),
+    'miscellaneous': AppColors.accent,
+  };
+
+  // Violation Types
+  static const Map<String, String> violationTypes = {
+    'speeding': 'سرعة زائدة',
+    'red_light': 'تجاوز إشارة حمراء',
+    'parking': 'مخالفة وقوف',
+    'no_license': 'بدون رخصة',
+    'overweight': 'حمل زائد',
+    'other': 'أخرى',
+  };
+
+  // Violation Status
+  static const Map<String, String> violationStatuses = {
+    'pending': 'معلقة',
+    'paid': 'مدفوعة',
+    'disputed': 'متنازع عليها',
+  };
+
+  static const Map<String, Color> violationStatusColors = {
+    'pending': AppColors.warning,
+    'paid': AppColors.success,
+    'disputed': AppColors.info,
+  };
+
   // Database
   static const String dbName = 'kms_fleet.db';
-  static const int dbVersion = 2; // v1=vehicles+maintenance, v2=+expenses
+  static const int dbVersion = 2;
 
   // Animation Durations
   static const Duration shortAnimation = Duration(milliseconds: 200);

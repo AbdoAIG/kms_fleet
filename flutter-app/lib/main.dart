@@ -1,32 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/auth_provider.dart';
 import 'providers/vehicle_provider.dart';
 import 'providers/maintenance_provider.dart';
+import 'providers/checklist_provider.dart';
+import 'providers/fuel_provider.dart';
+import 'providers/driver_provider.dart';
 import 'providers/expense_provider.dart';
 import 'services/database_service.dart';
+import 'services/supabase_service.dart';
 import 'utils/app_theme.dart';
 import 'utils/app_colors.dart';
 import 'models/maintenance_record.dart';
+import 'models/checklist.dart';
+import 'models/fuel_record.dart';
 import 'models/vehicle.dart';
-import 'models/expense.dart';
+import 'models/driver.dart';
+import 'widgets/developer_credit.dart';
 import 'screens/main_screen.dart';
+import 'screens/login_screen.dart';
 import 'screens/add_vehicle_screen.dart';
 import 'screens/add_maintenance_screen.dart';
+import 'screens/add_checklist_screen.dart';
+import 'screens/add_fuel_screen.dart';
 import 'screens/vehicle_details_screen.dart';
+import 'screens/drivers_screen.dart';
+import 'screens/add_driver_screen.dart';
+import 'screens/driver_details_screen.dart';
+import 'screens/expenses_screen.dart';
 import 'screens/add_expense_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  // Lock orientation on mobile only
+  if (!kIsWeb) {
+    try {
+      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    } catch (_) {}
+  }
+
+  // Initialize Supabase
+  await initSupabase();
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => VehicleProvider()),
         ChangeNotifierProvider(create: (_) => MaintenanceProvider()),
+        ChangeNotifierProvider(create: (_) => ChecklistProvider()),
+        ChangeNotifierProvider(create: (_) => FuelProvider()),
+        ChangeNotifierProvider(create: (_) => DriverProvider()),
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
       ],
       child: const KmsFleetApp(),
@@ -82,34 +112,69 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
         );
       },
       home: _ready
-          ? const MainScreen()
+          ? Consumer<AuthProvider>(
+              builder: (context, auth, _) {
+                if (auth.isLoggedIn) return const MainScreen();
+                return const LoginScreen();
+              },
+            )
           : _SplashScreen(error: _error, onRetry: _retry),
       onGenerateRoute: (settings) {
-        if (settings.name == '/add-vehicle') {
-          return MaterialPageRoute(
-            builder: (_) => AddVehicleScreen(vehicle: settings.arguments as Vehicle?),
-          );
+        try {
+          if (settings.name == '/add-vehicle') {
+            return MaterialPageRoute(
+              builder: (_) => AddVehicleScreen(vehicle: settings.arguments as Vehicle?),
+            );
+          }
+          if (settings.name == '/add-maintenance') {
+            final args = settings.arguments;
+            return MaterialPageRoute(
+              builder: (_) => AddMaintenanceScreen(
+                record: args is MaintenanceRecord ? args : null,
+                vehicle: args is Vehicle ? args : null,
+              ),
+            );
+          }
+          if (settings.name == '/add-checklist') {
+            return MaterialPageRoute(
+              builder: (_) => AddChecklistScreen(
+                checklist: settings.arguments is Checklist ? settings.arguments as Checklist : null,
+              ),
+            );
+          }
+          if (settings.name == '/add-fuel') {
+            final args = settings.arguments;
+            return MaterialPageRoute(
+              builder: (_) => AddFuelScreen(
+                record: args is FuelRecord ? args : null,
+                vehicle: args is Vehicle ? args : null,
+              ),
+            );
+          }
+          if (settings.name == '/vehicle-details' && settings.arguments is Vehicle) {
+            return MaterialPageRoute(
+              builder: (_) => VehicleDetailsScreen(vehicle: settings.arguments as Vehicle),
+            );
+          }
+          if (settings.name == '/add-driver') {
+            return MaterialPageRoute(
+              builder: (_) => AddDriverScreen(driver: settings.arguments as Driver?),
+            );
+          }
+          if (settings.name == '/driver-details' && settings.arguments is Driver) {
+            return MaterialPageRoute(
+              builder: (_) => DriverDetailsScreen(driver: settings.arguments as Driver),
+            );
+          }
+          if (settings.name == '/add-expense') {
+            return MaterialPageRoute(
+              builder: (_) => AddExpenseScreen(expense: settings.arguments as Expense?),
+            );
+          }
+          return MaterialPageRoute(builder: (_) => const MainScreen());
+        } catch (e) {
+          return MaterialPageRoute(builder: (_) => const MainScreen());
         }
-        if (settings.name == '/add-maintenance') {
-          final args = settings.arguments;
-          return MaterialPageRoute(
-            builder: (_) => AddMaintenanceScreen(
-              record: args is MaintenanceRecord ? args : null,
-              vehicle: args is Vehicle ? args : null,
-            ),
-          );
-        }
-        if (settings.name == '/vehicle-details' && settings.arguments is Vehicle) {
-          return MaterialPageRoute(
-            builder: (_) => VehicleDetailsScreen(vehicle: settings.arguments as Vehicle),
-          );
-        }
-        if (settings.name == '/add-expense') {
-          return MaterialPageRoute(
-            builder: (_) => AddExpenseScreen(expense: settings.arguments as Expense?),
-          );
-        }
-        return MaterialPageRoute(builder: (_) => const MainScreen());
       },
     );
   }
@@ -153,13 +218,23 @@ class _SplashScreen extends StatelessWidget {
       backgroundColor: AppColors.primary,
       body: Center(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.directions_car, color: Colors.white, size: 64),
-            const SizedBox(height: 16),
-            const Text('KMS Fleet', style: TextStyle(fontFamily: 'Cairo', fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white)),
-            const SizedBox(height: 24),
+            const Spacer(),
+            const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.directions_car, color: Colors.white, size: 64),
+                SizedBox(height: 16),
+                Text('KMS Fleet', style: TextStyle(fontFamily: 'Cairo', fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white)),
+                SizedBox(height: 24),
+              ],
+            ),
             CircularProgressIndicator(strokeWidth: 2, color: Colors.white.withOpacity(0.7)),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: DeveloperCredit(compact: false),
+            ),
           ],
         ),
       ),
