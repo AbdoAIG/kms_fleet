@@ -20,6 +20,7 @@ import 'models/checklist.dart';
 import 'models/fuel_record.dart';
 import 'models/vehicle.dart';
 import 'models/expense.dart';
+import 'models/work_order.dart';
 import 'widgets/developer_credit.dart';
 import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';

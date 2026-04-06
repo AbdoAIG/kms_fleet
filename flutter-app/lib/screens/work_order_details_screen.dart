@@ -72,7 +72,7 @@ class _WorkOrderDetailsScreenState extends State<WorkOrderDetailsScreen> {
       case 'maintenance':
         return Icons.build;
       case 'repair':
-        return Icons.Handyman;
+        return Icons.construction;
       case 'inspection':
         return Icons.fact_check;
       default:
@@ -274,7 +274,7 @@ class _WorkOrderDetailsScreenState extends State<WorkOrderDetailsScreen> {
           ),
 
           // Space for bottom button
-          const SizedBox(height: canAdvance ? 80 : 24),
+          SizedBox(height: canAdvance ? 80 : 24),
         ],
       ),
       // ── Advance status button ──

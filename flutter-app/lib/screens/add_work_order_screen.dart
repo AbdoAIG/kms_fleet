@@ -43,7 +43,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
 
   static const Map<String, IconData> _workOrderTypeIcons = {
     'maintenance': Icons.build,
-    'repair': Icons Handyman,
+    'repair': Icons.construction,
     'inspection': Icons.fact_check,
   };
 

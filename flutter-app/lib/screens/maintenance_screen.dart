@@ -925,7 +925,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen>
       case 'maintenance':
         return Icons.build;
       case 'repair':
-        return Icons.Handyman;
+        return Icons.construction;
       case 'inspection':
         return Icons.fact_check;
       default:
