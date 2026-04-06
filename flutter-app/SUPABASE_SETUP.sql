@@ -320,21 +320,21 @@ ALTER TABLE public.attachments ENABLE ROW LEVEL SECURITY;
 
 -- app_users
 CREATE POLICY "Users can view own profile" ON public.app_users
-  FOR SELECT USING (auth.uid() = user_id OR auth.uid() = auth_user_id);
+  FOR SELECT USING (auth.uid() = id OR auth.uid() = auth_user_id);
 
 CREATE POLICY "Users can update own profile" ON public.app_users
-  FOR UPDATE USING (auth.uid() = user_id OR auth.uid() = auth_user_id);
+  FOR UPDATE USING (auth.uid() = id OR auth.uid() = auth_user_id);
 
 CREATE POLICY "Admins can manage all users" ON public.app_users
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM public.app_users au
-      WHERE au.user_id = auth.uid() AND au.role = 'admin'
+      WHERE au.auth_user_id = auth.uid() AND au.role = 'admin'
     )
   );
 
 CREATE POLICY "Authenticated users can insert users" ON public.app_users
-  FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.uid() = auth_user_id);
+  FOR INSERT WITH CHECK (auth.uid() = id OR auth.uid() = auth_user_id);
 
 -- vehicles
 CREATE POLICY "Users can manage own vehicles" ON public.vehicles
@@ -383,7 +383,7 @@ CREATE POLICY "Users can manage own attachments" ON public.attachments
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.app_users (auth_user_id, user_id, email, display_name, role)
+  INSERT INTO public.app_users (auth_user_id, id, email, display_name, role)
   VALUES (
     NEW.id,
     NEW.id,
