@@ -26,11 +26,18 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
   final _weightController = TextEditingController();
   String _selectedGovernorate = '';
   int _nolonResult = 0;
+  double _customRate = 0;
+
+  // ── Built-in calculator state ──
+  final _calcDisplay = TextEditingController();
+  String _calcExpression = '';
+  String _calcResult = '0';
+  bool _calcHasResult = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadData();
   }
 
@@ -38,6 +45,7 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
   void dispose() {
     _tabController.dispose();
     _weightController.dispose();
+    _calcDisplay.dispose();
     super.dispose();
   }
 
@@ -51,11 +59,12 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // Egyptian Governorates
+  // Egyptian Governorates (27 governorates - complete)
   // ═══════════════════════════════════════════════════════════════
 
-  static const Map<String, double> _governorateRates = {
-    // القاهرة والجيزة - أعلى نسبة
+  /// Default rates for each governorate. User can change them manually.
+  static Map<String, double> _governorateRates = {
+    // القاهرة والجيزة
     'القاهرة': 1.0,
     'الجيزة': 1.0,
     // الدلتا والوجه البحري
@@ -66,32 +75,33 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
     'الدقهلية': 0.95,
     'دمياط': 0.95,
     'الشرقية': 0.95,
+    'البحيرة': 0.90,
+    // القناة وسيناء
     'الإسماعيلية': 0.90,
     'بورسعيد': 0.90,
     'السويس': 0.90,
-    // الصعيد - أقل نسبة
+    'شمال سيناء': 0.85,
+    'جنوب سيناء': 0.85,
+    // الإسكندرية
+    'الإسكندرية': 0.95,
+    // الصعيد (الوجه القبلي)
+    'الفيوم': 0.90,
+    'بني سويف': 0.90,
     'المنيا': 0.85,
     'أسيوط': 0.85,
     'سوهاج': 0.80,
     'قنا': 0.80,
     'الأقصر': 0.75,
     'أسوان': 0.75,
-    // الوادي الجديد ومرسي مطروح
+    // المحافظات الحدودية
+    'البحر الأحمر': 0.80,
     'الوادي الجديد': 0.70,
     'مطروح': 0.80,
-    // البحر الأحمر وسيناء
-    'البحر الأحمر': 0.80,
-    'شمال سيناء': 0.85,
-    'جنوب سيناء': 0.85,
-    // الفيوم وبني سويف
-    'الفيوم': 0.90,
-    'بني سويف': 0.90,
-    // الأقصر - مكرر في حال
-    'البحيرة': 0.90,
   };
 
   static const List<String> _governorateGroups = [
     'القاهرة والجيزة',
+    'الإسكندرية',
     'الوجه البحري (الدلتا)',
     'القناة وسيناء',
     'الصعيد (الوجه القبلي)',
@@ -102,14 +112,16 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
     switch (group) {
       case 'القاهرة والجيزة':
         return ['القاهرة', 'الجيزة'];
+      case 'الإسكندرية':
+        return ['الإسكندرية'];
       case 'الوجه البحري (الدلتا)':
-        return ['القليوبية', 'المنوفية', 'الغربية', 'كفر الشيخ', 'الدقهلية', 'دمياط', 'الشرقية', 'الفيوم', 'بني سويف', 'البحيرة'];
+        return ['القليوبية', 'المنوفية', 'الغربية', 'كفر الشيخ', 'الدقهلية', 'دمياط', 'الشرقية', 'البحيرة'];
       case 'القناة وسيناء':
-        return ['الإسماعيلية', 'بورسعيد', 'السويس', 'شمال سيناء', 'جنوب سيناء', 'البحر الأحمر'];
+        return ['الإسماعيلية', 'بورسعيد', 'السويس', 'شمال سيناء', 'جنوب سيناء'];
       case 'الصعيد (الوجه القبلي)':
-        return ['المنيا', 'أسيوط', 'سوهاج', 'قنا', 'الأقصر', 'أسوان'];
+        return ['الفيوم', 'بني سويف', 'المنيا', 'أسيوط', 'سوهاج', 'قنا', 'الأقصر', 'أسوان'];
       case 'المحافظات الحدودية':
-        return ['الوادي الجديد', 'مطروح'];
+        return ['البحر الأحمر', 'الوادي الجديد', 'مطروح'];
       default:
         return [];
     }
@@ -121,13 +133,139 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
       setState(() => _nolonResult = 0);
       return;
     }
-    final rate = _governorateRates[_selectedGovernorate] ?? 0.8;
-    // حساب النولون: الوزن × نسبة المحافظة × سعر الطن (متوسط 50 جنيه للطن)
+    final rate = _customRate > 0 ? _customRate : (_governorateRates[_selectedGovernorate] ?? 0.8);
     final tonnage = weight / 1000;
     setState(() {
       _nolonResult = (tonnage * rate * 50).round();
     });
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // BUILT-IN CALCULATOR
+  // ═══════════════════════════════════════════════════════════════
+
+  void _calcInput(String value) {
+    setState(() {
+      if (_calcHasResult && value != 'C' && !['+', '-', '×', '÷'].contains(value)) {
+        _calcExpression = '';
+        _calcResult = '0';
+        _calcHasResult = false;
+      }
+      _calcHasResult = false;
+      if (value == 'C') {
+        _calcExpression = '';
+        _calcResult = '0';
+      } else if (value == '⌫') {
+        if (_calcExpression.isNotEmpty) {
+          _calcExpression = _calcExpression.substring(0, _calcExpression.length - 1);
+        }
+        if (_calcExpression.isEmpty) _calcResult = '0';
+      } else if (value == '=') {
+        _calcResult = _evaluateExpression(_calcExpression);
+        _calcHasResult = true;
+      } else {
+        _calcExpression += value;
+      }
+      _calcDisplay.text = _calcHasResult ? _calcResult : _calcExpression;
+    });
+  }
+
+  String _evaluateExpression(String expression) {
+    try {
+      if (expression.isEmpty) return '0';
+      // Replace display operators with math operators
+      String eval = expression.replaceAll('×', '*').replaceAll('÷', '/');
+
+      // Parse and evaluate safely
+      final result = _parseMath(eval);
+      if (result == null || result.isInfinite || result.isNaN) return 'خطأ';
+      // Format result
+      if (result == result.truncateToDouble()) {
+        return result.toInt().toString();
+      }
+      return result.toStringAsFixed(4).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    } catch (e) {
+      return 'خطأ';
+    }
+  }
+
+  double? _parseMath(String expr) {
+    // Simple math parser supporting +, -, *, / with proper precedence
+    expr = expr.replaceAll(' ', '');
+    if (expr.isEmpty) return null;
+    return _parseAddSub(expr, 0).$1;
+  }
+
+  (double?, int) _parseAddSub(String expr, int pos) {
+    var (left, nextPos) = _parseMulDiv(expr, pos);
+    if (left == null) return (null, nextPos);
+    while (nextPos < expr.length) {
+      final op = expr[nextPos];
+      if (op != '+' && op != '-') break;
+      nextPos++;
+      var (right, newPos) = _parseMulDiv(expr, nextPos);
+      if (right == null) return (null, newPos);
+      left = op == '+' ? left + right : left - right;
+      nextPos = newPos;
+    }
+    return (left, nextPos);
+  }
+
+  (double?, int) _parseMulDiv(String expr, int pos) {
+    var (left, nextPos) = _parseNumber(expr, pos);
+    if (left == null) return (null, nextPos);
+    while (nextPos < expr.length) {
+      final op = expr[nextPos];
+      if (op != '*' && op != '/') break;
+      nextPos++;
+      var (right, newPos) = _parseNumber(expr, nextPos);
+      if (right == null) return (null, newPos);
+      if (op == '*') {
+        left = left * right;
+      } else {
+        if (right == 0) return (double.nan, newPos);
+        left = left / right;
+      }
+      nextPos = newPos;
+    }
+    return (left, nextPos);
+  }
+
+  (double?, int) _parseNumber(String expr, int pos) {
+    // Handle unary minus
+    if (pos < expr.length && expr[pos] == '-') {
+      final (val, newPos) = _parseNumber(expr, pos + 1);
+      return (val != null ? -val : null, newPos);
+    }
+    if (pos < expr.length && expr[pos] == '+') {
+      return _parseNumber(expr, pos + 1);
+    }
+    // Handle parentheses
+    if (pos < expr.length && expr[pos] == '(') {
+      final (val, newPos) = _parseAddSub(expr, pos + 1);
+      if (newPos < expr.length && expr[newPos] == ')') {
+        return (val, newPos + 1);
+      }
+      return (null, newPos);
+    }
+    // Parse digits and decimal point
+    final buffer = StringBuffer();
+    while (pos < expr.length) {
+      final ch = expr[pos];
+      if ((ch >= '0' && ch <= '9') || ch == '.') {
+        buffer.write(ch);
+        pos++;
+      } else {
+        break;
+      }
+    }
+    if (buffer.isEmpty) return (null, pos);
+    return (double.tryParse(buffer.toString()), pos);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // BUILD
+  // ═══════════════════════════════════════════════════════════════
 
   @override
   Widget build(BuildContext context) {
@@ -169,17 +307,18 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
               labelColor: AppColors.textSecondary,
               unselectedLabelColor: AppColors.textHint,
               labelStyle: const TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 fontFamily: 'Cairo',
               ),
               unselectedLabelStyle: const TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Cairo',
               ),
               tabs: const [
                 Tab(text: 'حساب النولون'),
+                Tab(text: 'آلة حاسبة'),
                 Tab(text: 'سجلات الوقود'),
               ],
             ),
@@ -191,13 +330,14 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
               controller: _tabController,
               children: [
                 _buildNolonTab(),
+                _buildCalculatorTab(),
                 _buildFuelTab(),
               ],
             ),
           ),
         ],
       ),
-      floatingActionButton: _tabController.index == 1
+      floatingActionButton: _tabController.index == 2
           ? FloatingActionButton(
               onPressed: () => Navigator.pushNamed(context, '/add-fuel'),
               child: const Icon(Icons.add),
@@ -248,7 +388,7 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'اختر المحافظة ووزن الحمولة لحساب تكلفة النولون',
+                      'اختر المحافظة ووزن الحمولة لحساب تكلفة النولون • يمكنك تعديل النسبة يدوياً',
                       style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ],
@@ -292,9 +432,54 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
             );
           }).toList(),
           onChanged: (value) {
-            setState(() => _selectedGovernorate = value ?? '');
+            setState(() {
+              _selectedGovernorate = value ?? '';
+              _customRate = 0;
+            });
             _calculateNolon();
           },
+        ),
+        const SizedBox(height: 16),
+
+        // ── Manual Rate Override ──
+        _buildSectionTitle('نسبة النولون (يدوي)'),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: TextEditingController(text: _customRate > 0 ? _customRate.toStringAsFixed(2) : ''),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (value) {
+                  final parsed = double.tryParse(value.trim());
+                  if (parsed != null && parsed >= 0 && parsed <= 2) {
+                    setState(() => _customRate = parsed);
+                    _calculateNolon();
+                  } else if (value.trim().isEmpty) {
+                    setState(() => _customRate = 0);
+                    _calculateNolon();
+                  }
+                },
+                decoration: InputDecoration(
+                  labelText: 'اتركه فارغاً للنسبة الافتراضية',
+                  prefixIcon: const Icon(Icons.percent),
+                  suffixText: '%',
+                  hintText: '${((_governorateRates[_selectedGovernorate] ?? 0) * 100).round()}%',
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _customRate = 0;
+                  _calculateNolon();
+                });
+              },
+              icon: const Icon(Icons.refresh),
+              tooltip: 'إعادة النسبة الافتراضية',
+            ),
+          ],
         ),
         const SizedBox(height: 16),
 
@@ -346,6 +531,7 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
   Widget _buildResultCard() {
     final weight = double.tryParse(_weightController.text.trim()) ?? 0;
     final isCalculated = _nolonResult > 0;
+    final usedRate = _customRate > 0 ? _customRate : (_governorateRates[_selectedGovernorate] ?? 0);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -391,7 +577,6 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
               ),
             ),
             const SizedBox(height: 12),
-            // Details
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
@@ -415,7 +600,9 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
                   _ResultRow(
                     icon: Icons.percent,
                     label: 'النسبة',
-                    value: '${((_governorateRates[_selectedGovernorate] ?? 0) * 100).round()}%',
+                    value: _customRate > 0
+                        ? '${(usedRate * 100).toStringAsFixed(1)}% (يدوي)'
+                        : '${(usedRate * 100).round()}%',
                   ),
                 ],
               ),
@@ -441,7 +628,7 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
             children: [
               Icon(Icons.info_outline, size: 16, color: AppColors.info),
               SizedBox(width: 6),
-              Text('جدول نسب النولون حسب المحافظة', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              Text('جدول نسب النولون حسب المحافظة (27 محافظة)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
             ],
           ),
           const SizedBox(height: 12),
@@ -461,7 +648,10 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
                       final rate = _governorateRates[gov]!;
                       return GestureDetector(
                         onTap: () {
-                          setState(() => _selectedGovernorate = gov);
+                          setState(() {
+                            _selectedGovernorate = gov;
+                            _customRate = 0;
+                          });
                           _calculateNolon();
                         },
                         child: Container(
@@ -500,6 +690,195 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
     if (rate >= 0.95) return AppColors.error;
     if (rate >= 0.85) return AppColors.accent;
     return AppColors.success;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // CALCULATOR TAB
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildCalculatorTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // ── Display ──
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1a1a2e),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Expression
+                Text(
+                  _calcExpression.isEmpty ? '' : _calcExpression,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white.withOpacity(0.5),
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                // Result
+                Text(
+                  _calcDisplay.text.isEmpty ? '0' : _calcDisplay.text,
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    fontFamily: 'Cairo',
+                    height: 1.2,
+                  ),
+                  textAlign: TextAlign.right,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // ── Calculator Buttons ──
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                // Row 1: C, ⌫, %, ÷
+                _buildCalcRow([
+                  _CalcBtn(label: 'C', color: AppColors.error, textColor: Colors.white, onTap: () => _calcInput('C')),
+                  _CalcBtn(label: '⌫', color: AppColors.surfaceVariant, textColor: AppColors.textPrimary, onTap: () => _calcInput('⌫')),
+                  _CalcBtn(label: '%', color: AppColors.surfaceVariant, textColor: AppColors.primary, onTap: () => _calcInput('%')),
+                  _CalcBtn(label: '÷', color: const Color(0xFF1565C0), textColor: Colors.white, onTap: () => _calcInput('÷')),
+                ]),
+                // Row 2: 7, 8, 9, ×
+                _buildCalcRow([
+                  _CalcBtn(label: '7', onTap: () => _calcInput('7')),
+                  _CalcBtn(label: '8', onTap: () => _calcInput('8')),
+                  _CalcBtn(label: '9', onTap: () => _calcInput('9')),
+                  _CalcBtn(label: '×', color: const Color(0xFF1565C0), textColor: Colors.white, onTap: () => _calcInput('×')),
+                ]),
+                // Row 3: 4, 5, 6, -
+                _buildCalcRow([
+                  _CalcBtn(label: '4', onTap: () => _calcInput('4')),
+                  _CalcBtn(label: '5', onTap: () => _calcInput('5')),
+                  _CalcBtn(label: '6', onTap: () => _calcInput('6')),
+                  _CalcBtn(label: '-', color: const Color(0xFF1565C0), textColor: Colors.white, onTap: () => _calcInput('-')),
+                ]),
+                // Row 4: 1, 2, 3, +
+                _buildCalcRow([
+                  _CalcBtn(label: '1', onTap: () => _calcInput('1')),
+                  _CalcBtn(label: '2', onTap: () => _calcInput('2')),
+                  _CalcBtn(label: '3', onTap: () => _calcInput('3')),
+                  _CalcBtn(label: '+', color: const Color(0xFF1565C0), textColor: Colors.white, onTap: () => _calcInput('+')),
+                ]),
+                // Row 5: (, 0, ), =
+                _buildCalcRow([
+                  _CalcBtn(label: '(', color: AppColors.surfaceVariant, textColor: AppColors.textPrimary, onTap: () => _calcInput('(')),
+                  _CalcBtn(label: '0', onTap: () => _calcInput('0')),
+                  _CalcBtn(label: ')', color: AppColors.surfaceVariant, textColor: AppColors.textPrimary, onTap: () => _calcInput(')')),
+                  _CalcBtn(label: '=', color: AppColors.success, textColor: Colors.white, onTap: () => _calcInput('=')),
+                ]),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // ── Percentage shortcut buttons ──
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline, size: 16, color: AppColors.primary),
+                    const SizedBox(width: 6),
+                    const Text('اختصارات سريعة', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _QuickCalcShortcut(label: '10%', expr: '*0.1', onTap: () { _calcExpression += '*0.1'; _calcInput('='); }),
+                    _QuickCalcShortcut(label: '15%', expr: '*0.15', onTap: () { _calcExpression += '*0.15'; _calcInput('='); }),
+                    _QuickCalcShortcut(label: '20%', expr: '*0.2', onTap: () { _calcExpression += '*0.2'; _calcInput('='); }),
+                    _QuickCalcShortcut(label: '÷ 1000', expr: '/1000', onTap: () { _calcExpression += '/1000'; _calcInput('='); }),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalcRow(List<_CalcBtn> buttons) {
+    return Padding(
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        children: buttons.map((btn) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: btn.onTap,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: btn.color,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: btn.color == Colors.white
+                          ? [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2))]
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        btn.label,
+                        style: TextStyle(
+                          fontSize: btn.label.length > 2 ? 18 : 22,
+                          fontWeight: FontWeight.w700,
+                          color: btn.textColor ?? AppColors.textPrimary,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -878,6 +1257,55 @@ class _ResultRow extends StatelessWidget {
         const Spacer(),
         Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
       ],
+    );
+  }
+}
+
+class _CalcBtn {
+  final String label;
+  final Color color;
+  final Color? textColor;
+  final VoidCallback onTap;
+
+  const _CalcBtn({
+    required this.label,
+    this.color = Colors.white,
+    this.textColor,
+    required this.onTap,
+  });
+}
+
+class _QuickCalcShortcut extends StatelessWidget {
+  final String label;
+  final String expr;
+  final VoidCallback onTap;
+
+  const _QuickCalcShortcut({
+    required this.label,
+    required this.expr,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+          ),
+        ),
+      ),
     );
   }
 }
