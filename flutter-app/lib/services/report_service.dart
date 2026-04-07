@@ -99,7 +99,7 @@ class ReportService {
   static pw.Widget buildWatermarkOverlay(pw.MemoryImage watermarkImage) {
     return pw.Positioned.fill(
       child: pw.Opacity(
-        opacity: 0.15,
+        opacity: 0.2,
         child: pw.Center(
           child: pw.Image(
             watermarkImage,
