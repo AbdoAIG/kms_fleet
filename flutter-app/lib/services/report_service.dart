@@ -118,8 +118,10 @@ class ReportService {
       return pw.Container(
         height: 0,
         child: pw.Transform.translate(
-          dx: (contentW - imgW) / 2,
-          dy: (contentH - imgH) / 2,
+          offset: PdfPoint(
+            (contentW - imgW) / 2,
+            (contentH - imgH) / 2,
+          ),
           child: pw.Opacity(
             opacity: 0.2,
             child: pw.Image(
