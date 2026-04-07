@@ -21,6 +21,7 @@ class AddMaintenanceScreen extends StatefulWidget {
 
 class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _searchController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _odometerController = TextEditingController();
   final _costController = TextEditingController();
@@ -37,6 +38,10 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
   String _selectedStatus = 'pending';
   int? _selectedVehicleId;
   List<Vehicle> _vehicles = [];
+  List<Vehicle> _filteredVehicles = [];
+  String _searchQuery = '';
+  Vehicle? _selectedVehicle;
+  bool _showVehicleDropdown = false;
 
   bool _isSaving = false;
   bool get _isEditing => widget.record != null;
@@ -65,6 +70,8 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
       _selectedVehicleId = widget.record!.vehicleId;
     } else if (widget.vehicle != null) {
       _selectedVehicleId = widget.vehicle!.id;
+      _selectedVehicle = widget.vehicle;
+      _searchController.text = widget.vehicle!.plateNumber;
       _odometerController.text =
           widget.vehicle!.currentOdometer.toString();
     }
@@ -74,11 +81,53 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
     final provider = context.read<VehicleProvider>();
     setState(() {
       _vehicles = provider.allVehicles;
+      _filteredVehicles = _vehicles;
+    });
+  }
+
+  void _filterVehicles(String query) {
+    setState(() {
+      _searchQuery = query;
+      if (query.trim().isEmpty) {
+        _filteredVehicles = _vehicles;
+        _showVehicleDropdown = false;
+      } else {
+        final q = query.trim().toLowerCase();
+        _filteredVehicles = _vehicles.where((v) {
+          return v.plateNumber.toLowerCase().contains(q) ||
+              v.make.toLowerCase().contains(q) ||
+              v.model.toLowerCase().contains(q) ||
+              (v.driverName != null && v.driverName!.toLowerCase().contains(q)) ||
+              (v.displayName.toLowerCase().contains(q));
+        }).toList();
+        _showVehicleDropdown = _filteredVehicles.isNotEmpty;
+      }
+    });
+  }
+
+  void _selectVehicle(Vehicle vehicle) {
+    setState(() {
+      _selectedVehicle = vehicle;
+      _selectedVehicleId = vehicle.id;
+      _searchController.text = '${vehicle.plateNumber} - ${vehicle.make} ${vehicle.model}';
+      _showVehicleDropdown = false;
+      _odometerController.text = vehicle.currentOdometer.toString();
+    });
+  }
+
+  void _clearVehicleSelection() {
+    setState(() {
+      _selectedVehicle = null;
+      _selectedVehicleId = null;
+      _searchController.clear();
+      _showVehicleDropdown = false;
+      _filteredVehicles = _vehicles;
     });
   }
 
   @override
   void dispose() {
+    _searchController.dispose();
     _descriptionController.dispose();
     _odometerController.dispose();
     _costController.dispose();
@@ -93,9 +142,13 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
   Future<void> _save() async {
     AppHelpers.unfocus(context);
 
-    if (!_formKey.currentState!.validate()) return;
+    // Only vehicle and type are mandatory
     if (_selectedVehicleId == null) {
       AppHelpers.showSnackBar(context, 'يرجى اختيار المركبة', isError: true);
+      return;
+    }
+    if (_selectedType.isEmpty) {
+      AppHelpers.showSnackBar(context, 'يرجى اختيار نوع الصيانة', isError: true);
       return;
     }
 
@@ -106,10 +159,16 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
         id: _isEditing ? widget.record!.id : null,
         vehicleId: _selectedVehicleId!,
         maintenanceDate: _selectedDate,
-        description: _descriptionController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty
+            ? AppConstants.maintenanceTypes[_selectedType] ?? 'صيانة'
+            : _descriptionController.text.trim(),
         type: _selectedType,
-        odometerReading: int.parse(_odometerController.text.trim()),
-        cost: double.parse(_costController.text.trim()),
+        odometerReading: _odometerController.text.trim().isEmpty
+            ? 0
+            : (int.tryParse(_odometerController.text.trim()) ?? 0),
+        cost: _costController.text.trim().isEmpty
+            ? 0.0
+            : (double.tryParse(_costController.text.trim()) ?? 0.0),
         laborCost: _laborCostController.text.trim().isEmpty
             ? null
             : double.parse(_laborCostController.text.trim()),
@@ -160,71 +219,102 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Vehicle Selection
-            _buildSectionTitle('المركبة'),
+            // ── Vehicle Search ──
+            _buildSectionTitle('المركبة *', isRequired: true),
             const SizedBox(height: 8),
-            DropdownButtonFormField<int>(
-              value: _selectedVehicleId,
-              decoration: const InputDecoration(
-                labelText: 'اختر المركبة',
-                prefixIcon: Icon(Icons.directions_car),
-              ),
-              items: _vehicles.map((v) {
-                return DropdownMenuItem(
-                  value: v.id,
-                  child: Text('${v.make} ${v.model} - ${v.plateNumber}',
-                      overflow: TextOverflow.ellipsis),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedVehicleId = value;
-                  final vehicle = _vehicles.firstWhere(
-                    (v) => v.id == value,
-                    orElse: () => Vehicle(
-                      plateNumber: '',
-                      make: '',
-                      model: '',
-                      year: 2024,
-                      color: 'white',
-                      fuelType: 'petrol',
-                      currentOdometer: 0,
-                      status: 'active',
+            _buildVehicleSearchField(),
+            if (_showVehicleDropdown)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                constraints: const BoxConstraints(maxHeight: 220),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
                     ),
-                  );
-                  _odometerController.text =
-                      vehicle.currentOdometer.toString();
-                });
-              },
-            ),
+                  ],
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  itemCount: _filteredVehicles.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1, indent: 16, endIndent: 16),
+                  itemBuilder: (context, index) {
+                    final v = _filteredVehicles[index];
+                    return InkWell(
+                      onTap: () => _selectVehicle(v),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppConstants.vehicleTypeColors[v.vehicleType]?.withOpacity(0.1) ?? AppColors.primaryContainer,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                AppConstants.vehicleTypeIcons[v.vehicleType] ?? Icons.directions_car,
+                                size: 20,
+                                color: AppConstants.vehicleTypeColors[v.vehicleType] ?? AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    v.plateNumber,
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${v.make} ${v.model} - ${AppConstants.vehicleTypes[v.vehicleType] ?? ''}',
+                                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (v.hasDriver) ...[
+                              Icon(Icons.person_outline, size: 14, color: AppColors.textHint),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  v.driverName ?? '',
+                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             const SizedBox(height: 20),
 
-            // Maintenance Info
+            // ── Maintenance Info ──
             _buildSectionTitle('تفاصيل الصيانة'),
             const SizedBox(height: 8),
 
-            // Date Picker
-            InkWell(
-              onTap: _pickDate,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'تاريخ الصيانة',
-                  prefixIcon: Icon(Icons.calendar_today),
-                ),
-                child: Text(
-                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Type
+            // Type (mandatory)
             DropdownButtonFormField<String>(
               value: _selectedType,
-              decoration: const InputDecoration(
-                labelText: 'نوع الصيانة',
-                prefixIcon: Icon(Icons.category),
+              decoration: InputDecoration(
+                labelText: 'نوع الصيانة *',
+                prefixIcon: const Icon(Icons.category),
               ),
               items: AppConstants.maintenanceTypes.entries.map((entry) {
                 return DropdownMenuItem(
@@ -249,7 +339,23 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Description
+            // Date Picker (optional)
+            InkWell(
+              onTap: _pickDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'تاريخ الصيانة',
+                  prefixIcon: Icon(Icons.calendar_today),
+                ),
+                child: Text(
+                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Description (optional)
             TextFormField(
               controller: _descriptionController,
               maxLines: 2,
@@ -257,13 +363,9 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
                 labelText: 'وصف الصيانة',
                 prefixIcon: Icon(Icons.description),
                 alignLabelWithHint: true,
+                hintText: 'اختياري',
+                hintStyle: TextStyle(fontSize: 12, color: AppColors.textHint),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'يرجى إدخال وصف الصيانة';
-                }
-                return null;
-              },
             ),
             const SizedBox(height: 12),
 
@@ -276,15 +378,8 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
                     decoration: const InputDecoration(
                       labelText: 'عداد الكيلومتر',
                       prefixIcon: Icon(Icons.speed),
+                      hintText: 'اختياري',
                     ),
-                    validator: (value) {
-                      if (value == null ||
-                          value.trim().isEmpty ||
-                          int.tryParse(value.trim()) == null) {
-                        return 'قيمة غير صالحة';
-                      }
-                      return null;
-                    },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -327,8 +422,8 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Cost Info
-            _buildSectionTitle('التكاليف'),
+            // ── Cost Info (optional) ──
+            _buildSectionTitle('التكاليف (اختياري)'),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -342,14 +437,6 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
                       labelText: 'تكلفة القطع',
                       prefixIcon: Icon(Icons.attach_money),
                     ),
-                    validator: (value) {
-                      if (value == null ||
-                          value.trim().isEmpty ||
-                          double.tryParse(value.trim()) == null) {
-                        return 'قيمة غير صالحة';
-                      }
-                      return null;
-                    },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -369,8 +456,8 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Service Provider Info
-            _buildSectionTitle('معلومات مقدم الخدمة'),
+            // ── Service Provider (optional) ──
+            _buildSectionTitle('معلومات مقدم الخدمة (اختياري)'),
             const SizedBox(height: 8),
             TextFormField(
               controller: _serviceProviderController,
@@ -400,7 +487,7 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Next Maintenance
+            // ── Next Maintenance (optional) ──
             _buildSectionTitle('الصيانة القادمة (اختياري)'),
             const SizedBox(height: 8),
             InkWell(
@@ -433,7 +520,7 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
                 alignLabelWithHint: true,
               ),
             ),
-            // Attachments (only when editing an existing record)
+            // Attachments
             if (_isEditing && widget.record!.id != null) ...[
               const SizedBox(height: 20),
               _buildSectionTitle('مرفقات الصيانة'),
@@ -485,6 +572,26 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
     );
   }
 
+  Widget _buildVehicleSearchField() {
+    return TextFormField(
+      controller: _searchController,
+      onChanged: _filterVehicles,
+      readOnly: _selectedVehicleId != null && !_showVehicleDropdown,
+      decoration: InputDecoration(
+        labelText: 'ابحث برقم السيارة أو اسم السائق *',
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: _selectedVehicleId != null
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 20),
+                onPressed: _clearVehicleSelection,
+              )
+            : null,
+        hintText: 'مثال: 12345 أو أحمد',
+        hintStyle: const TextStyle(fontSize: 13, color: AppColors.textHint),
+      ),
+    );
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -509,16 +616,29 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
     }
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, {bool isRequired = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: AppColors.primary,
-        ),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+            ),
+          ),
+          if (isRequired)
+            const Text(
+              ' *',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.error,
+              ),
+            ),
+        ],
       ),
     );
   }
