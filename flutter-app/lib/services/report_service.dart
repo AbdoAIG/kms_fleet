@@ -43,6 +43,7 @@ class ReportService {
   }
 
   /// Builds a standard PDF header with logo, report title and subtitle.
+  /// Returns a Row with logo on the right and title/subtitle on the left.
   static Future<List<pw.Widget>> buildPdfHeader({
     required String title,
     required String subtitle,
@@ -52,30 +53,39 @@ class ReportService {
     final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
 
     return [
-      pw.Center(
-        child: pw.Column(
-          mainAxisSize: pw.MainAxisSize.min,
-          children: [
-            pw.Image(logoImage, width: 60, height: 60, fit: pw.BoxFit.contain),
-            pw.SizedBox(height: 6),
-            pw.Text(
-              title,
-              style: pw.TextStyle(
-                fontSize: 18,
-                fontWeight: pw.FontWeight.bold,
-              ),
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.end,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          // Title and subtitle on the left
+          pw.Expanded(
+            child: pw.Column(
+              mainAxisSize: pw.MainAxisSize.min,
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Text(
+                  title,
+                  style: pw.TextStyle(
+                    fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  subtitle,
+                  style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                ),
+              ],
             ),
-            pw.SizedBox(height: 2),
-            pw.Text(
-              subtitle,
-              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
-            ),
-          ],
-        ),
+          ),
+          pw.SizedBox(width: 16),
+          // Logo on the right (compact, no overlap)
+          pw.Image(logoImage, width: 50, height: 50, fit: pw.BoxFit.contain),
+        ],
       ),
-      pw.SizedBox(height: 10),
+      pw.SizedBox(height: 12),
       pw.Divider(),
-      pw.SizedBox(height: 8),
+      pw.SizedBox(height: 10),
     ];
   }
 
@@ -85,37 +95,20 @@ class ReportService {
     return pw.MemoryImage(bytes.buffer.asUint8List());
   }
 
-  /// Wraps page content with a subtle watermark logo in the background.
-  ///
-  /// The watermark is centered on the page with low opacity (0.05) so it
-  /// doesn't interfere with text readability.
-  static pw.Widget wrapWithWatermark({
-    required List<pw.Widget> content,
-    required pw.MemoryImage watermarkImage,
-  }) {
-    return pw.Stack(
-      children: [
-        // Watermark background (very low opacity, centered, large)
-        pw.Positioned(
-          left: 0,
-          top: 0,
-          bottom: 0,
-          right: 0,
-          child: pw.Center(
-            child: pw.Opacity(
-              opacity: 0.05,
-              child: pw.Image(
-                watermarkImage,
-                width: 350,
-                height: 160,
-                fit: pw.BoxFit.contain,
-              ),
-            ),
+  /// Creates a PageTheme with the watermark as background (20% opacity).
+  static pw.PageTheme _watermarkPageTheme(pw.MemoryImage watermarkImage) {
+    return pw.PageTheme(
+      background: pw.Opacity(
+        opacity: 0.2,
+        child: pw.Center(
+          child: pw.Image(
+            watermarkImage,
+            width: 350,
+            height: 160,
+            fit: pw.BoxFit.contain,
           ),
         ),
-        // Actual content on top
-        ...content,
-      ],
+      ),
     );
   }
 
@@ -220,8 +213,9 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
+          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
-            wrapWithWatermark(content: [
+
               ...headerWidgets,
               pw.Text(
                 'إجمالي السجلات: ${records.length}',
@@ -274,7 +268,7 @@ class ReportService {
                     style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
                   ),
                 ),
-            ], watermarkImage: watermarkImage),
+            ],
           ],
         ),
       );
@@ -314,8 +308,9 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
+          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
-            wrapWithWatermark(content: [
+
             ...headerWidgets,
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
@@ -378,7 +373,7 @@ class ReportService {
                   style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
                 ),
               ),
-            ], watermarkImage: watermarkImage),
+            ],
           ],
         ),
       );
@@ -590,8 +585,9 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
+          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
-            wrapWithWatermark(content: [
+
             ...headerWidgets,
             pw.Text(
               'إجمالي الأوامر: ${orders.length}',
@@ -684,7 +680,7 @@ class ReportService {
                 ),
               ],
             ),
-            ], watermarkImage: watermarkImage),
+            ],
           ],
         ),
       );
@@ -778,8 +774,9 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
+          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
-            wrapWithWatermark(content: [
+
             ...headerWidgets,
             pw.Text(
               'إجمالي السجلات: ${rows.length}',
@@ -876,7 +873,7 @@ class ReportService {
                 bottom: pw.BorderSide(color: PdfColors.grey400),
               ),
             ),
-            ], watermarkImage: watermarkImage),
+            ],
           ],
         ),
       );
@@ -964,8 +961,9 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
+          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
-            wrapWithWatermark(content: [
+
             ...headerWidgets,
             pw.Text(
               'إجمالي السائقين: ${driverVehicles.length}',
@@ -1045,7 +1043,7 @@ class ReportService {
                 ),
               ),
             ),
-            ], watermarkImage: watermarkImage),
+            ],
           ],
         ),
       );
@@ -1318,8 +1316,9 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
+          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
-            wrapWithWatermark(content: [
+
             ...headerWidgets,
 
             // ── Vehicle Info Section ──
@@ -1506,7 +1505,7 @@ class ReportService {
                   style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey500),
                 ),
               ),
-            ], watermarkImage: watermarkImage),
+            ],
           ],
         ),
       );
@@ -1730,8 +1729,9 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
+          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
-            wrapWithWatermark(content: [
+
             ...headerWidgets,
 
             // ── Vehicle Info ──
@@ -1820,7 +1820,7 @@ class ReportService {
               headerAlignment: pw.Alignment.center,
               border: tableBorder,
             ),
-            ], watermarkImage: watermarkImage),
+            ],
           ],
         ),
       );
