@@ -186,23 +186,7 @@ class _MainScreenState extends State<MainScreen>
           padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 12),
           child: Row(
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white.withOpacity(0.5), width: 1),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: Image.asset(
-                    'assets/images/kms_logo.jpeg',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
+              const Icon(Icons.local_shipping, color: Colors.white, size: 30),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

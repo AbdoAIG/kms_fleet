@@ -683,33 +683,11 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: Column(
         children: [
-          // Logo Image
-          Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.4),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(10),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                'assets/images/kms_logo.jpeg',
-                fit: BoxFit.contain,
-              ),
-            ),
+          // Logo Icon (large, no frame)
+          const Icon(
+            Icons.local_shipping_rounded,
+            size: 80,
+            color: Colors.white,
           ),
           const SizedBox(height: 16),
           const Text(
