@@ -367,3 +367,19 @@ Stage Summary:
 - All interactive elements (sidebar, bottom nav, sync) updated to blue theme
 - AppColors.primary not changed (only local header/navigation colors updated)
 - RTL layout and all existing functionality preserved
+---
+Task ID: 3
+Agent: main
+Task: Fix PDF watermark to use FullPage widget, center on page
+
+Work Log:
+- Replaced _wrapWithWatermark with _buildPageWatermark using pw.FullPage
+- Watermark now renders as full-page overlay, centered on each page
+- Increased watermark size to 450x210 at 15% opacity
+- Updated all 7 PDF generator build callbacks
+- Fixed critical bug where content was being discarded
+
+Stage Summary:
+- Watermark uses pw.FullPage for true page-centered rendering
+- All 7 PDF generators updated correctly
+- Content properly flows in build callbacks alongside watermark

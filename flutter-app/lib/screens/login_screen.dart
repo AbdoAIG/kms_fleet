@@ -516,10 +516,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 16),
-
-                              // ── Security Info ──
-                              _buildSecurityBadge(),
                               const SizedBox(height: 24),
                             ],
                           ),
@@ -625,37 +621,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// Security badge showing encryption and protection status.
-  Widget _buildSecurityBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(
-            Icons.verified_user,
-            size: 14,
-            color: AppColors.success,
-          ),
-          SizedBox(width: 6),
-          Text(
-            'حماية متقدمة • تشفير SHA-256',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 11,
-              color: AppColors.success,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
@@ -703,7 +668,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'نظام إدارة الأسطول',
+            'إدارة سيارات KMS',
             style: TextStyle(
               fontFamily: 'Cairo',
               fontSize: 15,

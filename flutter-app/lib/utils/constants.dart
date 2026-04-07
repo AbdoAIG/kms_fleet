@@ -5,7 +5,7 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'KMS Fleet';
-  static const String appNameAr = 'نظام إدارة الأسطول';
+  static const String appNameAr = 'إدارة سيارات KMS';
 
   // Maintenance Types
   static const Map<String, String> maintenanceTypes = {
