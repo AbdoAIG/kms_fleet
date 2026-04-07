@@ -42,16 +42,22 @@ class ReportService {
     return pw.Font.ttf(fontData.buffer.asByteData());
   }
 
-  /// Builds a standard PDF header with report title and subtitle (no logo).
-  static List<pw.Widget> buildPdfHeader({
+  /// Builds a standard PDF header with logo, report title and subtitle.
+  static Future<List<pw.Widget>> buildPdfHeader({
     required String title,
     required String subtitle,
-  }) {
+  }) async {
+    // Load logo image from assets
+    final logoBytes = await rootBundle.load('assets/images/kms_logo.png');
+    final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
+
     return [
       pw.Center(
         child: pw.Column(
           mainAxisSize: pw.MainAxisSize.min,
           children: [
+            pw.Image(logoImage, width: 80, height: 80, fit: pw.BoxFit.contain),
+            pw.SizedBox(height: 8),
             pw.Text(
               title,
               style: pw.TextStyle(
@@ -156,7 +162,7 @@ class ReportService {
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
       // Pre-build header
-      final headerWidgets = buildPdfHeader(
+      final headerWidgets = await buildPdfHeader(
         title: 'تقرير سجلات الصيانة',
         subtitle: '${AppConstants.appName} – $now',
       );
@@ -250,7 +256,7 @@ class ReportService {
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
       // Pre-build header
-      final headerWidgets = buildPdfHeader(
+      final headerWidgets = await buildPdfHeader(
         title: 'تقرير أسطول المركبات',
         subtitle: '${AppConstants.appName} – $now',
       );
@@ -513,7 +519,7 @@ class ReportService {
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
       // Pre-build header
-      final headerWidgets = buildPdfHeader(
+      final headerWidgets = await buildPdfHeader(
         title: 'تقرير أوامر العمل',
         subtitle: '${AppConstants.appName} – $now',
       );
@@ -654,7 +660,7 @@ class ReportService {
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
       // Pre-build header
-      final headerWidgets = buildPdfHeader(
+      final headerWidgets = await buildPdfHeader(
         title: 'تقرير التكاليف الشهري لكل مركبة',
         subtitle: '${AppConstants.appName} – $now',
       );
@@ -844,7 +850,7 @@ class ReportService {
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
       // Pre-build header
-      final headerWidgets = buildPdfHeader(
+      final headerWidgets = await buildPdfHeader(
         title: 'تقرير أداء السائقين',
         subtitle: '${AppConstants.appName} – $now',
       );
@@ -1212,7 +1218,7 @@ class ReportService {
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
       // Pre-build header
-      final headerWidgets = buildPdfHeader(
+      final headerWidgets = await buildPdfHeader(
         title: 'تقرير مركبة: ${vehicle.make} ${vehicle.model}',
         subtitle: '${AppConstants.appName} – $now',
       );
@@ -1636,7 +1642,7 @@ class ReportService {
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
       // Pre-build header
-      final headerWidgets = buildPdfHeader(
+      final headerWidgets = await buildPdfHeader(
         title: 'تقرير عطل - ${record.description}',
         subtitle: '${AppConstants.appName} – $now',
       );

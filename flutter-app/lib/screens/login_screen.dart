@@ -683,11 +683,12 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: Column(
         children: [
-          // Logo Icon (large, no frame)
-          const Icon(
-            Icons.local_shipping_rounded,
-            size: 80,
-            color: Colors.white,
+          // Logo (large, no frame)
+          Image.asset(
+            'assets/images/kms_logo.png',
+            width: 150,
+            height: 150,
+            fit: BoxFit.contain,
           ),
           const SizedBox(height: 16),
           const Text(
