@@ -96,10 +96,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
           path = await ReportService.generateMonthlyCostPDF();
           label = 'تقرير التكاليف الشهرية';
           break;
-        case 'driver_performance_pdf':
-          path = await ReportService.generateDriverPerformancePDF();
-          label = 'تقرير أداء السائقين';
-          break;
         case 'comprehensive_excel':
           path = await ReportService.generateComprehensiveExcel();
           label = 'تصدير شامل للمحاسبين';
@@ -265,14 +261,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
         format: 'PDF',
         formatColor: AppColors.error,
         type: 'monthly_cost_pdf',
-      ),
-      _ExportItem(
-        title: 'تقرير أداء السائقين',
-        description: 'أداء السائقين والمخالفات وحالة الرخص',
-        icon: Icons.person_search,
-        format: 'PDF',
-        formatColor: AppColors.error,
-        type: 'driver_performance_pdf',
       ),
       _ExportItem(
         title: 'تصدير شامل للمحاسبين',
