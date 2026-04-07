@@ -322,176 +322,253 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // Vehicle Info Card — Type-Specific Header
+  // Vehicle Info Card — Type-Specific Header with Vehicle Image
   // ═══════════════════════════════════════════════════════════════════════════════
+
+  static const _vehicleImages = {
+    'half_truck': 'assets/images/vehicles/half_truck.png',
+    'jumbo_truck': 'assets/images/vehicles/jumbo_truck.png',
+    'double_cabin': 'assets/images/vehicles/double_cabin.png',
+    'bus': 'assets/images/vehicles/bus.png',
+    'microbus': 'assets/images/vehicles/microbus.png',
+    'forklift': 'assets/images/vehicles/forklift.png',
+  };
 
   Widget _buildVehicleInfoCard(Color statusColor) {
     final vehicle = widget.vehicle;
     final config = _typeConfig;
+    final vehicleImage = _vehicleImages[vehicle.vehicleType];
 
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [config.color, config.color.withOpacity(0.75)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: config.color.withOpacity(0.3),
+            color: config.color.withOpacity(0.15),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
         ],
+        border: Border.all(color: AppColors.border, width: 0.5),
       ),
       child: Column(
         children: [
-          // Top row: icon + name + badges
-          Row(
-            children: [
-              // Large type-specific icon
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-                ),
-                child: Icon(
-                  config.icon,
-                  color: Colors.white,
-                  size: 36,
-                ),
+          // ── Vehicle Image Header ──
+          Container(
+            height: 200,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  config.color.withOpacity(0.12),
+                  config.color.withOpacity(0.04),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              const SizedBox(width: 16),
-              // Name + plate + type badge
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      vehicle.displayName,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        vehicle.plateNumber,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Stack(
+              children: [
+                // Vehicle image
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    child: vehicleImage != null
+                        ? Image.asset(
+                            vehicleImage,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Icon(
+                                config.detailIcon,
+                                size: 80,
+                                color: config.color.withOpacity(0.3),
+                              ),
+                            ),
+                          )
+                        : Center(
+                          child: Icon(
+                            config.detailIcon,
+                            size: 80,
+                            color: config.color.withOpacity(0.3),
+                          ),
+                          ),
+                  ),
+                ),
+                // Status badge (top-right)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 6),
-                    // Type badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          AppConstants.vehicleStatuses[vehicle.status] ?? '',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: statusColor,
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Type badge (top-left)
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: config.color.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: config.color.withOpacity(0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(config.icon, color: Colors.white, size: 12),
+                        const SizedBox(width: 4),
+                        Text(
+                          config.shortLabel,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // ── Vehicle Info Section ──
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Vehicle name + plate
+                Text(
+                  vehicle.displayName,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    fontFamily: 'Cairo',
+                    height: 1.3,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  vehicle.plateNumber,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                    fontFamily: 'Cairo',
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+                const SizedBox(height: 16),
+                // Info row: odometer, fuel, color, year
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          Icon(config.icon, color: Colors.white70, size: 12),
+                          _InfoItem(
+                            icon: Icons.speed,
+                            label: 'عداد الكيلومتر',
+                            value: AppFormatters.formatNumber(vehicle.currentOdometer),
+                            unit: 'كم',
+                          ),
+                          _InfoItem(
+                            icon: Icons.local_gas_station,
+                            label: 'الوقود',
+                            value: AppConstants.fuelTypes[vehicle.fuelType] ?? '',
+                          ),
+                          _InfoItem(
+                            icon: Icons.palette,
+                            label: 'اللون',
+                            value: AppConstants.vehicleColors[vehicle.color] ?? '',
+                          ),
+                          _InfoItem(
+                            icon: Icons.calendar_today,
+                            label: 'السنة',
+                            value: '${vehicle.year}',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Capacity row (type-specific)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.straighten, color: AppColors.textHint, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            config.capacityLabel,
+                            style: const TextStyle(fontSize: 11, color: AppColors.textHint, fontFamily: 'Cairo'),
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            config.shortLabel,
+                            config.capacityValue(vehicle.toMap()),
                             style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                              fontFamily: 'Cairo',
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              // Status badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  AppConstants.vehicleStatuses[vehicle.status] ?? '',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: statusColor,
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Divider(color: Colors.white24),
-          const SizedBox(height: 16),
-          // Info row: odometer, fuel, color, year, capacity
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _InfoItem(
-                icon: Icons.speed,
-                label: 'عداد الكيلومتر',
-                value: AppFormatters.formatNumber(vehicle.currentOdometer),
-                unit: 'كم',
-              ),
-              _InfoItem(
-                icon: Icons.local_gas_station,
-                label: 'الوقود',
-                value: AppConstants.fuelTypes[vehicle.fuelType] ?? '',
-              ),
-              _InfoItem(
-                icon: Icons.palette,
-                label: 'اللون',
-                value: AppConstants.vehicleColors[vehicle.color] ?? '',
-              ),
-              _InfoItem(
-                icon: Icons.calendar_today,
-                label: 'السنة',
-                value: '${vehicle.year}',
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Capacity row (type-specific)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.straighten, color: Colors.white60, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                config.capacityLabel,
-                style: const TextStyle(fontSize: 11, color: Colors.white60),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                config.capacityValue(vehicle.toMap()),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
