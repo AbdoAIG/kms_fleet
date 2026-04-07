@@ -102,38 +102,44 @@ class Vehicle3DCard extends StatelessWidget {
                       // Badges row
                       Row(
                         children: [
-                          // Status pill
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: _statusColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 5,
-                                  height: 5,
-                                  decoration: BoxDecoration(
-                                    color: _statusColor,
-                                    shape: BoxShape.circle,
+                          // Status pill - wrapped in Flexible to prevent overflow
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: _statusColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                      color: _statusColor,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _statusLabel,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: _statusColor,
-                                    fontFamily: 'Cairo',
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      _statusLabel,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: _statusColor,
+                                        fontFamily: 'Cairo',
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 4),
                           // Type pill - use short label to prevent overflow
                           Flexible(
                             child: Container(
@@ -164,7 +170,7 @@ class Vehicle3DCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 4),
                           // Menu
                           PopupMenuButton<String>(
                             padding: EdgeInsets.zero,
@@ -223,29 +229,33 @@ class Vehicle3DCard extends StatelessWidget {
                       // Quick stats
                       Row(
                         children: [
-                          _QuickStat(
-                            icon: Icons.speed,
-                            value: AppFormatters.formatNumber(vehicle.currentOdometer),
-                            unit: 'كم',
+                          Flexible(
+                            child: _QuickStat(
+                              icon: Icons.speed,
+                              value: AppFormatters.formatNumber(vehicle.currentOdometer),
+                              unit: 'كم',
+                            ),
                           ),
-                          const SizedBox(width: 14),
-                          _QuickStat(
-                            icon: Icons.local_gas_station,
-                            value: AppConstants.fuelTypes[vehicle.fuelType] ?? '',
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: _QuickStat(
+                              icon: Icons.local_gas_station,
+                              value: AppConstants.fuelTypes[vehicle.fuelType] ?? '',
+                            ),
                           ),
-                          const Spacer(),
-                          if (vehicle.hasDriver)
+                          if (vehicle.hasDriver) ...[
+                            const SizedBox(width: 6),
                             Flexible(
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.person_outline, size: 12, color: AppColors.textHint),
-                                  const SizedBox(width: 3),
+                                  const SizedBox(width: 2),
                                   Flexible(
                                     child: Text(
                                       vehicle.driverName ?? '',
                                       style: const TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 10,
                                         color: AppColors.textSecondary,
                                         fontFamily: 'Cairo',
                                       ),
@@ -256,6 +266,7 @@ class Vehicle3DCard extends StatelessWidget {
                                 ],
                               ),
                             ),
+                          ],
                         ],
                       ),
                     ],
@@ -306,15 +317,17 @@ class _QuickStat extends StatelessWidget {
       children: [
         Icon(icon, size: 12, color: AppColors.textHint),
         const SizedBox(width: 3),
-        Text(
-          unit != null ? '$value $unit' : value,
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppColors.textSecondary,
-            fontFamily: 'Cairo',
+        Flexible(
+          child: Text(
+            unit != null ? '$value $unit' : value,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+              fontFamily: 'Cairo',
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

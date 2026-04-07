@@ -94,46 +94,33 @@ class ReportService {
     return pw.MemoryImage(bytes.buffer.asUint8List());
   }
 
-  /// Wraps content in a Column (no watermark overlay – watermark is handled
-  /// via the MultiPage header to ensure it is always centered on the full page).
-  static pw.Widget wrapContent(List<pw.Widget> content) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-      children: content,
-    );
-  }
-
-  /// Returns a header builder that paints the watermark at the exact center
-  /// of every page, regardless of content height.
-  ///
-  /// Uses a zero-height Container with Transform.translate so the header
-  /// takes no layout space but the image is rendered at the page centre.
-  static pw.Widget Function(pw.Context) watermarkHeader(pw.MemoryImage watermarkImage) {
-    return (pw.Context context) {
-      final page = context.page.pageFormat;
-      final contentW = page.width - page.marginLeft - page.marginRight;
-      final contentH = page.height - page.marginTop - page.marginBottom;
-      const imgW = 300.0;
-      const imgH = 140.0;
-      return pw.Container(
-        height: 0,
-        child: pw.Transform.translate(
-          offset: PdfPoint(
-            (contentW - imgW) / 2,
-            (contentH - imgH) / 2,
-          ),
-          child: pw.Opacity(
-            opacity: 0.2,
-            child: pw.Image(
-              watermarkImage,
-              width: imgW,
-              height: imgH,
-              fit: pw.BoxFit.contain,
+  /// Wraps content in a Stack with a centered watermark overlay behind
+  /// the actual report content. The watermark is drawn at the centre of
+  /// the content area (which, with equal margins, is the centre of the page).
+  static pw.Widget wrapContent(List<pw.Widget> content, pw.MemoryImage watermarkImage) {
+    return pw.Stack(
+      children: [
+        // Watermark fills the entire content area, centred
+        pw.Positioned.fill(
+          child: pw.Center(
+            child: pw.Opacity(
+              opacity: 0.2,
+              child: pw.Image(
+                watermarkImage,
+                width: 300,
+                height: 140,
+                fit: pw.BoxFit.contain,
+              ),
             ),
           ),
         ),
-      );
-    };
+        // Report content on top
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: content,
+        ),
+      ],
+    );
   }
 
   // ── Shared helpers ───────────────────────────────────────────────────────
@@ -237,7 +224,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: watermarkHeader(watermarkImage),
+          
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -293,7 +280,7 @@ class ReportService {
                       style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
                     ),
                   ),
-              ]),
+              ], watermarkImage),
             ],
         ),
       );
@@ -333,7 +320,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: watermarkHeader(watermarkImage),
+          
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -399,7 +386,7 @@ class ReportService {
                       style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
                     ),
                   ),
-              ]),
+              ], watermarkImage),
             ],
         ),
       );
@@ -611,7 +598,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: watermarkHeader(watermarkImage),
+          
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -707,7 +694,7 @@ class ReportService {
                     ),
                   ],
                 ),
-              ]),
+              ], watermarkImage),
             ],
         ),
       );
@@ -801,7 +788,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: watermarkHeader(watermarkImage),
+          
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -943,7 +930,7 @@ class ReportService {
                 bottom: pw.BorderSide(color: PdfColors.grey400),
               ),
             ),
-              ]),
+              ], watermarkImage),
             ],
         ),
       );
@@ -1216,7 +1203,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: watermarkHeader(watermarkImage),
+          
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1406,7 +1393,7 @@ class ReportService {
                       style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey500),
                     ),
                   ),
-              ]),
+              ], watermarkImage),
             ],
         ),
       );
@@ -1630,7 +1617,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: watermarkHeader(watermarkImage),
+          
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1722,7 +1709,7 @@ class ReportService {
                   headerAlignment: pw.Alignment.center,
                   border: tableBorder,
                 ),
-              ]),
+              ], watermarkImage),
             ],
         ),
       );
