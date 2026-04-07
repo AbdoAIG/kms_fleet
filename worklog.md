@@ -398,3 +398,23 @@ Stage Summary:
 - 6 3D vehicle images saved to assets/images/vehicles/
 - New widget: showVehiclePreviewSheet() function in lib/widgets/vehicle_preview_sheet.dart
 - Vehicle tap now opens bottom sheet with options to view details, edit, or add maintenance
+---
+Task ID: 1
+Agent: Main Agent
+Task: Replace 3D CustomPainter vehicle illustrations with actual vehicle images
+
+Work Log:
+- Analyzed vehicle_3d_card.dart (1519 lines) - found ~900 lines of CustomPainter code that wasn't rendering
+- Analyzed vehicle_details_screen.dart - found icon-based gradient header
+- Confirmed vehicle images exist in assets/images/vehicles/ (6 PNG files: bus, double_cabin, forklift, half_truck, jumbo_truck, microbus)
+- Rewrote vehicle_3d_card.dart: removed all CustomPainter classes (Vehicle3DPainter base + 6 painter subclasses + _GridPainter), replaced with Image.asset approach using _vehicleImages map
+- Updated Vehicle3DCard build method: replaced 140px CustomPaint illustration with 160px vehicle image, kept status badge and type badge overlays
+- Updated vehicle_details_screen.dart _buildVehicleInfoCard: replaced 72x72 icon container with 200px vehicle image header, moved info section below image
+- Both files now use consistent _vehicleImages static map
+- Pushed to GitHub (commit c4a5b28)
+
+Stage Summary:
+- Removed 959 lines of unused CustomPainter code
+- Added vehicle images to vehicle cards in the fleet list
+- Added vehicle image header to vehicle details screen
+- Files changed: vehicle_3d_card.dart (327 lines from 1519), vehicle_details_screen.dart
