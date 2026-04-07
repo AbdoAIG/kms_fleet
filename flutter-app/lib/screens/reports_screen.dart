@@ -88,10 +88,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
           path = await ReportService.generateFuelExcel();
           label = 'تقرير الوقود';
           break;
-        case 'checklist_excel':
-          path = await ReportService.generateChecklistExcel();
-          label = 'تقرير الفحوصات';
-          break;
         case 'work_orders_pdf':
           path = await ReportService.generateWorkOrdersPDF();
           label = 'تقرير أوامر العمل';
@@ -253,14 +249,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
         format: 'Excel',
         formatColor: AppColors.success,
         type: 'fuel_excel',
-      ),
-      _ExportItem(
-        title: 'قوائم الفحص',
-        description: 'نتائج فحص المركبات والتقييمات',
-        icon: Icons.fact_check,
-        format: 'Excel',
-        formatColor: AppColors.success,
-        type: 'checklist_excel',
       ),
       _ExportItem(
         title: 'تقرير أوامر العمل',

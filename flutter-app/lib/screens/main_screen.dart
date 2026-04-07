@@ -11,7 +11,7 @@ import '../providers/notification_provider.dart';
 import '../providers/vehicle_provider.dart';
 import '../providers/maintenance_provider.dart';
 import '../providers/fuel_provider.dart';
-import '../providers/checklist_provider.dart';
+
 import '../providers/work_order_provider.dart';
 import '../providers/trip_tracking_provider.dart';
 import '../widgets/developer_credit.dart';
@@ -19,7 +19,6 @@ import '../services/supabase_service.dart';
 import 'dashboard_screen.dart';
 import 'vehicles_screen.dart';
 import 'maintenance_screen.dart';
-import 'checklist_screen.dart';
 import 'fuel_screen.dart';
 import 'reports_screen.dart';
 
@@ -40,7 +39,6 @@ class _MainScreenState extends State<MainScreen>
     DashboardScreen(onNavigateToTab: _switchToTab),
     VehiclesScreen(),
     MaintenanceScreen(),
-    ChecklistScreen(),
     FuelScreen(),
     ReportsScreen(),
   ];
@@ -49,7 +47,6 @@ class _MainScreenState extends State<MainScreen>
     _NavItem(Icons.dashboard_outlined, Icons.dashboard, 'الرئيسية'),
     _NavItem(Icons.directions_car_outlined, Icons.directions_car, 'المركبات'),
     _NavItem(Icons.build_outlined, Icons.build, 'الصيانة'),
-    _NavItem(Icons.fact_check_outlined, Icons.fact_check, 'الفحص'),
     _NavItem(Icons.local_gas_station_outlined, Icons.local_gas_station, 'الوقود'),
     _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, 'التقارير'),
   ];
@@ -78,7 +75,6 @@ class _MainScreenState extends State<MainScreen>
       final vehicleProvider = context.read<VehicleProvider>();
       final maintenanceProvider = context.read<MaintenanceProvider>();
       final fuelProvider = context.read<FuelProvider>();
-      final checklistProvider = context.read<ChecklistProvider>();
       final workOrderProvider = context.read<WorkOrderProvider>();
       final tripProvider = context.read<TripTrackingProvider>();
 
@@ -86,7 +82,6 @@ class _MainScreenState extends State<MainScreen>
         vehicleProvider.loadVehicles(),
         maintenanceProvider.loadRecords(),
         fuelProvider.loadFuelRecords(),
-        checklistProvider.loadChecklists(),
         workOrderProvider.loadOrders(),
         tripProvider.loadTrips(),
       ]);

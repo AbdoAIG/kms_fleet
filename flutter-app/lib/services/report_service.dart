@@ -56,26 +56,26 @@ class ReportService {
         child: pw.Column(
           mainAxisSize: pw.MainAxisSize.min,
           children: [
-            pw.Image(logoImage, width: 120, height: 120, fit: pw.BoxFit.contain),
-            pw.SizedBox(height: 8),
+            pw.Image(logoImage, width: 60, height: 60, fit: pw.BoxFit.contain),
+            pw.SizedBox(height: 6),
             pw.Text(
               title,
               style: pw.TextStyle(
-                fontSize: 22,
+                fontSize: 18,
                 fontWeight: pw.FontWeight.bold,
               ),
             ),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 2),
             pw.Text(
               subtitle,
-              style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
+              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
             ),
           ],
         ),
       ),
-      pw.SizedBox(height: 16),
+      pw.SizedBox(height: 10),
       pw.Divider(),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
     ];
   }
 
@@ -87,7 +87,7 @@ class ReportService {
 
   /// Wraps page content with a subtle watermark logo in the background.
   ///
-  /// The watermark is centered on the page with low opacity (0.06) so it
+  /// The watermark is centered on the page with low opacity (0.05) so it
   /// doesn't interfere with text readability.
   static pw.Widget wrapWithWatermark({
     required List<pw.Widget> content,
@@ -103,11 +103,11 @@ class ReportService {
           right: 0,
           child: pw.Center(
             child: pw.Opacity(
-              opacity: 0.08,
+              opacity: 0.05,
               child: pw.Image(
                 watermarkImage,
-                width: 400,
-                height: 185,
+                width: 350,
+                height: 160,
                 fit: pw.BoxFit.contain,
               ),
             ),
