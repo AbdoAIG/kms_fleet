@@ -168,17 +168,32 @@ class ReportService {
     }
   }
 
+  /// Saves raw bytes to a file and returns the file path.
+  ///
+  /// On **desktop** (Windows/Linux/macOS): saves directly to the Downloads
+  /// folder so the file is always accessible.
+  ///
+  /// On **mobile** (Android/iOS): saves to a temp directory and opens the
+  /// system share sheet.
   static Future<String> _shareBytes(
     List<int> bytes,
     String fileName,
   ) async {
     try {
-      // Clean up old report temp files (fire-and-forget, don't block sharing)
       _cleanupOldTempFiles();
-
-      final dir = await getTemporaryDirectory();
-      // Sanitise file name: keep only safe characters
       final safeName = fileName.replaceAll(RegExp(r'[^\w\.\-\u0600-\u06FF]'), '_');
+
+      // ── Desktop: save to Downloads folder ──────────────────────────
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+        final downloadsDir = await getDownloadsDirectory();
+        final saveDir = downloadsDir ?? await getTemporaryDirectory();
+        final file = File('${saveDir.path}/$safeName');
+        await file.writeAsBytes(bytes, flush: true);
+        return file.path; // Return full path so caller can show it
+      }
+
+      // ── Mobile: temp file + share sheet ────────────────────────────
+      final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/$safeName');
       await file.writeAsBytes(bytes, flush: true);
 
@@ -190,7 +205,7 @@ class ReportService {
       await Share.shareXFiles([xFile], text: '');
       return fileName;
     } catch (e) {
-      debugPrint('ReportService: error sharing file: $e');
+      debugPrint('ReportService: error saving/sharing file: $e');
       return '';
     }
   }

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 import '../services/report_service.dart';
@@ -102,8 +103,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
           break;
       }
       if (path.isNotEmpty && mounted) {
+        // On desktop, path is the full file path; on mobile, it's just the file name
+        final isDesktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+        final msg = isDesktop
+            ? 'تم حفظ $label بنجاح ✅\n$path'
+            : 'تم حفظ $label بنجاح ✅';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('تم حفظ $label بنجاح ✅'), backgroundColor: AppColors.success),
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.success,
+            duration: Duration(seconds: isDesktop ? 5 : 3),
+          ),
         );
       }
     } catch (e) {
