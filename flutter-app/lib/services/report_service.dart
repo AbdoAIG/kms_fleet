@@ -79,10 +79,10 @@ class ReportService {
     ];
   }
 
-  /// Loads the logo image from assets for use as PDF watermark.
-  static Future<pw.MemoryImage> _loadLogoImage() async {
-    final logoBytes = await rootBundle.load('assets/images/kms_logo.png');
-    return pw.MemoryImage(logoBytes.buffer.asUint8List());
+  /// Loads the watermark image from assets for use as PDF background.
+  static Future<pw.MemoryImage> _loadWatermarkImage() async {
+    final bytes = await rootBundle.load('assets/images/kms_watermark.png');
+    return pw.MemoryImage(bytes.buffer.asUint8List());
   }
 
   /// Wraps page content with a subtle watermark logo in the background.
@@ -91,7 +91,7 @@ class ReportService {
   /// doesn't interfere with text readability.
   static pw.Widget wrapWithWatermark({
     required List<pw.Widget> content,
-    required pw.MemoryImage logoImage,
+    required pw.MemoryImage watermarkImage,
   }) {
     return pw.Stack(
       children: [
@@ -103,11 +103,11 @@ class ReportService {
           right: 0,
           child: pw.Center(
             child: pw.Opacity(
-              opacity: 0.06,
+              opacity: 0.08,
               child: pw.Image(
-                logoImage,
-                width: 300,
-                height: 300,
+                watermarkImage,
+                width: 400,
+                height: 185,
                 fit: pw.BoxFit.contain,
               ),
             ),
@@ -198,7 +198,7 @@ class ReportService {
   static Future<String> generateMaintenancePDF() async {
     try {
       final font = await _loadCairoFont();
-      final logoImage = await _loadLogoImage();
+      final watermarkImage = await _loadWatermarkImage();
       final records = await DatabaseService.getAllMaintenanceRecords();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -274,7 +274,7 @@ class ReportService {
                     style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
                   ),
                 ),
-            ], logoImage: logoImage),
+            ], watermarkImage: watermarkImage),
           ],
         ),
       );
@@ -295,7 +295,7 @@ class ReportService {
   static Future<String> generateVehiclesPDF() async {
     try {
       final font = await _loadCairoFont();
-      final logoImage = await _loadLogoImage();
+      final watermarkImage = await _loadWatermarkImage();
       final vehicles = await DatabaseService.getAllVehicles();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -378,7 +378,7 @@ class ReportService {
                   style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
                 ),
               ),
-            ], logoImage: logoImage),
+            ], watermarkImage: watermarkImage),
           ],
         ),
       );
@@ -561,7 +561,7 @@ class ReportService {
   static Future<String> generateWorkOrdersPDF() async {
     try {
       final font = await _loadCairoFont();
-      final logoImage = await _loadLogoImage();
+      final watermarkImage = await _loadWatermarkImage();
       final orders = await DatabaseService.getAllWorkOrders();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -684,7 +684,7 @@ class ReportService {
                 ),
               ],
             ),
-            ], logoImage: logoImage),
+            ], watermarkImage: watermarkImage),
           ],
         ),
       );
@@ -705,7 +705,7 @@ class ReportService {
   static Future<String> generateMonthlyCostPDF() async {
     try {
       final font = await _loadCairoFont();
-      final logoImage = await _loadLogoImage();
+      final watermarkImage = await _loadWatermarkImage();
       final expenses = await DatabaseService.getAllExpenses();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -876,7 +876,7 @@ class ReportService {
                 bottom: pw.BorderSide(color: PdfColors.grey400),
               ),
             ),
-            ], logoImage: logoImage),
+            ], watermarkImage: watermarkImage),
           ],
         ),
       );
@@ -897,7 +897,7 @@ class ReportService {
   static Future<String> generateDriverPerformancePDF() async {
     try {
       final font = await _loadCairoFont();
-      final logoImage = await _loadLogoImage();
+      final watermarkImage = await _loadWatermarkImage();
       final vehicles = await DatabaseService.getAllVehicles();
       final violations = await DatabaseService.getAllViolations();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
@@ -1045,7 +1045,7 @@ class ReportService {
                 ),
               ),
             ),
-            ], logoImage: logoImage),
+            ], watermarkImage: watermarkImage),
           ],
         ),
       );
@@ -1269,7 +1269,7 @@ class ReportService {
   static Future<String> generateSingleVehiclePDF(Vehicle vehicle) async {
     try {
       final font = await _loadCairoFont();
-      final logoImage = await _loadLogoImage();
+      final watermarkImage = await _loadWatermarkImage();
       final vehicleId = vehicle.id ?? 0;
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -1506,7 +1506,7 @@ class ReportService {
                   style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey500),
                 ),
               ),
-            ], logoImage: logoImage),
+            ], watermarkImage: watermarkImage),
           ],
         ),
       );
@@ -1697,7 +1697,7 @@ class ReportService {
   static Future<String> generateSingleMaintenancePDF(MaintenanceRecord record) async {
     try {
       final font = await _loadCairoFont();
-      final logoImage = await _loadLogoImage();
+      final watermarkImage = await _loadWatermarkImage();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
       // Pre-build header
@@ -1820,7 +1820,7 @@ class ReportService {
               headerAlignment: pw.Alignment.center,
               border: tableBorder,
             ),
-            ], logoImage: logoImage),
+            ], watermarkImage: watermarkImage),
           ],
         ),
       );
