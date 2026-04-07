@@ -449,7 +449,7 @@ class _PopupItem extends PopupMenuItem<String> {
     required this.label,
     required String value,
     this.isDestructive = false,
-  }) : super(value: value, child: SizedBox.shrink());
+  }) : super(value: value, child: const SizedBox.shrink());
 
   @override
   PopupMenuItemState<String, _PopupItem> createState() =>
