@@ -8,6 +8,7 @@ import '../utils/constants.dart';
 import '../utils/formatters.dart';
 import '../utils/vehicle_type_config.dart';
 import '../widgets/maintenance_card.dart';
+import '../widgets/vehicle_rotating_image.dart';
 
 class VehicleDetailsScreen extends StatefulWidget {
   final Vehicle vehicle;
@@ -217,109 +218,84 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       ),
       child: Column(
         children: [
-          // Image area
-          Container(
-            height: 180,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  config.color.withOpacity(0.12),
-                  config.color.withOpacity(0.04),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+          // Rotating 3D Image
+          Stack(
+            children: [
+              VehicleRotatingImage(
+                imagePath: vehicleImage,
+                fallbackIcon: config.detailIcon,
+                accentColor: config.color,
+                height: 220,
+                borderRadius: 18,
               ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-            ),
-            child: Stack(
-              children: [
-                // Vehicle image
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                    child: vehicleImage != null
-                        ? Image.asset(
-                            vehicleImage,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => Center(
-                              child: Icon(config.detailIcon, size: 72, color: config.color.withOpacity(0.3)),
-                            ),
-                          )
-                        : Center(
-                            child: Icon(config.detailIcon, size: 72, color: config.color.withOpacity(0.3)),
-                          ),
+              // Status badge (top-right)
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.92),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        AppConstants.vehicleStatuses[vehicle.status] ?? '',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: statusColor,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                // Status badge (top-right)
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.92),
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+              ),
+              // Type badge (top-left)
+              Positioned(
+                top: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: config.color.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(config.icon, color: Colors.white, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        config.shortLabel,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          fontFamily: 'Cairo',
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          AppConstants.vehicleStatuses[vehicle.status] ?? '',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: statusColor,
-                            fontFamily: 'Cairo',
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                // Type badge (top-left)
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: config.color.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(config.icon, color: Colors.white, size: 12),
-                        const SizedBox(width: 4),
-                        Text(
-                          config.shortLabel,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            fontFamily: 'Cairo',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
           // Name + Plate
           Padding(

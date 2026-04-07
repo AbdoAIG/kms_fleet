@@ -3,6 +3,7 @@ import '../models/vehicle.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
+import '../widgets/vehicle_rotating_image.dart';
 
 // ═══════════════════════════════════════════════════════════════
 //  VEHICLE IMAGE MAP
@@ -89,7 +90,7 @@ class Vehicle3DCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           child: Row(
             children: [
-              // ── Vehicle Image ──
+              // ── Vehicle Image (with rotating preview) ──
               _buildVehicleImage(),
               // ── Vehicle Info ──
               Expanded(
@@ -133,31 +134,37 @@ class Vehicle3DCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          // Type pill
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: _typeColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(_typeIcon, color: _typeColor, size: 10),
-                                const SizedBox(width: 3),
-                                Text(
-                                  _typeLabel,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: _typeColor,
-                                    fontFamily: 'Cairo',
+                          // Type pill - use short label to prevent overflow
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: _typeColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(_typeIcon, color: _typeColor, size: 10),
+                                  const SizedBox(width: 3),
+                                  Flexible(
+                                    child: Text(
+                                      _typeLabel,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: _typeColor,
+                                        fontFamily: 'Cairo',
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: 6),
                           // Menu
                           PopupMenuButton<String>(
                             padding: EdgeInsets.zero,
@@ -209,6 +216,8 @@ class Vehicle3DCard extends StatelessWidget {
                           color: _typeColor,
                           fontFamily: 'Cairo',
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 10),
                       // Quick stats
@@ -226,24 +235,26 @@ class Vehicle3DCard extends StatelessWidget {
                           ),
                           const Spacer(),
                           if (vehicle.hasDriver)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.person_outline, size: 12, color: AppColors.textHint),
-                                const SizedBox(width: 3),
-                                Flexible(
-                                  child: Text(
-                                    vehicle.driverName ?? '',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary,
-                                      fontFamily: 'Cairo',
+                            Flexible(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.person_outline, size: 12, color: AppColors.textHint),
+                                  const SizedBox(width: 3),
+                                  Flexible(
+                                    child: Text(
+                                      vehicle.driverName ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondary,
+                                        fontFamily: 'Cairo',
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                         ],
                       ),
@@ -259,33 +270,15 @@ class Vehicle3DCard extends StatelessWidget {
   }
 
   Widget _buildVehicleImage() {
-    return Container(
+    return SizedBox(
       width: 110,
       height: 120,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            _typeColor.withOpacity(0.1),
-            _typeColor.withOpacity(0.04),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
-        child: _vehicleImage != null
-            ? Image.asset(
-                _vehicleImage!,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Center(
-                  child: Icon(_typeIcon, size: 40, color: _typeColor.withOpacity(0.3)),
-                ),
-              )
-            : Center(
-                child: Icon(_typeIcon, size: 40, color: _typeColor.withOpacity(0.3)),
-              ),
+      child: VehicleRotatingImage(
+        imagePath: _vehicleImage,
+        fallbackIcon: _typeIcon,
+        accentColor: _typeColor,
+        height: 120,
+        borderRadius: 0,
       ),
     );
   }
@@ -320,6 +313,8 @@ class _QuickStat extends StatelessWidget {
             color: AppColors.textSecondary,
             fontFamily: 'Cairo',
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

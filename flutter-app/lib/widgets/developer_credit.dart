@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../utils/app_colors.dart';
 
 class DeveloperCredit extends StatefulWidget {
   final bool compact;
@@ -67,27 +66,36 @@ class _DeveloperCreditState extends State<DeveloperCredit>
     final credit = _credits[_currentIndex];
     final text = credit.keys.first;
     final icon = credit.values.first;
-    final useFontSize = widget.fontSize ?? (widget.compact ? 10.0 : 14.0);
-    final useIconSize = widget.iconSize ?? (widget.compact ? 12.0 : 16.0);
-    final verticalPadding = widget.compact ? 4.0 : 12.0;
+    final useFontSize = widget.fontSize ?? (widget.compact ? 13.0 : 16.0);
+    final useIconSize = widget.iconSize ?? (widget.compact ? 16.0 : 20.0);
+    final verticalPadding = widget.compact ? 8.0 : 16.0;
+
+    const goldColor = Color(0xFFD4A017);
 
     return FadeTransition(
       opacity: _fadeController,
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: verticalPadding, horizontal: 8),
+        padding: EdgeInsets.symmetric(vertical: verticalPadding),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: useIconSize, color: AppColors.textHint),
-            const SizedBox(width: 4),
+            Icon(icon, size: useIconSize, color: goldColor),
+            const SizedBox(width: 8),
             Flexible(
               child: Text(
                 text,
                 style: TextStyle(
                   fontSize: useFontSize,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textHint,
-                  letterSpacing: 0.3,
+                  fontWeight: FontWeight.w700,
+                  color: goldColor,
+                  letterSpacing: 0.5,
+                  shadows: const [
+                    Shadow(
+                      color: Color(0x55D4A017),
+                      blurRadius: 4,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
                 ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,

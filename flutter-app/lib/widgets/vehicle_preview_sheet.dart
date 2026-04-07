@@ -4,6 +4,7 @@ import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
 import '../utils/vehicle_type_config.dart';
+import '../widgets/vehicle_rotating_image.dart';
 
 /// Shows a bottom sheet with vehicle preview and quick actions.
 void showVehiclePreviewSheet(BuildContext context, {
@@ -56,11 +57,12 @@ class _VehiclePreviewSheetContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final statusColor = AppConstants.vehicleStatusColors[vehicle.status] ?? AppColors.textHint;
+    final vehicleImage = _vehicleImages[vehicle.vehicleType];
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      minChildSize: 0.45,
-      maxChildSize: 0.88,
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
       expand: false,
       builder: (ctx, scrollController) {
         return Container(
@@ -93,8 +95,88 @@ class _VehiclePreviewSheetContent extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // ── Vehicle Image ──
-              _buildVehicleImage(),
+              // ── Rotating 3D Vehicle Image ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Stack(
+                  children: [
+                    VehicleRotatingImage(
+                      imagePath: vehicleImage,
+                      fallbackIcon: config.detailIcon,
+                      accentColor: config.color,
+                      height: 200,
+                      borderRadius: 16,
+                    ),
+                    // Status badge (top-right)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              AppConstants.vehicleStatuses[vehicle.status] ?? '',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: statusColor,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Type badge (top-left)
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: config.color.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(config.icon, color: Colors.white, size: 12),
+                            const SizedBox(width: 4),
+                            Text(
+                              config.shortLabel,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
 
               // ── Name + Badges ──
@@ -103,24 +185,6 @@ class _VehiclePreviewSheetContent extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // Badges
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        _buildPill(
-                          color: statusColor,
-                          icon: null,
-                          label: AppConstants.vehicleStatuses[vehicle.status] ?? '',
-                        ),
-                        const SizedBox(width: 6),
-                        _buildPill(
-                          color: config.color,
-                          icon: config.icon,
-                          label: config.shortLabel,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
                     // Name
                     Text(
                       vehicle.displayName,
@@ -175,68 +239,6 @@ class _VehiclePreviewSheetContent extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildPill({required Color color, required IconData? icon, required String label}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, color: color, size: 11),
-            const SizedBox(width: 3),
-          ],
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: color,
-              fontFamily: 'Cairo',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVehicleImage() {
-    final imagePath = _vehicleImages[vehicle.vehicleType];
-    return Container(
-      height: 180,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [
-            config.color.withOpacity(0.12),
-            config.color.withOpacity(0.04),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: imagePath != null
-            ? Image.asset(
-                imagePath,
-                fit: BoxFit.contain,
-                width: double.infinity,
-                errorBuilder: (_, __, ___) => Center(
-                  child: Icon(config.detailIcon, size: 64, color: config.color.withOpacity(0.3)),
-                ),
-              )
-            : Center(
-                child: Icon(config.detailIcon, size: 64, color: config.color.withOpacity(0.3)),
-              ),
-      ),
     );
   }
 
@@ -331,7 +333,6 @@ class _VehiclePreviewSheetContent extends StatelessWidget {
                   Text(
                     vehicle.driverPhone!,
                     style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontFamily: 'Cairo'),
-                    textDirection: TextDirection.ltr,
                   ),
               ],
             ),
