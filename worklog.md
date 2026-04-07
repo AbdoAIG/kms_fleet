@@ -383,3 +383,18 @@ Stage Summary:
 - Watermark uses pw.FullPage for true page-centered rendering
 - All 7 PDF generators updated correctly
 - Content properly flows in build callbacks alongside watermark
+---
+Task ID: 4
+Agent: main
+Task: Add 3D vehicle preview bottom sheet
+
+Work Log:
+- Generated 6 AI 3D vehicle model images (half_truck, jumbo_truck, double_cabin, bus, microbus, forklift)
+- Created vehicle_preview_sheet.dart with DraggableScrollableSheet modal
+- Updated vehicles_screen.dart to show preview sheet on tap instead of direct navigation
+- Bottom sheet includes: 3D model image, vehicle info grid, driver card, action buttons
+
+Stage Summary:
+- 6 3D vehicle images saved to assets/images/vehicles/
+- New widget: showVehiclePreviewSheet() function in lib/widgets/vehicle_preview_sheet.dart
+- Vehicle tap now opens bottom sheet with options to view details, edit, or add maintenance

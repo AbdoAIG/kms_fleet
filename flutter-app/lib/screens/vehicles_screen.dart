@@ -4,6 +4,7 @@ import '../models/vehicle.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../widgets/vehicle_3d_card.dart';
+import '../widgets/vehicle_preview_sheet.dart';
 import '../widgets/empty_state_widget.dart';
 import '../widgets/loading_widget.dart';
 import '../providers/vehicle_provider.dart';
@@ -184,10 +185,24 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                     final vehicle = provider.vehicles[index];
                     return Vehicle3DCard(
                       vehicle: vehicle,
-                      onTap: () => Navigator.pushNamed(
+                      onTap: () => showVehiclePreviewSheet(
                         context,
-                        '/vehicle-details',
-                        arguments: vehicle,
+                        vehicle: vehicle,
+                        onDetails: () => Navigator.pushNamed(
+                          context,
+                          '/vehicle-details',
+                          arguments: vehicle,
+                        ),
+                        onEdit: () => Navigator.pushNamed(
+                          context,
+                          '/add-vehicle',
+                          arguments: vehicle,
+                        ),
+                        onMaintenance: () => Navigator.pushNamed(
+                          context,
+                          '/add-maintenance',
+                          arguments: vehicle,
+                        ),
                       ),
                       onEdit: () => Navigator.pushNamed(
                         context,
