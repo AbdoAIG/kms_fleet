@@ -418,3 +418,31 @@ Stage Summary:
 - Added vehicle images to vehicle cards in the fleet list
 - Added vehicle image header to vehicle details screen
 - Files changed: vehicle_3d_card.dart (327 lines from 1519), vehicle_details_screen.dart
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Replace logo, remove driver performance report, fix PDF watermark
+
+Work Log:
+- Processed uploaded logo image (2000x2000 RGBA PNG) into 3 variants:
+  - kms_logo_header.png: 500x500 with white background (for login screen & main header)
+  - kms_logo.png: 300x300 with transparent background (for PDF header)
+  - kms_watermark.png: 450x210 with transparent background (for PDF watermark)
+- Removed old kms_logo.jpeg file
+- Removed generateDriverPerformancePDF() method (~170 lines) from report_service.dart
+- Removed driver performance export card from reports_screen.dart
+- Removed driver_performance_pdf case from _handleExport switch
+- Removed unused driver_violation.dart import
+- Fixed PDF watermark: replaced pw.FullPage (which created separate page) with
+  pw.Stack + pw.Positioned.fill approach. Watermark now renders behind content.
+  Updated wrapWithWatermark() helper and buildWatermarkOverlay() method.
+  Updated all 6 PDF generators: Maintenance, Vehicles, Work Orders, Monthly Cost,
+  Single Vehicle, Single Maintenance
+- Pushed commit 808ea71 to GitHub
+
+Stage Summary:
+- 6 files changed, 538 insertions, 665 deletions
+- Logo replaced in all locations (login, header, PDF header, watermark)
+- Driver performance report completely removed
+- PDF watermark now appears behind text (not on separate page)
