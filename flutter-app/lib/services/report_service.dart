@@ -237,7 +237,7 @@ class ReportService {
                 if (records.isNotEmpty)
                   pw.TableHelper.fromTextArray(
                     headers: [
-                      '#', 'المركبة', 'التاريخ', 'الوصف', 'النوع',
+                      '#', 'السيارة', 'التاريخ', 'الوصف', 'النوع',
                       'التكلفة', 'الحالة', 'الأولوية',
                     ],
                     data: records.asMap().entries.map((entry) {
@@ -307,7 +307,7 @@ class ReportService {
 
       // Pre-build header
       final headerWidgets = await buildPdfHeader(
-        title: 'تقرير أسطول المركبات',
+        title: 'تقرير أسطول السيارات',
         subtitle: '${AppConstants.appName} – $now',
       );
 
@@ -329,7 +329,7 @@ class ReportService {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
                   children: [
                     pw.Text(
-                      'إجمالي المركبات: ${vehicles.length}',
+                      'إجمالي السيارات: ${vehicles.length}',
                       style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
                     ),
                     pw.Text(
@@ -382,7 +382,7 @@ class ReportService {
                 else
                   pw.Center(
                     child: pw.Text(
-                      'لا توجد مركبات',
+                      'لا توجد سيارات',
                       style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
                     ),
                   ),
@@ -415,7 +415,7 @@ class ReportService {
 
       // ── Headers ────────────────────────────────────────────────────
       const headers = [
-        '#', 'المركبة', 'رقم اللوحة', 'تاريخ التعبئة', 'العداد (كم)',
+        '#', 'السيارة', 'رقم اللوحة', 'تاريخ التعبئة', 'العداد (كم)',
         'اللترات', 'سعر اللتر (ج.م)', 'الإجمالي (ج.م)', 'نوع الوقود',
         'المحطة', 'الموقع', 'خزان كامل', 'معدل الاستهلاك', 'غير طبيعي', 'ملاحظات',
       ];
@@ -497,7 +497,7 @@ class ReportService {
 
       // ── Headers ────────────────────────────────────────────────────
       const headers = [
-        '#', 'المركبة', 'رقم اللوحة', 'نوع الفحص', 'تاريخ الفحص',
+        '#', 'السيارة', 'رقم اللوحة', 'نوع الفحص', 'تاريخ الفحص',
         'العداد (كم)', 'المفتش', 'عدد البنود', 'بنود مكتملة',
         'بنود بها عيوب', 'التقييم', 'الحالة', 'ملاحظات',
       ];
@@ -611,7 +611,7 @@ class ReportService {
                 if (orders.isNotEmpty)
                   pw.TableHelper.fromTextArray(
                     headers: [
-                      '#', 'المركبة', 'رقم اللوحة', 'النوع', 'الحالة',
+                      '#', 'السيارة', 'رقم اللوحة', 'النوع', 'الحالة',
                       'الأولوية', 'الفني', 'التكلفة المقدرة', 'التكلفة الفعلية', 'الفرق',
                     ],
                     data: orders.asMap().entries.map((entry) {
@@ -721,7 +721,7 @@ class ReportService {
 
       // Pre-build header
       final headerWidgets = await buildPdfHeader(
-        title: 'تقرير التكاليف الشهري لكل مركبة',
+        title: 'تقرير التكاليف الشهري لكل سيارة',
         subtitle: '${AppConstants.appName} – $now',
       );
 
@@ -801,7 +801,7 @@ class ReportService {
                 if (rows.isNotEmpty)
                   pw.TableHelper.fromTextArray(
                 headers: [
-                  '#', 'المركبة', 'رقم اللوحة', 'الشهر',
+                  '#', 'السيارة', 'رقم اللوحة', 'الشهر',
                   'الصيانة', 'الوقود', 'الغرامات', 'التأمين', 'أخرى', 'الإجمالي',
                 ],
                 data: rows.asMap().entries.map((entry) {
@@ -998,8 +998,8 @@ class ReportService {
 
       writeHeaders(summarySheet, ['البند', 'القيمة']);
       writeRow(summarySheet, 1, [TextCellValue('تاريخ التقرير'), TextCellValue(DateFormat('yyyy-MM-dd').format(DateTime.now()))]);
-      writeRow(summarySheet, 2, [TextCellValue('إجمالي المركبات'), IntCellValue(vehicles.length)]);
-      writeRow(summarySheet, 3, [TextCellValue('المركبات النشطة'), IntCellValue(activeCount)]);
+      writeRow(summarySheet, 2, [TextCellValue('إجمالي السيارات'), IntCellValue(vehicles.length)]);
+      writeRow(summarySheet, 3, [TextCellValue('السيارات النشطة'), IntCellValue(activeCount)]);
       writeRow(summarySheet, 4, [TextCellValue('إجمالي تكاليف الصيانة'), DoubleCellValue(totalMaintenanceCost)]);
       writeRow(summarySheet, 5, [TextCellValue('إجمالي تكاليف الوقود'), DoubleCellValue(totalFuelCost)]);
       writeRow(summarySheet, 6, [TextCellValue('إجمالي المصروفات'), DoubleCellValue(totalExpenseCost)]);
@@ -1009,9 +1009,9 @@ class ReportService {
       writeRow(summarySheet, 10, [TextCellValue('عدد أوامر العمل'), IntCellValue(workOrders.length)]);
 
       // ═══════════════════════════════════════════════════════════════════
-      //  Sheet 2: المركبات
+      //  Sheet 2: السيارات
       // ═══════════════════════════════════════════════════════════════════
-      final vehiclesSheet = workbook['المركبات'];
+      final vehiclesSheet = workbook['السيارات'];
       writeHeaders(vehiclesSheet, [
         '#', 'رقم اللوحة', 'الماركة', 'الموديل', 'السنة',
         'اللون', 'الوقود', 'العداد (كم)', 'الحالة', 'اسم السائق', 'رقم الرخصة',
@@ -1038,7 +1038,7 @@ class ReportService {
       // ═══════════════════════════════════════════════════════════════════
       final maintenanceSheet = workbook['سجلات الصيانة'];
       writeHeaders(maintenanceSheet, [
-        '#', 'المركبة', 'رقم اللوحة', 'التاريخ', 'الوصف', 'النوع',
+        '#', 'السيارة', 'رقم اللوحة', 'التاريخ', 'الوصف', 'النوع',
         'التكلفة (ج.م)', 'الحالة', 'الأولوية',
       ]);
       for (var row = 0; row < maintenanceRecords.length; row++) {
@@ -1061,7 +1061,7 @@ class ReportService {
       // ═══════════════════════════════════════════════════════════════════
       final fuelSheet = workbook['الوقود'];
       writeHeaders(fuelSheet, [
-        '#', 'المركبة', 'رقم اللوحة', 'تاريخ التعبئة', 'العداد (كم)',
+        '#', 'السيارة', 'رقم اللوحة', 'تاريخ التعبئة', 'العداد (كم)',
         'اللترات', 'سعر اللتر (ج.م)', 'الإجمالي (ج.م)', 'نوع الوقود', 'المحطة',
       ]);
       for (var row = 0; row < fuelRecords.length; row++) {
@@ -1085,7 +1085,7 @@ class ReportService {
       // ═══════════════════════════════════════════════════════════════════
       final expensesSheet = workbook['المصروفات'];
       writeHeaders(expensesSheet, [
-        '#', 'المركبة', 'رقم اللوحة', 'التاريخ', 'النوع',
+        '#', 'السيارة', 'رقم اللوحة', 'التاريخ', 'النوع',
         'المبلغ (ج.م)', 'الوصف', 'مقدم الخدمة', 'رقم الفاتورة',
       ]);
       for (var row = 0; row < expenses.length; row++) {
@@ -1108,7 +1108,7 @@ class ReportService {
       // ═══════════════════════════════════════════════════════════════════
       final ordersSheet = workbook['أوامر العمل'];
       writeHeaders(ordersSheet, [
-        '#', 'المركبة', 'رقم اللوحة', 'النوع', 'الحالة',
+        '#', 'السيارة', 'رقم اللوحة', 'النوع', 'الحالة',
         'الأولوية', 'الفني', 'التكلفة المقدرة (ج.م)', 'التكلفة الفعلية (ج.م)', 'الفرق (ج.م)',
         'تاريخ البدء', 'تاريخ الاكتمال', 'ملاحظات',
       ]);
@@ -1160,7 +1160,7 @@ class ReportService {
 
       // Pre-build header
       final headerWidgets = await buildPdfHeader(
-        title: 'تقرير مركبة: ${vehicle.make} ${vehicle.model}',
+        title: 'تقرير سيارة: ${vehicle.make} ${vehicle.model}',
         subtitle: '${AppConstants.appName} – $now',
       );
 
@@ -1211,7 +1211,7 @@ class ReportService {
 
                 // ── Vehicle Info Section ──
                 pw.Text(
-                  'بيانات المركبة',
+                  'بيانات السيارة',
                   style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
                 ),
                 pw.SizedBox(height: 8),
@@ -1226,7 +1226,7 @@ class ReportService {
                     ['العداد الحالي', '${vehicle.currentOdometer} كم'],
                     ['الحالة', AppConstants.vehicleStatuses[vehicle.status] ?? vehicle.status],
                     if (vehicle.vehicleType != null && vehicle.vehicleType!.isNotEmpty)
-                      ['نوع المركبة', vehicle.vehicleType!],
+                      ['نوع السيارة', vehicle.vehicleType!],
                     ['اسم السائق', vehicle.driverName ?? 'غير محدد'],
                   ],
                   headerStyle: pw.TextStyle(
@@ -1400,7 +1400,7 @@ class ReportService {
 
       final bytes = await pdf.save();
       final dateStr = DateFormat('yyyyMMdd').format(DateTime.now());
-      final fileName = 'تقرير_مركبة_${vehicle.plateNumber}_$dateStr.pdf';
+      final fileName = 'تقرير_سيارة_${vehicle.plateNumber}_$dateStr.pdf';
       return _shareBytes(bytes, fileName);
     } catch (e) {
       debugPrint('ReportService: generateSingleVehiclePDF error: $e');
@@ -1425,7 +1425,7 @@ class ReportService {
       final workbook = Excel.createExcel();
 
       // ── Sheet 1: Vehicle Info ──
-      final infoSheet = workbook['بيانات المركبة'];
+      final infoSheet = workbook['بيانات السيارة'];
       workbook.delete('Sheet1');
 
       const infoHeaders = ['البيان', 'القيمة'];
@@ -1449,7 +1449,7 @@ class ReportService {
         ['العداد الحالي', '${vehicle.currentOdometer}'],
         ['الحالة', AppConstants.vehicleStatuses[vehicle.status] ?? vehicle.status],
         if (vehicle.vehicleType != null && vehicle.vehicleType!.isNotEmpty)
-          ['نوع المركبة', vehicle.vehicleType!],
+          ['نوع السيارة', vehicle.vehicleType!],
         ['اسم السائق', vehicle.driverName ?? 'غير محدد'],
         ['رقم هاتف السائق', vehicle.driverPhone ?? 'غير محدد'],
       ];
@@ -1569,7 +1569,7 @@ class ReportService {
         return '';
       }
       final dateStr = DateFormat('yyyyMMdd').format(DateTime.now());
-      final fileName = 'مركبة_${vehicle.plateNumber}_$dateStr.xlsx';
+      final fileName = 'سيارة_${vehicle.plateNumber}_$dateStr.xlsx';
       return _shareBytes(bytes, fileName);
     } catch (e) {
       debugPrint('ReportService: generateSingleVehicleExcel error: $e');
@@ -1625,14 +1625,14 @@ class ReportService {
 
                 // ── Vehicle Info ──
                 pw.Text(
-                  'بيانات المركبة',
+                  'بيانات السيارة',
                   style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
                 ),
                 pw.SizedBox(height: 8),
                 pw.TableHelper.fromTextArray(
                   headers: ['البيان', 'القيمة'],
                   data: [
-                    ['المركبة', vehicleLabel],
+                    ['السيارة', vehicleLabel],
                     ['رقم اللوحة', plateLabel],
                   ],
                   headerStyle: pw.TextStyle(

@@ -484,7 +484,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen>
                 context.read<WorkOrderProvider>().setSearchQuery(value);
               },
               decoration: InputDecoration(
-                hintText: 'البحث بالوصف أو الفني أو المركبة...',
+                hintText: 'البحث بالوصف أو الفني أو السيارة...',
                 prefixIcon: const Icon(Icons.search,
                     color: AppColors.textHint, size: 20),
                 suffixIcon: _woSearchController.text.isNotEmpty
@@ -740,7 +740,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen>
                   child: Text(
                     order.vehicle != null
                         ? '${order.vehicle!.make} ${order.vehicle!.model}'
-                        : 'مركبة #${order.vehicleId}',
+                        : 'سيارة #${order.vehicleId}',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,

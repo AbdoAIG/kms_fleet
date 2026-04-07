@@ -130,7 +130,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   return EmptyStateWidget(
                     icon: Icons.fact_check_outlined,
                     title: 'لا توجد قوائم فحص',
-                    subtitle: 'أضف قائمة فحص جديدة لبدء تفتيش المركبات',
+                    subtitle: 'أضف قائمة فحص جديدة لبدء تفتيش السيارات',
                     actionText: 'إضافة قائمة فحص',
                     onAction: () => Navigator.pushNamed(context, '/add-checklist'),
                   );

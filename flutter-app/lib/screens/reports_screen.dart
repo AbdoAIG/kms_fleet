@@ -82,7 +82,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           break;
         case 'vehicles_pdf':
           path = await ReportService.generateVehiclesPDF();
-          label = 'تقرير المركبات';
+          label = 'تقرير السيارات';
           break;
         case 'fuel_excel':
           path = await ReportService.generateFuelExcel();
@@ -256,7 +256,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
       _ExportItem(
         title: 'تقرير التكاليف الشهرية',
-        description: 'تكاليف كل مركبة مقسمة حسب الشهر',
+        description: 'تكاليف كل سيارة مقسمة حسب الشهر',
         icon: Icons.calendar_month,
         format: 'PDF',
         formatColor: AppColors.error,
@@ -651,14 +651,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('تكاليف الصيانة حسب المركبة', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            const Text('تكاليف الصيانة حسب السيارة', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(8)),
               child: const Row(
                 children: [
-                  Expanded(flex: 3, child: Text('المركبة', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                  Expanded(flex: 3, child: Text('السيارة', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
                   Expanded(flex: 1, child: Text('العمليات', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
                   Expanded(flex: 2, child: Text('التكلفة', textAlign: TextAlign.end, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
                 ],

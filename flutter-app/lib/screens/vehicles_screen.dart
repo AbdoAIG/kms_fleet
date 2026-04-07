@@ -38,7 +38,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
             child: Row(
               children: [
                 const Text(
-                  'أسطول المركبات',
+                  'أسطول السيارات',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -57,7 +57,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '${provider.vehicles.length} مركبة',
+                        '${provider.vehicles.length} سيارة',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -148,17 +148,17 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
             child: Consumer<VehicleProvider>(
               builder: (context, provider, child) {
                 if (provider.isLoading) {
-                  return const LoadingWidget(message: 'جاري تحميل المركبات...');
+                  return const LoadingWidget(message: 'جاري تحميل السيارات...');
                 }
 
                 if (provider.vehicles.isEmpty) {
                   return EmptyStateWidget(
                     icon: Icons.directions_car_outlined,
-                    title: 'لا توجد مركبات',
+                    title: 'لا توجد سيارات',
                     subtitle: _typeFilter != 'all'
-                        ? 'لا توجد مركبات من نوع ${AppConstants.vehicleTypes[_typeFilter] ?? _typeFilter}'
-                        : 'أضف مركبة جديدة لبدء إدارة الأسطول',
-                    actionText: 'إضافة مركبة',
+                        ? 'لا توجد سيارات من نوع ${AppConstants.vehicleTypes[_typeFilter] ?? _typeFilter}'
+                        : 'أضف سيارة جديدة لبدء إدارة الأسطول',
+                    actionText: 'إضافة سيارة',
                     onAction: () => Navigator.pushNamed(context, '/add-vehicle'),
                   );
                 }
@@ -292,7 +292,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('حذف المركبة'),
+        title: const Text('حذف السيارة'),
         content: Text('هل أنت متأكد من حذف ${vehicle.displayName}؟'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
@@ -302,7 +302,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
               context.read<VehicleProvider>().deleteVehicle(vehicle.id!);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('تم حذف المركبة بنجاح'),
+                  content: Text('تم حذف السيارة بنجاح'),
                   behavior: SnackBarBehavior.floating,
                 ),
               );

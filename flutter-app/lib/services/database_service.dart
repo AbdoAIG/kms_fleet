@@ -241,7 +241,7 @@ class DatabaseService {
     final n = DateTime.now();
     return [
       DriverViolation(id: 1, vehicleId: 5, type: 'speeding', amount: 500, date: n.subtract(const Duration(days: 10)), description: 'سرعة زائدة على طريق القاهرة الإسكندرية', points: 2, status: 'paid', createdAt: n, updatedAt: n),
-      DriverViolation(id: 2, vehicleId: 3, type: 'overweight', amount: 300, date: n.subtract(const Duration(days: 5)), description: 'حمل زائد على مركبة نقل', points: 1, status: 'pending', createdAt: n, updatedAt: n),
+      DriverViolation(id: 2, vehicleId: 3, type: 'overweight', amount: 300, date: n.subtract(const Duration(days: 5)), description: 'حمل زائد على سيارة نقل', points: 1, status: 'pending', createdAt: n, updatedAt: n),
       DriverViolation(id: 3, vehicleId: 2, type: 'red_light', amount: 1000, date: n.subtract(const Duration(days: 2)), description: 'تجاوز إشارة مرورية حمراء', points: 3, status: 'pending', createdAt: n, updatedAt: n),
     ];
   }
@@ -251,9 +251,9 @@ class DatabaseService {
     return [
       Expense(id: 1, vehicleId: 1, type: 'toll', amount: 150, date: n.subtract(const Duration(days: 12)), description: 'رسوم طريق القاهرة السويس', serviceProvider: 'هيئة الطرق والكباري', invoiceNumber: 'TOLL-001', createdAt: n, updatedAt: n),
       Expense(id: 2, vehicleId: 3, type: 'toll', amount: 200, date: n.subtract(const Duration(days: 8)), description: 'رسوم طريق الدائرية', serviceProvider: 'هيئة الطرق والكباري', invoiceNumber: 'TOLL-002', createdAt: n, updatedAt: n),
-      Expense(id: 3, vehicleId: 2, type: 'insurance', amount: 5000, date: n.subtract(const Duration(days: 60)), description: 'تجديد تأمين المركبة السنوي', serviceProvider: 'شركة التأمين المصرية', invoiceNumber: 'INS-001', createdAt: n, updatedAt: n),
+      Expense(id: 3, vehicleId: 2, type: 'insurance', amount: 5000, date: n.subtract(const Duration(days: 60)), description: 'تجديد تأمين السيارة السنوي', serviceProvider: 'شركة التأمين المصرية', invoiceNumber: 'INS-001', createdAt: n, updatedAt: n),
       Expense(id: 4, vehicleId: 5, type: 'violation', amount: 500, date: n.subtract(const Duration(days: 10)), description: 'غرامة مرورية - سرعة زائدة', serviceProvider: 'الإدارة العامة للمرور', invoiceNumber: 'VIO-001', createdAt: n, updatedAt: n),
-      Expense(id: 5, vehicleId: 4, type: 'miscellaneous', amount: 150, date: n.subtract(const Duration(days: 15)), description: 'غسيل وتنظيف المركبة', serviceProvider: 'مركز الغسيل', invoiceNumber: 'MISC-001', createdAt: n, updatedAt: n),
+      Expense(id: 5, vehicleId: 4, type: 'miscellaneous', amount: 150, date: n.subtract(const Duration(days: 15)), description: 'غسيل وتنظيف السيارة', serviceProvider: 'مركز الغسيل', invoiceNumber: 'MISC-001', createdAt: n, updatedAt: n),
       Expense(id: 6, vehicleId: 6, type: 'miscellaneous', amount: 250, date: n.subtract(const Duration(days: 7)), description: 'تغيير لوحة ترخيص جديدة', serviceProvider: 'مصلحة المرور', invoiceNumber: 'MISC-002', createdAt: n, updatedAt: n),
       Expense(id: 7, vehicleId: 1, type: 'fuel', amount: 550, date: n.subtract(const Duration(days: 3)), description: 'تعبئة وقود - بنزين 95', serviceProvider: 'محطة الأفق', odometerReading: 45500, createdAt: n, updatedAt: n),
       Expense(id: 8, vehicleId: 3, type: 'maintenance', amount: 350, date: n.subtract(const Duration(days: 20)), description: 'تغيير فلتر زيت وفلتر هواء', serviceProvider: 'ورشة الصيانة السريعة', invoiceNumber: 'MAINT-001', odometerReading: 89500, createdAt: n, updatedAt: n),

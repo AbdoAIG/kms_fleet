@@ -19,7 +19,7 @@ class FuelScreen extends StatefulWidget {
 
 class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _vehicleFilterLabel = 'جميع المركبات';
+  String _vehicleFilterLabel = 'جميع السيارات';
   int? _selectedVehicleId;
 
   // ── Nolon calculator state ──
@@ -916,13 +916,13 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
                     _selectedVehicleId = vehicleId;
                     final vehicles = context.read<VehicleProvider>().allVehicles;
                     if (vehicleId == null) {
-                      _vehicleFilterLabel = 'جميع المركبات';
+                      _vehicleFilterLabel = 'جميع السيارات';
                     } else {
                       final v = vehicles.firstWhere(
                         (v) => v.id == vehicleId,
                         orElse: () => Vehicle(plateNumber: '', make: '', model: '', year: 2024, color: 'white', fuelType: 'petrol', currentOdometer: 0, status: 'active'),
                       );
-                      _vehicleFilterLabel = v.plateNumber.isNotEmpty ? '${v.make} ${v.model}' : 'مركبة';
+                      _vehicleFilterLabel = v.plateNumber.isNotEmpty ? '${v.make} ${v.model}' : 'سيارة';
                     }
                   });
                   context.read<FuelProvider>().setVehicleFilter(vehicleId);
@@ -930,7 +930,7 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
                 itemBuilder: (context) {
                   final vehicles = context.watch<VehicleProvider>().allVehicles;
                   return [
-                    const PopupMenuItem<int?>(value: null, child: Row(children: [Icon(Icons.directions_car, size: 18), SizedBox(width: 8), Text('جميع المركبات')])),
+                    const PopupMenuItem<int?>(value: null, child: Row(children: [Icon(Icons.directions_car, size: 18), SizedBox(width: 8), Text('جميع السيارات')])),
                     if (vehicles.isNotEmpty) const PopupMenuDivider(),
                     ...vehicles.map((v) => PopupMenuItem<int?>(
                       value: v.id,
@@ -1024,7 +1024,7 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      record.vehicle?.plateNumber ?? 'مركبة #${record.vehicleId}',
+                      record.vehicle?.plateNumber ?? 'سيارة #${record.vehicleId}',
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                     ),
                     const SizedBox(height: 2),

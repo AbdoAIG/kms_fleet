@@ -396,12 +396,12 @@ class _WorkOrderDetailsScreenState extends State<WorkOrderDetailsScreen> {
     final v = wo.vehicle!;
     return _SectionCard(
       icon: Icons.directions_car,
-      title: 'بيانات المركبة',
+      title: 'بيانات السيارة',
       child: Column(
         children: [
           _InfoRow(
             icon: Icons.badge,
-            label: 'المركبة',
+            label: 'السيارة',
             value: '${v.make} ${v.model}',
           ),
           const SizedBox(height: 10),

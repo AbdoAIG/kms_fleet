@@ -332,7 +332,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen>
                         icon: Icons.route_outlined,
                         title: 'لا توجد رحلات',
                         subtitle: _activeFilter == 'all'
-                            ? 'لم يتم تسجيل أي رحلة لهذه المركبة بعد'
+                            ? 'لم يتم تسجيل أي رحلة لهذه السيارة بعد'
                             : _activeFilter == 'active'
                                 ? 'لا توجد رحلات جارية حالياً'
                                 : 'لا توجد رحلات مكتملة',

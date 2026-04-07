@@ -44,7 +44,7 @@ class _AddChecklistScreenState extends State<AddChecklistScreen> {
     _InspectionDef('مقود وتوجيه', 'المقود ونظام التوجيه', Icons.settings),
     _InspectionDef('مقاعد وأحزمة أمان', 'حالة المقاعد والأحزمة', Icons.airline_seat_recline_extra),
     _InspectionDef('معدات الطوارئ', 'طفاية، مثلث', Icons.medical_services),
-    _InspectionDef('حالة الهيكل الخارجي', 'فحص جسم المركبة', Icons.directions_car),
+    _InspectionDef('حالة الهيكل الخارجي', 'فحص جسم السيارة', Icons.directions_car),
     _InspectionDef('الوثائق', 'رخصة، تأمين', Icons.description),
   ];
 
@@ -162,7 +162,7 @@ class _AddChecklistScreenState extends State<AddChecklistScreen> {
 
     if (!_formKey.currentState!.validate()) return;
     if (_selectedVehicleId == null) {
-      AppHelpers.showSnackBar(context, 'يرجى اختيار المركبة', isError: true);
+      AppHelpers.showSnackBar(context, 'يرجى اختيار السيارة', isError: true);
       return;
     }
 
@@ -246,12 +246,12 @@ class _AddChecklistScreenState extends State<AddChecklistScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             // ── Vehicle Selection ──
-            _buildSectionTitle('المركبة'),
+            _buildSectionTitle('السيارة'),
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
               value: _selectedVehicleId,
               decoration: const InputDecoration(
-                labelText: 'اختر المركبة',
+                labelText: 'اختر السيارة',
                 prefixIcon: Icon(Icons.directions_car),
               ),
               items: _vehicles.map((v) {

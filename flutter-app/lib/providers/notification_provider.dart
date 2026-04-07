@@ -340,7 +340,7 @@ class NotificationProvider extends ChangeNotifier {
             final id = _djb2Hash('vstatus_${vehicle.id}');
             newNotifications.add(AppNotification(
               id: id,
-              title: 'مركبة في الصيانة منذ فترة طويلة',
+              title: 'سيارة في الصيانة منذ فترة طويلة',
               body:
                   '${vehicle.make} ${vehicle.model} (${vehicle.plateNumber}) - السائق: $driver - منذ $daysInMaintenance يوم',
               type: 'vehicle_status',
@@ -387,7 +387,7 @@ class NotificationProvider extends ChangeNotifier {
             final id = _djb2Hash('vinactive_${vehicle.id}');
             newNotifications.add(AppNotification(
               id: id,
-              title: 'مركبة غير نشطة لفترة طويلة',
+              title: 'سيارة غير نشطة لفترة طويلة',
               body:
                   '${vehicle.make} ${vehicle.model} (${vehicle.plateNumber}) - منذ $daysInactive يوم',
               type: 'vehicle_inactive',
@@ -483,6 +483,6 @@ class NotificationProvider extends ChangeNotifier {
         return '${v.make} ${v.model} (${v.plateNumber})';
       }
     }
-    return 'مركبة #$vehicleId';
+    return 'سيارة #$vehicleId';
   }
 }

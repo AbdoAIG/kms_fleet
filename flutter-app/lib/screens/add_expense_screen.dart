@@ -70,7 +70,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedVehicleId == null) {
-      AppHelpers.showSnackBar(context, 'اختر المركبة', isError: true);
+      AppHelpers.showSnackBar(context, 'اختر السيارة', isError: true);
       return;
     }
 
@@ -125,7 +125,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             const SizedBox(height: 16),
 
             // ── Vehicle ──
-            _buildSectionTitle('المركبة'),
+            _buildSectionTitle('السيارة'),
             _buildVehicleDropdown(),
             const SizedBox(height: 16),
 
@@ -212,7 +212,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.border)),
       child: DropdownButtonFormField<int>(
         value: _selectedVehicleId,
-        hint: const Text('اختر المركبة', style: TextStyle(fontSize: 14, color: AppColors.textHint)),
+        hint: const Text('اختر السيارة', style: TextStyle(fontSize: 14, color: AppColors.textHint)),
         decoration: const InputDecoration(border: InputBorder.none, enabledBorder: InputBorder.none),
         items: _vehicles.map((v) {
           return DropdownMenuItem(value: v.id, child: Text('${v.plateNumber} - ${v.make} ${v.model}', style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis));

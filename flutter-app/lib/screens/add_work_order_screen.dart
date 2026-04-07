@@ -97,7 +97,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
 
     if (!_formKey.currentState!.validate()) return;
     if (_selectedVehicleId == null) {
-      AppHelpers.showSnackBar(context, 'يرجى اختيار المركبة', isError: true);
+      AppHelpers.showSnackBar(context, 'يرجى اختيار السيارة', isError: true);
       return;
     }
 
@@ -173,12 +173,12 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             // ── Section: Vehicle ──
-            _buildSectionTitle('المركبة'),
+            _buildSectionTitle('السيارة'),
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
               value: _selectedVehicleId,
               decoration: const InputDecoration(
-                labelText: 'اختر المركبة',
+                labelText: 'اختر السيارة',
                 prefixIcon: Icon(Icons.directions_car),
               ),
               items: _vehicles.map((v) {
@@ -195,7 +195,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
               },
               validator: (value) {
                 if (value == null) {
-                  return 'يرجى اختيار المركبة';
+                  return 'يرجى اختيار السيارة';
                 }
                 return null;
               },

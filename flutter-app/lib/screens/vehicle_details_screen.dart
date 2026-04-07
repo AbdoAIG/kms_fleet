@@ -363,7 +363,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               Icon(Icons.directions_car, color: AppColors.primary, size: 18),
               SizedBox(width: 8),
               Text(
-                'بيانات المركبة',
+                'بيانات السيارة',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,

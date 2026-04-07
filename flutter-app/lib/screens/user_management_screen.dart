@@ -846,7 +846,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         return [
           'جميع الصلاحيات',
           'إدارة المستخدمين والأدوار',
-          'إضافة / تعديل / حذف المركبات',
+          'إضافة / تعديل / حذف السيارات',
           'عرض التقارير والإحصائيات',
           'إدارة الصيانة والوقود والفحوصات',
         ];
@@ -860,9 +860,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         ];
       case 'driver':
         return [
-          'عرض مركبته المخصصة فقط',
-          'إضافة سجلات وقود لمركبته',
-          'إضافة قوائم فحص لمركبته',
+          'عرض سيارته المخصصة فقط',
+          'إضافة سجلات وقود لسيارته',
+          'إضافة قوائم فحص لسيارته',
         ];
       default:
         return [];
@@ -875,13 +875,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         return [];
       case 'supervisor':
         return [
-          'حذف المركبات',
+          'حذف السيارات',
           'إدارة المستخدمين',
         ];
       case 'driver':
         return [
           'عرض التقارير',
-          'إدارة المركبات أو المستخدمين',
+          'إدارة السيارات أو المستخدمين',
         ];
       default:
         return [];

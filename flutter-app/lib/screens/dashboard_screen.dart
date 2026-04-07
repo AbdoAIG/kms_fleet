@@ -293,7 +293,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (_searchController.text.trim().isNotEmpty) { _performSearch(_searchController.text); _showSearchResults(); }
           },
           decoration: InputDecoration(
-            hintText: 'ابحث عن مركبة بالاسم أو الرقم...',
+            hintText: 'ابحث عن سيارة بالاسم أو الرقم...',
             hintStyle: const TextStyle(fontSize: 13, color: AppColors.textHint, fontWeight: FontWeight.w500),
             prefixIcon: _isSearching
                 ? const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)))
@@ -332,7 +332,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          _buildKPICard('إجمالي المركبات', '$vehicleCount', Icons.directions_car, AppColors.primary, '$activeVehicles نشطة'),
+          _buildKPICard('إجمالي السيارات', '$vehicleCount', Icons.directions_car, AppColors.primary, '$activeVehicles نشطة'),
           const SizedBox(width: 10),
           _buildKPICard('في الصيانة', '$maintenanceVehicles', Icons.build_circle_outlined, AppColors.warning, '$urgentRecords عاجلة'),
           const SizedBox(width: 10),
@@ -387,7 +387,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           Row(
             children: [
-              Expanded(child: _QuickActionCard(icon: Icons.add_circle_outline, label: 'إضافة مركبة', color: AppColors.primary, gradient: [AppColors.primary, AppColors.primaryLight], onTap: () => Navigator.pushNamed(context, '/add-vehicle'))),
+              Expanded(child: _QuickActionCard(icon: Icons.add_circle_outline, label: 'إضافة سيارة', color: AppColors.primary, gradient: [AppColors.primary, AppColors.primaryLight], onTap: () => Navigator.pushNamed(context, '/add-vehicle'))),
               const SizedBox(width: 10),
               Expanded(child: _QuickActionCard(icon: Icons.build, label: 'إضافة صيانة', color: AppColors.accent, gradient: [AppColors.accent, AppColors.accentLight], onTap: () => Navigator.pushNamed(context, '/add-maintenance'))),
               const SizedBox(width: 10),
@@ -591,7 +591,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildMaintenanceItem(MaintenanceRecord record) {
     final priorityColor = AppConstants.priorityColors[record.priority] ?? AppColors.textHint;
-    final plateNumber = record.vehicle?.plateNumber ?? 'مركبة #${record.vehicleId}';
+    final plateNumber = record.vehicle?.plateNumber ?? 'سيارة #${record.vehicleId}';
     final typeName = AppConstants.maintenanceTypes[record.type] ?? record.description;
 
     return Container(
@@ -628,7 +628,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildActivityItem(MaintenanceRecord record) {
     final statusColor = AppConstants.maintenanceStatusColors[record.status] ?? AppColors.textHint;
     final statusLabel = AppConstants.maintenanceStatuses[record.status] ?? '';
-    final plateNumber = record.vehicle?.plateNumber ?? 'مركبة #${record.vehicleId}';
+    final plateNumber = record.vehicle?.plateNumber ?? 'سيارة #${record.vehicleId}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

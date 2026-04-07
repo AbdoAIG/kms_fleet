@@ -122,10 +122,10 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
       if (_isEditing) {
         await context.read<VehicleProvider>().updateVehicle(vehicle);
-        AppHelpers.showSnackBar(context, 'تم تعديل المركبة بنجاح');
+        AppHelpers.showSnackBar(context, 'تم تعديل السيارة بنجاح');
       } else {
         await context.read<VehicleProvider>().addVehicle(vehicle);
-        AppHelpers.showSnackBar(context, 'تم إضافة المركبة بنجاح');
+        AppHelpers.showSnackBar(context, 'تم إضافة السيارة بنجاح');
       }
       Navigator.pop(context, true);
     } catch (e) {
@@ -139,7 +139,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'تعديل المركبة' : 'إضافة مركبة جديدة'),
+        title: Text(_isEditing ? 'تعديل السيارة' : 'إضافة سيارة جديدة'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -151,7 +151,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             // Section: Basic Info
-            _buildSectionTitle('معلومات المركبة الأساسية'),
+            _buildSectionTitle('معلومات السيارة الأساسية'),
             const SizedBox(height: 12),
             TextFormField(
               controller: _plateController,
@@ -174,7 +174,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
             DropdownButtonFormField<String>(
               value: _selectedVehicleType.isEmpty ? null : _selectedVehicleType,
               decoration: const InputDecoration(
-                labelText: 'نوع المركبة',
+                labelText: 'نوع السيارة',
                 prefixIcon: Icon(Icons.category),
               ),
               items: AppConstants.vehicleTypes.entries.map((entry) {
@@ -478,7 +478,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                       ),
                     )
                   : Text(
-                      _isEditing ? 'حفظ التعديلات' : 'إضافة المركبة',
+                      _isEditing ? 'حفظ التعديلات' : 'إضافة السيارة',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,

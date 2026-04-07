@@ -144,7 +144,7 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
 
     // Only vehicle and type are mandatory
     if (_selectedVehicleId == null) {
-      AppHelpers.showSnackBar(context, 'يرجى اختيار المركبة', isError: true);
+      AppHelpers.showSnackBar(context, 'يرجى اختيار السيارة', isError: true);
       return;
     }
     if (_selectedType.isEmpty) {
@@ -220,7 +220,7 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             // ── Vehicle Search ──
-            _buildSectionTitle('المركبة *', isRequired: true),
+            _buildSectionTitle('السيارة *', isRequired: true),
             const SizedBox(height: 8),
             _buildVehicleSearchField(),
             if (_showVehicleDropdown)

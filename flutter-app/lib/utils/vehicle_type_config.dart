@@ -249,15 +249,15 @@ VehicleTypeConfig getVehicleTypeConfig(String? type) {
   // Fallback generic config
   return const VehicleTypeConfig(
     typeKey: 'generic',
-    label: 'مركبة',
-    shortLabel: 'مركبة',
+    label: 'سيارة',
+    shortLabel: 'سيارة',
     icon: Icons.directions_car,
     detailIcon: Icons.directions_car,
     color: AppColors.primary,
     lightColor: AppColors.primaryContainer,
     capacityLabel: 'السعة',
     capacityValue: _truckCapacity,
-    description: 'مركبة عامة',
+    description: 'سيارة عامة',
     inspectionPoints: [
       InspectionPoint(id: 'engine', label: 'المحرك', maintenanceType: 'mechanical', icon: Icons.settings, color: AppColors.mechanicalColor),
       InspectionPoint(id: 'brakes', label: 'الفرامل', maintenanceType: 'brakes', icon: Icons.dangerous, color: AppColors.brakesColor),

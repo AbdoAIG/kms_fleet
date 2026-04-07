@@ -107,7 +107,7 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedVehicleId == null) {
       AppHelpers.showSnackBar(
-          context, 'يرجى اختيار المركبة',
+          context, 'يرجى اختيار السيارة',
           isError: true);
       return;
     }
@@ -180,12 +180,12 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             // ── Vehicle Selection ──
-            _buildSectionTitle('المركبة'),
+            _buildSectionTitle('السيارة'),
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
               value: _selectedVehicleId,
               decoration: const InputDecoration(
-                labelText: 'اختر المركبة',
+                labelText: 'اختر السيارة',
                 prefixIcon: Icon(Icons.directions_car),
               ),
               items: _vehicles.map((v) {

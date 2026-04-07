@@ -97,7 +97,7 @@ class _GpsMapScreenState extends State<GpsMapScreen> {
       final vehicle =
           vehicles.where((v) => v.id == trip.vehicleId).firstOrNull;
       final plateNumber =
-          vehicle?.plateNumber ?? 'مركبة #${trip.vehicleId}';
+          vehicle?.plateNumber ?? 'سيارة #${trip.vehicleId}';
 
       // Use end position as "last known location" marker
       final endLat = trip.endLat ?? trip.startLat!;
@@ -267,7 +267,7 @@ class _GpsMapScreenState extends State<GpsMapScreen> {
                       children: [
                         Text(
                           vehicle?.displayName ??
-                              'مركبة #${trip.vehicleId}',
+                              'سيارة #${trip.vehicleId}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -284,7 +284,7 @@ class _GpsMapScreenState extends State<GpsMapScreen> {
                           ),
                           child: Text(
                             vehicle?.plateNumber ??
-                                'مركبة #${trip.vehicleId}',
+                                'سيارة #${trip.vehicleId}',
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -440,7 +440,7 @@ class _GpsMapScreenState extends State<GpsMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('تتبع المركبات'),
+        title: const Text('تتبع السيارات'),
         actions: [
           if (_isGettingLocation)
             const Padding(
@@ -497,7 +497,7 @@ class _GpsMapScreenState extends State<GpsMapScreen> {
                       icon: Icons.map_outlined,
                       title: 'لا توجد رحلات مسجلة',
                       subtitle:
-                          'قم بتسجيل رحلة جديدة لتظهر موقع المركبات على الخريطة',
+                          'قم بتسجيل رحلة جديدة لتظهر موقع السيارات على الخريطة',
                     )
                   : Stack(
                       children: [
