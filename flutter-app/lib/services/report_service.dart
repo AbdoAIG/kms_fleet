@@ -95,18 +95,16 @@ class ReportService {
     return pw.MemoryImage(bytes.buffer.asUint8List());
   }
 
-  /// Creates a PageTheme with the watermark as background (20% opacity).
-  static pw.PageTheme _watermarkPageTheme(pw.MemoryImage watermarkImage) {
-    return pw.PageTheme(
-      background: pw.Opacity(
+  /// Returns a watermark widget (centered, 20% opacity) to place in PDF content.
+  static pw.Widget _buildWatermark(pw.MemoryImage watermarkImage) {
+    return pw.Center(
+      child: pw.Opacity(
         opacity: 0.2,
-        child: pw.Center(
-          child: pw.Image(
-            watermarkImage,
-            width: 350,
-            height: 160,
-            fit: pw.BoxFit.contain,
-          ),
+        child: pw.Image(
+          watermarkImage,
+          width: 300,
+          height: 140,
+          fit: pw.BoxFit.contain,
         ),
       ),
     );
@@ -213,10 +211,10 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
-
               ...headerWidgets,
+              _buildWatermark(watermarkImage),
+              pw.SizedBox(height: 8),
               pw.Text(
                 'إجمالي السجلات: ${records.length}',
                 style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -269,7 +267,6 @@ class ReportService {
                   ),
                 ),
             ],
-          ],
         ),
       );
 
@@ -308,10 +305,11 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
 
             ...headerWidgets,
+            _buildWatermark(watermarkImage),
+            pw.SizedBox(height: 8),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
               children: [
@@ -374,7 +372,6 @@ class ReportService {
                 ),
               ),
             ],
-          ],
         ),
       );
 
@@ -585,10 +582,11 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
 
             ...headerWidgets,
+            _buildWatermark(watermarkImage),
+            pw.SizedBox(height: 8),
             pw.Text(
               'إجمالي الأوامر: ${orders.length}',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -681,7 +679,6 @@ class ReportService {
               ],
             ),
             ],
-          ],
         ),
       );
 
@@ -774,10 +771,11 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
 
             ...headerWidgets,
+            _buildWatermark(watermarkImage),
+            pw.SizedBox(height: 8),
             pw.Text(
               'إجمالي السجلات: ${rows.length}',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -874,7 +872,6 @@ class ReportService {
               ),
             ),
             ],
-          ],
         ),
       );
 
@@ -961,10 +958,11 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
 
             ...headerWidgets,
+            _buildWatermark(watermarkImage),
+            pw.SizedBox(height: 8),
             pw.Text(
               'إجمالي السائقين: ${driverVehicles.length}',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -1044,7 +1042,6 @@ class ReportService {
               ),
             ),
             ],
-          ],
         ),
       );
 
@@ -1316,10 +1313,11 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
 
             ...headerWidgets,
+            _buildWatermark(watermarkImage),
+            pw.SizedBox(height: 8),
 
             // ── Vehicle Info Section ──
             pw.Text(
@@ -1506,7 +1504,6 @@ class ReportService {
                 ),
               ),
             ],
-          ],
         ),
       );
 
@@ -1729,10 +1726,11 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: _watermarkPageTheme(watermarkImage),
           build: (context) => [
 
             ...headerWidgets,
+            _buildWatermark(watermarkImage),
+            pw.SizedBox(height: 8),
 
             // ── Vehicle Info ──
             pw.Text(
@@ -1821,7 +1819,6 @@ class ReportService {
               border: tableBorder,
             ),
             ],
-          ],
         ),
       );
 
