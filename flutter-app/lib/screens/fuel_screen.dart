@@ -205,7 +205,8 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
       nextPos++;
       var (right, newPos) = _parseMulDiv(expr, nextPos);
       if (right == null) return (null, newPos);
-      left = op == '+' ? left + right : left - right;
+      final l = left!, r = right!;
+      left = op == '+' ? l + r : l - r;
       nextPos = newPos;
     }
     return (left, nextPos);
@@ -220,11 +221,12 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
       nextPos++;
       var (right, newPos) = _parseNumber(expr, nextPos);
       if (right == null) return (null, newPos);
+      final l = left!, r = right!;
       if (op == '*') {
-        left = left * right;
+        left = l * r;
       } else {
-        if (right == 0) return (double.nan, newPos);
-        left = left / right;
+        if (r == 0) return (double.nan, newPos);
+        left = l / r;
       }
       nextPos = newPos;
     }
@@ -252,7 +254,8 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
     final buffer = StringBuffer();
     while (pos < expr.length) {
       final ch = expr[pos];
-      if ((ch >= '0' && ch <= '9') || ch == '.') {
+      final code = ch.codeUnitAt(0);
+      if ((code >= 48 && code <= 57) || ch == '.') {
         buffer.write(ch);
         pos++;
       } else {
