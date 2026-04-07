@@ -331,3 +331,39 @@ Stage Summary:
 - Vehicle export: Already existed (PDF + Excel for individual vehicle)
 - Notifications: Now 10 notification types covering maintenance, license, fuel, work orders, violations, vehicle status, upcoming maintenance, inactive vehicles, high odometer, overdue maintenance
 - Attachments: Users can now attach photos when editing maintenance, fuel, and work order records, and view/attach photos on vehicle details
+
+---
+Task ID: 1
+Agent: main
+Task: Fix PDF watermark to be behind text, make logo 2x bigger
+
+Work Log:
+- Replaced _buildWatermark method with _wrapWithWatermark that uses pw.Stack with pw.Positioned.fill
+- Changed logo size from 50x50 to 100x100 in buildPdfHeader
+- Updated all 7 PDF generator functions to use _wrapWithWatermark wrapper
+- Watermark now appears as a background behind content instead of inline element
+
+Stage Summary:
+- Watermark is now rendered behind PDF content using Stack layout
+- Logo doubled in size from 50 to 100 pixels
+- All 7 PDF generators updated: generateMaintenancePDF, generateVehiclesPDF, generateWorkOrdersPDF, generateMonthlyCostPDF, generateDriverPerformancePDF, generateSingleVehiclePDF, generateSingleMaintenancePDF
+---
+Task ID: 2
+Agent: main
+Task: Redesign app header with baby blue color scheme
+
+Work Log:
+- Changed header gradient from teal (AppColors.primary) to blue (#1565C0 → #42A5F5)
+- Updated shadow color to match blue theme (#1565C0 with 0.3 opacity)
+- Added subtle light blue bottom border (#90CAF9 with 0.5 opacity) for professional separation
+- Increased header bottom padding from 12 to 14 for slightly taller header
+- Updated sidebar selected item color to blue (#1565C0)
+- Updated bottom nav selected item color to blue (#1565C0)
+- Updated mobile sync bar indicator colors (icon, progress, text) to blue (#1565C0)
+- Updated success SnackBar to blue (#1565C0)
+
+Stage Summary:
+- Header now uses professional blue gradient (#1565C0 → #42A5F5) with subtle bottom border
+- All interactive elements (sidebar, bottom nav, sync) updated to blue theme
+- AppColors.primary not changed (only local header/navigation colors updated)
+- RTL layout and all existing functionality preserved

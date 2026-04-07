@@ -80,7 +80,7 @@ class ReportService {
           ),
           pw.SizedBox(width: 16),
           // Logo on the right (compact, no overlap)
-          pw.Image(logoImage, width: 50, height: 50, fit: pw.BoxFit.contain),
+          pw.Image(logoImage, width: 100, height: 100, fit: pw.BoxFit.contain),
         ],
       ),
       pw.SizedBox(height: 12),
@@ -95,18 +95,35 @@ class ReportService {
     return pw.MemoryImage(bytes.buffer.asUint8List());
   }
 
-  /// Returns a watermark widget (centered, 20% opacity) to place in PDF content.
-  static pw.Widget _buildWatermark(pw.MemoryImage watermarkImage) {
-    return pw.Center(
-      child: pw.Opacity(
-        opacity: 0.2,
-        child: pw.Image(
-          watermarkImage,
-          width: 300,
-          height: 140,
-          fit: pw.BoxFit.contain,
+  /// Wraps content widgets with a semi-transparent watermark background overlay.
+  /// The watermark appears behind the content on the page.
+  static pw.Widget _wrapWithWatermark(pw.MemoryImage watermarkImage, List<pw.Widget> content) {
+    return pw.Stack(
+      children: [
+        // Watermark layer (drawn first = behind everything)
+        pw.Positioned(
+          left: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          child: pw.Center(
+            child: pw.Opacity(
+              opacity: 0.2,
+              child: pw.Image(
+                watermarkImage,
+                width: 300,
+                height: 140,
+                fit: pw.BoxFit.contain,
+              ),
+            ),
+          ),
         ),
-      ),
+        // Content layer (on top of watermark)
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: content,
+        ),
+      ],
     );
   }
 
@@ -212,9 +229,9 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
-              ...headerWidgets,
-              _buildWatermark(watermarkImage),
-              pw.SizedBox(height: 8),
+              _wrapWithWatermark(watermarkImage, [
+                ...headerWidgets,
+                pw.SizedBox(height: 8),
               pw.Text(
                 'إجمالي السجلات: ${records.length}',
                 style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -266,6 +283,7 @@ class ReportService {
                     style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
                   ),
                 ),
+              ]),
             ],
         ),
       );
@@ -307,9 +325,9 @@ class ReportService {
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
 
-            ...headerWidgets,
-            _buildWatermark(watermarkImage),
-            pw.SizedBox(height: 8),
+            _wrapWithWatermark(watermarkImage, [
+              ...headerWidgets,
+              pw.SizedBox(height: 8),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
               children: [
@@ -371,6 +389,7 @@ class ReportService {
                   style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
                 ),
               ),
+              ]),
             ],
         ),
       );
@@ -584,9 +603,9 @@ class ReportService {
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
 
-            ...headerWidgets,
-            _buildWatermark(watermarkImage),
-            pw.SizedBox(height: 8),
+            _wrapWithWatermark(watermarkImage, [
+              ...headerWidgets,
+              pw.SizedBox(height: 8),
             pw.Text(
               'إجمالي الأوامر: ${orders.length}',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -678,6 +697,7 @@ class ReportService {
                 ),
               ],
             ),
+              ]),
             ],
         ),
       );
@@ -773,9 +793,9 @@ class ReportService {
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
 
-            ...headerWidgets,
-            _buildWatermark(watermarkImage),
-            pw.SizedBox(height: 8),
+            _wrapWithWatermark(watermarkImage, [
+              ...headerWidgets,
+              pw.SizedBox(height: 8),
             pw.Text(
               'إجمالي السجلات: ${rows.length}',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -871,6 +891,7 @@ class ReportService {
                 bottom: pw.BorderSide(color: PdfColors.grey400),
               ),
             ),
+              ]),
             ],
         ),
       );
@@ -960,9 +981,9 @@ class ReportService {
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
 
-            ...headerWidgets,
-            _buildWatermark(watermarkImage),
-            pw.SizedBox(height: 8),
+            _wrapWithWatermark(watermarkImage, [
+              ...headerWidgets,
+              pw.SizedBox(height: 8),
             pw.Text(
               'إجمالي السائقين: ${driverVehicles.length}',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -1041,6 +1062,7 @@ class ReportService {
                 ),
               ),
             ),
+              ]),
             ],
         ),
       );
@@ -1315,9 +1337,9 @@ class ReportService {
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
 
-            ...headerWidgets,
-            _buildWatermark(watermarkImage),
-            pw.SizedBox(height: 8),
+            _wrapWithWatermark(watermarkImage, [
+              ...headerWidgets,
+              pw.SizedBox(height: 8),
 
             // ── Vehicle Info Section ──
             pw.Text(
@@ -1503,6 +1525,7 @@ class ReportService {
                   style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey500),
                 ),
               ),
+              ]),
             ],
         ),
       );
@@ -1728,9 +1751,9 @@ class ReportService {
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
 
-            ...headerWidgets,
-            _buildWatermark(watermarkImage),
-            pw.SizedBox(height: 8),
+            _wrapWithWatermark(watermarkImage, [
+              ...headerWidgets,
+              pw.SizedBox(height: 8),
 
             // ── Vehicle Info ──
             pw.Text(
@@ -1818,6 +1841,7 @@ class ReportService {
               headerAlignment: pw.Alignment.center,
               border: tableBorder,
             ),
+              ]),
             ],
         ),
       );

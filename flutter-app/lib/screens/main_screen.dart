@@ -96,7 +96,7 @@ class _MainScreenState extends State<MainScreen>
                 Expanded(child: Text('تم تحديث البيانات بنجاح', style: TextStyle(fontFamily: 'Cairo'))),
               ],
             ),
-            backgroundColor: AppColors.primary,
+            backgroundColor: const Color(0xFF1565C0),
             behavior: SnackBarBehavior.floating,
             duration: Duration(seconds: 2),
           ),
@@ -163,22 +163,25 @@ class _MainScreenState extends State<MainScreen>
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryLight],
+          colors: [const Color(0xFF1565C0), const Color(0xFF42A5F5)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: const Color(0xFF1565C0).withOpacity(0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
+        border: Border(
+          bottom: BorderSide(color: const Color(0xFF90CAF9).withOpacity(0.5), width: 1),
+        ),
       ),
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 12),
+          padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 14),
           child: Row(
             children: [
               Image.asset('assets/images/kms_logo_header.png', width: 56, height: 56, fit: BoxFit.contain),
@@ -504,7 +507,7 @@ class _MainScreenState extends State<MainScreen>
           duration: const Duration(milliseconds: 200),
           padding: EdgeInsets.symmetric(horizontal: _sidebarExpanded ? 14 : 0, vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : Colors.transparent,
+            color: isSelected ? const Color(0xFF1565C0) : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -608,11 +611,11 @@ class _MainScreenState extends State<MainScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (_isSyncing)
-                      SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                      SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: const Color(0xFF1565C0)))
                     else
-                      Icon(Icons.sync, size: 14, color: AppColors.primary),
+                      Icon(Icons.sync, size: 14, color: const Color(0xFF1565C0)),
                     const SizedBox(width: 4),
-                    Text('مزامنة', style: TextStyle(fontFamily: 'Cairo', fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                    Text('مزامنة', style: TextStyle(fontFamily: 'Cairo', fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF1565C0))),
                   ],
                 ),
               ),
@@ -636,7 +639,7 @@ class _MainScreenState extends State<MainScreen>
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                color: isSelected ? const Color(0xFF1565C0) : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
