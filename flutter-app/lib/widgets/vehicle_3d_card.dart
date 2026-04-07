@@ -18,10 +18,10 @@ const _vehicleImages = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-//  VEHICLE CARD
+//  VEHICLE CARD — Modern Horizontal Design
 // ═══════════════════════════════════════════════════════════════
 
-class Vehicle3DCard extends StatefulWidget {
+class Vehicle3DCard extends StatelessWidget {
   final Vehicle vehicle;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
@@ -37,325 +37,255 @@ class Vehicle3DCard extends StatefulWidget {
     this.onMaintenance,
   });
 
-  @override
-  State<Vehicle3DCard> createState() => _Vehicle3DCardState();
-}
-
-class _Vehicle3DCardState extends State<Vehicle3DCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnim;
-  late Animation<double> _shadowAnim;
-  bool _isPressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.97).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    _shadowAnim = Tween<double>(begin: 12.0, end: 4.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onTapDown(TapDownDetails details) {
-    _controller.forward();
-    setState(() => _isPressed = true);
-  }
-
-  void _onTapUp(TapUpDetails details) {
-    _controller.reverse();
-    setState(() => _isPressed = false);
-    widget.onTap?.call();
-  }
-
-  void _onTapCancel() {
-    _controller.reverse();
-    setState(() => _isPressed = false);
-  }
-
   Color get _typeColor {
-    if (widget.vehicle.vehicleType != null && widget.vehicle.vehicleType!.isNotEmpty) {
-      return AppConstants.vehicleTypeColors[widget.vehicle.vehicleType] ?? AppColors.primary;
+    if (vehicle.vehicleType != null && vehicle.vehicleType!.isNotEmpty) {
+      return AppConstants.vehicleTypeColors[vehicle.vehicleType] ?? AppColors.primary;
     }
     return AppColors.primary;
   }
 
   String get _typeLabel {
-    if (widget.vehicle.vehicleType != null && widget.vehicle.vehicleType!.isNotEmpty) {
-      return AppConstants.vehicleTypes[widget.vehicle.vehicleType] ?? '';
+    if (vehicle.vehicleType != null && vehicle.vehicleType!.isNotEmpty) {
+      return AppConstants.vehicleTypes[vehicle.vehicleType] ?? '';
     }
     return '';
   }
 
   IconData get _typeIcon {
-    if (widget.vehicle.vehicleType != null && widget.vehicle.vehicleType!.isNotEmpty) {
-      return AppConstants.vehicleTypeIcons[widget.vehicle.vehicleType] ?? Icons.directions_car;
+    if (vehicle.vehicleType != null && vehicle.vehicleType!.isNotEmpty) {
+      return AppConstants.vehicleTypeIcons[vehicle.vehicleType] ?? Icons.directions_car;
     }
     return Icons.directions_car;
   }
 
   Color get _statusColor =>
-      AppConstants.vehicleStatusColors[widget.vehicle.status] ?? AppColors.textSecondary;
+      AppConstants.vehicleStatusColors[vehicle.status] ?? AppColors.textSecondary;
 
   String get _statusLabel =>
-      AppConstants.vehicleStatuses[widget.vehicle.status] ?? '';
+      AppConstants.vehicleStatuses[vehicle.status] ?? '';
 
-  String? get _vehicleImage => _vehicleImages[widget.vehicle.vehicleType];
+  String? get _vehicleImage => _vehicleImages[vehicle.vehicleType];
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _scaleAnim.value,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: _typeColor.withOpacity(0.15),
-                  blurRadius: _shadowAnim.value,
-                  offset: Offset(0, _shadowAnim.value * 0.4),
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: _shadowAnim.value,
-                  offset: Offset(0, _shadowAnim.value * 0.2),
-                ),
-              ],
-            ),
-            child: Material(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              elevation: _isPressed ? 2 : 6,
-              child: InkWell(
-                onTapDown: _onTapDown,
-                onTapUp: _onTapUp,
-                onTapCancel: _onTapCancel,
-                borderRadius: BorderRadius.circular(20),
-                child: Column(
-                  children: [
-                    // ── Vehicle Image Area ──
-                    Container(
-                      height: 160,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            _typeColor.withOpacity(0.12),
-                            _typeColor.withOpacity(0.04),
-                          ],
-                        ),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                      ),
-                      child: Stack(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 0.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Row(
+            children: [
+              // ── Vehicle Image ──
+              _buildVehicleImage(),
+              // ── Vehicle Info ──
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Badges row
+                      Row(
                         children: [
-                          // Vehicle image
-                          Positioned.fill(
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                              child: _vehicleImage != null
-                                  ? Image.asset(
-                                      _vehicleImage!,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (_, __, ___) => _buildFallbackIcon(),
-                                    )
-                                  : _buildFallbackIcon(),
+                          // Status pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _statusColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: _statusColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _statusLabel,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: _statusColor,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          // Status badge (top-right)
-                          Positioned(
-                            top: 10,
-                            right: 12,
-                            child: _StatusBadge(
-                              color: _statusColor,
-                              label: _statusLabel,
+                          const SizedBox(width: 6),
+                          // Type pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _typeColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(_typeIcon, color: _typeColor, size: 10),
+                                const SizedBox(width: 3),
+                                Text(
+                                  _typeLabel,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: _typeColor,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          // Type badge (top-left)
-                          Positioned(
-                            top: 10,
-                            left: 12,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _typeColor.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _typeColor.withOpacity(0.3),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(_typeIcon, color: Colors.white, size: 12),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _typeLabel,
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          const Spacer(),
+                          // Menu
+                          PopupMenuButton<String>(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            icon: Icon(Icons.more_vert, color: AppColors.textHint.withOpacity(0.5), size: 18),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            onSelected: (value) {
+                              switch (value) {
+                                case 'edit':
+                                  onEdit?.call();
+                                  break;
+                                case 'maintenance':
+                                  onMaintenance?.call();
+                                  break;
+                                case 'delete':
+                                  onDelete?.call();
+                                  break;
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              _PopupMenuItem(icon: Icons.edit_outlined, label: 'تعديل', value: 'edit'),
+                              _PopupMenuItem(icon: Icons.build_outlined, label: 'صيانة', value: 'maintenance'),
+                              _PopupMenuItem(icon: Icons.delete_outline, label: 'حذف', value: 'delete', isDestructive: true),
+                            ],
                           ),
                         ],
                       ),
-                    ),
-                    // ── Vehicle Info Section ──
-                    _buildInfoSection(context),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFallbackIcon() {
-    return Center(
-      child: Icon(
-        _typeIcon,
-        size: 64,
-        color: _typeColor.withOpacity(0.3),
-      ),
-    );
-  }
-
-  Widget _buildInfoSection(BuildContext context) {
-    final vehicle = widget.vehicle;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 12, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Vehicle name + plate
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      vehicle.displayName,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        fontFamily: 'Cairo',
+                      const SizedBox(height: 8),
+                      // Vehicle name
+                      Text(
+                        vehicle.displayName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                          fontFamily: 'Cairo',
+                          height: 1.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _typeColor.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
+                      const SizedBox(height: 2),
+                      // Plate number
+                      Text(
                         vehicle.plateNumber,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: _typeColor,
                           fontFamily: 'Cairo',
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              // Popup menu
-              PopupMenuButton<String>(
-                padding: EdgeInsets.zero,
-                icon: Icon(Icons.more_vert, color: AppColors.textHint.withOpacity(0.6), size: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                onSelected: (value) {
-                  switch (value) {
-                    case 'edit':
-                      widget.onEdit?.call();
-                      break;
-                    case 'maintenance':
-                      widget.onMaintenance?.call();
-                      break;
-                    case 'delete':
-                      widget.onDelete?.call();
-                      break;
-                  }
-                },
-                itemBuilder: (context) => [
-                  _PopupItem(icon: Icons.edit_outlined, label: 'تعديل', value: 'edit'),
-                  _PopupItem(icon: Icons.build_outlined, label: 'صيانة', value: 'maintenance'),
-                  _PopupItem(icon: Icons.delete_outline, label: 'حذف', value: 'delete', isDestructive: true),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // Quick info row
-          Row(
-            children: [
-              _QuickInfo(
-                icon: Icons.speed,
-                value: '${AppFormatters.formatNumber(vehicle.currentOdometer)} كم',
-              ),
-              const SizedBox(width: 12),
-              _QuickInfo(
-                icon: Icons.local_gas_station,
-                value: AppConstants.fuelTypes[vehicle.fuelType] ?? '',
-              ),
-              const SizedBox(width: 12),
-              if (vehicle.hasDriver)
-                Expanded(
-                  child: Row(
-                    children: [
-                      Icon(Icons.person_outline, size: 13, color: AppColors.textHint.withOpacity(0.7)),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          vehicle.driverName ?? '',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondary.withOpacity(0.8),
-                            fontFamily: 'Cairo',
+                      const SizedBox(height: 10),
+                      // Quick stats
+                      Row(
+                        children: [
+                          _QuickStat(
+                            icon: Icons.speed,
+                            value: AppFormatters.formatNumber(vehicle.currentOdometer),
+                            unit: 'كم',
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          const SizedBox(width: 14),
+                          _QuickStat(
+                            icon: Icons.local_gas_station,
+                            value: AppConstants.fuelTypes[vehicle.fuelType] ?? '',
+                          ),
+                          const Spacer(),
+                          if (vehicle.hasDriver)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.person_outline, size: 12, color: AppColors.textHint),
+                                const SizedBox(width: 3),
+                                Flexible(
+                                  child: Text(
+                                    vehicle.driverName ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary,
+                                      fontFamily: 'Cairo',
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
                       ),
                     ],
                   ),
                 ),
+              ),
             ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVehicleImage() {
+    return Container(
+      width: 110,
+      height: 120,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            _typeColor.withOpacity(0.1),
+            _typeColor.withOpacity(0.04),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
+        child: _vehicleImage != null
+            ? Image.asset(
+                _vehicleImage!,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Center(
+                  child: Icon(_typeIcon, size: 40, color: _typeColor.withOpacity(0.3)),
+                ),
+              )
+            : Center(
+                child: Icon(_typeIcon, size: 40, color: _typeColor.withOpacity(0.3)),
+              ),
       ),
     );
   }
@@ -365,72 +295,29 @@ class _Vehicle3DCardState extends State<Vehicle3DCard>
 //  HELPER WIDGETS
 // ═══════════════════════════════════════════════════════════════
 
-class _StatusBadge extends StatelessWidget {
-  final Color color;
-  final String label;
-
-  const _StatusBadge({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: color,
-              fontFamily: 'Cairo',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickInfo extends StatelessWidget {
+class _QuickStat extends StatelessWidget {
   final IconData icon;
   final String value;
+  final String? unit;
 
-  const _QuickInfo({required this.icon, required this.value});
+  const _QuickStat({
+    required this.icon,
+    required this.value,
+    this.unit,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: AppColors.textHint.withOpacity(0.7)),
+        Icon(icon, size: 12, color: AppColors.textHint),
         const SizedBox(width: 3),
         Text(
-          value,
-          style: TextStyle(
+          unit != null ? '$value $unit' : value,
+          style: const TextStyle(
             fontSize: 11,
-            color: AppColors.textSecondary.withOpacity(0.8),
+            color: AppColors.textSecondary,
             fontFamily: 'Cairo',
           ),
         ),
@@ -439,12 +326,12 @@ class _QuickInfo extends StatelessWidget {
   }
 }
 
-class _PopupItem extends PopupMenuItem<String> {
+class _PopupMenuItem extends PopupMenuItem<String> {
   final IconData icon;
   final String label;
   final bool isDestructive;
 
-  const _PopupItem({
+  const _PopupMenuItem({
     required this.icon,
     required this.label,
     required String value,
@@ -452,11 +339,11 @@ class _PopupItem extends PopupMenuItem<String> {
   }) : super(value: value, child: const SizedBox.shrink());
 
   @override
-  PopupMenuItemState<String, _PopupItem> createState() =>
-      _PopupItemState();
+  PopupMenuItemState<String, _PopupMenuItem> createState() =>
+      _PopupMenuItemState();
 }
 
-class _PopupItemState extends PopupMenuItemState<String, _PopupItem> {
+class _PopupMenuItemState extends PopupMenuItemState<String, _PopupMenuItem> {
   @override
   Widget buildChild() {
     return Row(

@@ -22,11 +22,6 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   String _typeFilter = 'all';
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -37,17 +32,18 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // ── Page Title ──
+          // ── Header with title + count ──
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
             child: Row(
               children: [
-                Text(
+                const Text(
                   'أسطول المركبات',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
+                    fontFamily: 'Cairo',
                   ),
                 ),
                 const Spacer(),
@@ -66,6 +62,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppColors.primary,
+                          fontFamily: 'Cairo',
                         ),
                       ),
                     );
@@ -77,19 +74,13 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
 
           // ── Search Bar ──
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
             child: Container(
               height: 44,
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadowLight,
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border, width: 0.5),
               ),
               child: TextField(
                 controller: _searchController,
@@ -99,6 +90,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                 },
                 decoration: InputDecoration(
                   hintText: 'البحث بالماركة أو الموديل أو رقم اللوحة...',
+                  hintStyle: const TextStyle(fontSize: 13, fontFamily: 'Cairo'),
                   prefixIcon: const Icon(Icons.search, color: AppColors.textHint, size: 20),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
@@ -118,45 +110,38 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
             ),
           ),
 
-          // ── Vehicle Type Category Tabs ──
+          // ── Unified Filter Row (Type + Status combined) ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
             child: SizedBox(
-              height: 38,
+              height: 36,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  _buildTypeChip('الكل', 'all'),
-                  _buildTypeChip('عربيه نص نقل', 'half_truck'),
-                  _buildTypeChip('نقل جامبو', 'jumbo_truck'),
-                  _buildTypeChip('دبل كابينه', 'double_cabin'),
-                  _buildTypeChip('أتوبيسات', 'bus'),
-                  _buildTypeChip('ميكروباص', 'microbus'),
-                  _buildTypeChip('كلارك', 'forklift'),
+                  // Type filters
+                  _buildTypeChip('الكل', 'all', null),
+                  _buildTypeChip('نص نقل', 'half_truck', AppConstants.vehicleTypeColors['half_truck']),
+                  _buildTypeChip('جامبو', 'jumbo_truck', AppConstants.vehicleTypeColors['jumbo_truck']),
+                  _buildTypeChip('دبل كابينه', 'double_cabin', AppConstants.vehicleTypeColors['double_cabin']),
+                  _buildTypeChip('أتوبيس', 'bus', AppConstants.vehicleTypeColors['bus']),
+                  _buildTypeChip('ميكروباص', 'microbus', AppConstants.vehicleTypeColors['microbus']),
+                  _buildTypeChip('كلارك', 'forklift', AppConstants.vehicleTypeColors['forklift']),
+                  // Divider
+                  Container(
+                    width: 1,
+                    height: 20,
+                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    color: AppColors.border,
+                  ),
+                  // Status filters
+                  _buildStatusChip('نشطة', 'active'),
+                  _buildStatusChip('صيانة', 'maintenance'),
+                  _buildStatusChip('متوقفة', 'inactive'),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 4),
-
-          // ── Status Filter Chips ──
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: SizedBox(
-              height: 34,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _buildStatusChip('الكل', 'all'),
-                  _buildStatusChip('نشطة', 'active'),
-                  _buildStatusChip('في الصيانة', 'maintenance'),
-                  _buildStatusChip('غير نشطة', 'inactive'),
-                  _buildStatusChip('متقاعدة', 'retired'),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
 
           // ── Vehicles List ──
           Expanded(
@@ -230,34 +215,30 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     );
   }
 
-  Widget _buildTypeChip(String label, String value) {
+  Widget _buildTypeChip(String label, String value, Color? color) {
     final isSelected = _typeFilter == value;
-    Color? chipColor;
-    if (value != 'all') {
-      chipColor = AppConstants.vehicleTypeColors[value];
-    }
-
     return Padding(
-      padding: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.only(left: 5),
       child: FilterChip(
         selected: isSelected,
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (value != 'all' && chipColor != null) ...[
+            if (value != 'all' && color != null) ...[
               Icon(
                 AppConstants.vehicleTypeIcons[value] ?? Icons.directions_car,
-                size: 14,
-                color: isSelected ? Colors.white : chipColor,
+                size: 13,
+                color: isSelected ? Colors.white : color,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 3),
             ],
             Text(
               label,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected ? Colors.white : AppColors.textSecondary,
+                fontFamily: 'Cairo',
               ),
             ),
           ],
@@ -267,10 +248,10 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
           context.read<VehicleProvider>().setTypeFilter(value);
         },
         backgroundColor: AppColors.surface,
-        selectedColor: chipColor ?? AppColors.primary,
+        selectedColor: color ?? AppColors.primary,
         showCheckmark: false,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        side: BorderSide(color: isSelected ? (chipColor ?? AppColors.primary) : AppColors.border),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        side: BorderSide(color: isSelected ? (color ?? AppColors.primary) : AppColors.border),
         visualDensity: VisualDensity.compact,
       ),
     );
@@ -278,27 +259,29 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
 
   Widget _buildStatusChip(String label, String value) {
     final isSelected = _statusFilter == value;
+    final statusColor = AppConstants.vehicleStatusColors[value];
     return Padding(
-      padding: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.only(left: 5),
       child: FilterChip(
         selected: isSelected,
         label: Text(
           label,
           style: TextStyle(
             fontSize: 11,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             color: isSelected ? Colors.white : AppColors.textHint,
+            fontFamily: 'Cairo',
           ),
         ),
         onSelected: (selected) {
           setState(() => _statusFilter = value);
           context.read<VehicleProvider>().setStatusFilter(value);
         },
-        backgroundColor: Colors.transparent,
-        selectedColor: AppColors.primary.withOpacity(0.7),
+        backgroundColor: AppColors.surface,
+        selectedColor: statusColor ?? AppColors.primary,
         showCheckmark: false,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border.withOpacity(0.5)),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        side: BorderSide(color: isSelected ? (statusColor ?? AppColors.primary) : AppColors.border.withOpacity(0.5)),
         visualDensity: VisualDensity.compact,
       ),
     );
