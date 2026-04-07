@@ -186,7 +186,7 @@ class _MainScreenState extends State<MainScreen>
           padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 12),
           child: Row(
             children: [
-              Image.asset('assets/images/kms_logo.png', width: 44, height: 44, fit: BoxFit.contain),
+              Image.asset('assets/images/kms_logo.png', width: 56, height: 56, fit: BoxFit.contain),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -56,7 +56,7 @@ class ReportService {
         child: pw.Column(
           mainAxisSize: pw.MainAxisSize.min,
           children: [
-            pw.Image(logoImage, width: 80, height: 80, fit: pw.BoxFit.contain),
+            pw.Image(logoImage, width: 120, height: 120, fit: pw.BoxFit.contain),
             pw.SizedBox(height: 8),
             pw.Text(
               title,
@@ -77,6 +77,46 @@ class ReportService {
       pw.Divider(),
       pw.SizedBox(height: 12),
     ];
+  }
+
+  /// Loads the logo image from assets for use as PDF watermark.
+  static Future<pw.MemoryImage> _loadLogoImage() async {
+    final logoBytes = await rootBundle.load('assets/images/kms_logo.png');
+    return pw.MemoryImage(logoBytes.buffer.asUint8List());
+  }
+
+  /// Wraps page content with a subtle watermark logo in the background.
+  ///
+  /// The watermark is centered on the page with low opacity (0.06) so it
+  /// doesn't interfere with text readability.
+  static pw.Widget wrapWithWatermark({
+    required List<pw.Widget> content,
+    required pw.MemoryImage logoImage,
+  }) {
+    return pw.Stack(
+      children: [
+        // Watermark background (very low opacity, centered, large)
+        pw.Positioned(
+          left: 0,
+          top: 0,
+          bottom: 0,
+          right: 0,
+          child: pw.Center(
+            child: pw.Opacity(
+              opacity: 0.06,
+              child: pw.Image(
+                logoImage,
+                width: 300,
+                height: 300,
+                fit: pw.BoxFit.contain,
+              ),
+            ),
+          ),
+        ),
+        // Actual content on top
+        ...content,
+      ],
+    );
   }
 
   // ── Shared helpers ───────────────────────────────────────────────────────
@@ -158,6 +198,7 @@ class ReportService {
   static Future<String> generateMaintenancePDF() async {
     try {
       final font = await _loadCairoFont();
+      final logoImage = await _loadLogoImage();
       final records = await DatabaseService.getAllMaintenanceRecords();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -180,58 +221,60 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
-            ...headerWidgets,
-            pw.Text(
-              'إجمالي السجلات: ${records.length}',
-              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 4),
-            if (records.isNotEmpty)
-              pw.TableHelper.fromTextArray(
-                headers: [
-                  '#', 'المركبة', 'التاريخ', 'الوصف', 'النوع',
-                  'التكلفة', 'الحالة', 'الأولوية',
-                ],
-                data: records.asMap().entries.map((entry) {
-                  final i = entry.key + 1;
-                  final r = entry.value;
-                  final vehicleLabel =
-                      r.vehicle != null ? '${r.vehicle!.make} ${r.vehicle!.model}' : 'غير معروف';
-                  final dateLabel = DateFormat('dd/MM/yyyy').format(r.maintenanceDate);
-                  final typeLabel = AppConstants.maintenanceTypes[r.type] ?? r.type;
-                  final statusLabel = AppConstants.maintenanceStatuses[r.status] ?? r.status;
-                  final priorityLabel = AppConstants.priorities[r.priority] ?? r.priority;
-
-                  return [
-                    '$i', vehicleLabel, dateLabel, r.description, typeLabel,
-                    '${r.totalCost.toStringAsFixed(2)} ج.م', statusLabel, priorityLabel,
-                  ];
-                }).toList(),
-                headerStyle: pw.TextStyle(
-                  fontSize: 9,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.white,
-                ),
-                headerDecoration: const pw.BoxDecoration(color: PdfColors.teal800),
-                cellStyle: const pw.TextStyle(fontSize: 8),
-                cellAlignment: pw.Alignment.center,
-                headerAlignment: pw.Alignment.center,
-                border: const pw.TableBorder(
-                  horizontalInside: pw.BorderSide(color: PdfColors.grey300),
-                  verticalInside: pw.BorderSide(color: PdfColors.grey300),
-                  left: pw.BorderSide(color: PdfColors.grey400),
-                  right: pw.BorderSide(color: PdfColors.grey400),
-                  top: pw.BorderSide(color: PdfColors.grey400),
-                  bottom: pw.BorderSide(color: PdfColors.grey400),
-                ),
-              )
-            else
-              pw.Center(
-                child: pw.Text(
-                  'لا توجد سجلات صيانة',
-                  style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
-                ),
+            wrapWithWatermark(content: [
+              ...headerWidgets,
+              pw.Text(
+                'إجمالي السجلات: ${records.length}',
+                style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
               ),
+              pw.SizedBox(height: 4),
+              if (records.isNotEmpty)
+                pw.TableHelper.fromTextArray(
+                  headers: [
+                    '#', 'المركبة', 'التاريخ', 'الوصف', 'النوع',
+                    'التكلفة', 'الحالة', 'الأولوية',
+                  ],
+                  data: records.asMap().entries.map((entry) {
+                    final i = entry.key + 1;
+                    final r = entry.value;
+                    final vehicleLabel =
+                        r.vehicle != null ? '${r.vehicle!.make} ${r.vehicle!.model}' : 'غير معروف';
+                    final dateLabel = DateFormat('dd/MM/yyyy').format(r.maintenanceDate);
+                    final typeLabel = AppConstants.maintenanceTypes[r.type] ?? r.type;
+                    final statusLabel = AppConstants.maintenanceStatuses[r.status] ?? r.status;
+                    final priorityLabel = AppConstants.priorities[r.priority] ?? r.priority;
+
+                    return [
+                      '$i', vehicleLabel, dateLabel, r.description, typeLabel,
+                      '${r.totalCost.toStringAsFixed(2)} ج.م', statusLabel, priorityLabel,
+                    ];
+                  }).toList(),
+                  headerStyle: pw.TextStyle(
+                    fontSize: 9,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.white,
+                  ),
+                  headerDecoration: const pw.BoxDecoration(color: PdfColors.teal800),
+                  cellStyle: const pw.TextStyle(fontSize: 8),
+                  cellAlignment: pw.Alignment.center,
+                  headerAlignment: pw.Alignment.center,
+                  border: const pw.TableBorder(
+                    horizontalInside: pw.BorderSide(color: PdfColors.grey300),
+                    verticalInside: pw.BorderSide(color: PdfColors.grey300),
+                    left: pw.BorderSide(color: PdfColors.grey400),
+                    right: pw.BorderSide(color: PdfColors.grey400),
+                    top: pw.BorderSide(color: PdfColors.grey400),
+                    bottom: pw.BorderSide(color: PdfColors.grey400),
+                  ),
+                )
+              else
+                pw.Center(
+                  child: pw.Text(
+                    'لا توجد سجلات صيانة',
+                    style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
+                  ),
+                ),
+            ], logoImage: logoImage),
           ],
         ),
       );
@@ -252,6 +295,7 @@ class ReportService {
   static Future<String> generateVehiclesPDF() async {
     try {
       final font = await _loadCairoFont();
+      final logoImage = await _loadLogoImage();
       final vehicles = await DatabaseService.getAllVehicles();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -271,6 +315,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
+            wrapWithWatermark(content: [
             ...headerWidgets,
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
@@ -333,6 +378,7 @@ class ReportService {
                   style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey500),
                 ),
               ),
+            ], logoImage: logoImage),
           ],
         ),
       );
@@ -515,6 +561,7 @@ class ReportService {
   static Future<String> generateWorkOrdersPDF() async {
     try {
       final font = await _loadCairoFont();
+      final logoImage = await _loadLogoImage();
       final orders = await DatabaseService.getAllWorkOrders();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -544,6 +591,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
+            wrapWithWatermark(content: [
             ...headerWidgets,
             pw.Text(
               'إجمالي الأوامر: ${orders.length}',
@@ -636,6 +684,7 @@ class ReportService {
                 ),
               ],
             ),
+            ], logoImage: logoImage),
           ],
         ),
       );
@@ -656,6 +705,7 @@ class ReportService {
   static Future<String> generateMonthlyCostPDF() async {
     try {
       final font = await _loadCairoFont();
+      final logoImage = await _loadLogoImage();
       final expenses = await DatabaseService.getAllExpenses();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -729,6 +779,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
+            wrapWithWatermark(content: [
             ...headerWidgets,
             pw.Text(
               'إجمالي السجلات: ${rows.length}',
@@ -825,6 +876,7 @@ class ReportService {
                 bottom: pw.BorderSide(color: PdfColors.grey400),
               ),
             ),
+            ], logoImage: logoImage),
           ],
         ),
       );
@@ -845,6 +897,7 @@ class ReportService {
   static Future<String> generateDriverPerformancePDF() async {
     try {
       final font = await _loadCairoFont();
+      final logoImage = await _loadLogoImage();
       final vehicles = await DatabaseService.getAllVehicles();
       final violations = await DatabaseService.getAllViolations();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
@@ -912,6 +965,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
+            wrapWithWatermark(content: [
             ...headerWidgets,
             pw.Text(
               'إجمالي السائقين: ${driverVehicles.length}',
@@ -991,6 +1045,7 @@ class ReportService {
                 ),
               ),
             ),
+            ], logoImage: logoImage),
           ],
         ),
       );
@@ -1214,6 +1269,7 @@ class ReportService {
   static Future<String> generateSingleVehiclePDF(Vehicle vehicle) async {
     try {
       final font = await _loadCairoFont();
+      final logoImage = await _loadLogoImage();
       final vehicleId = vehicle.id ?? 0;
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -1263,6 +1319,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
+            wrapWithWatermark(content: [
             ...headerWidgets,
 
             // ── Vehicle Info Section ──
@@ -1449,6 +1506,7 @@ class ReportService {
                   style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey500),
                 ),
               ),
+            ], logoImage: logoImage),
           ],
         ),
       );
@@ -1639,6 +1697,7 @@ class ReportService {
   static Future<String> generateSingleMaintenancePDF(MaintenanceRecord record) async {
     try {
       final font = await _loadCairoFont();
+      final logoImage = await _loadLogoImage();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
       // Pre-build header
@@ -1672,6 +1731,7 @@ class ReportService {
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
           build: (context) => [
+            wrapWithWatermark(content: [
             ...headerWidgets,
 
             // ── Vehicle Info ──
@@ -1760,6 +1820,7 @@ class ReportService {
               headerAlignment: pw.Alignment.center,
               border: tableBorder,
             ),
+            ], logoImage: logoImage),
           ],
         ),
       );

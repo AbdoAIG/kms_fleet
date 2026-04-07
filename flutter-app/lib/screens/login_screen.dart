@@ -686,8 +686,8 @@ class _LoginScreenState extends State<LoginScreen> {
           // Logo (large, no frame)
           Image.asset(
             'assets/images/kms_logo.png',
-            width: 150,
-            height: 150,
+            width: 200,
+            height: 200,
             fit: BoxFit.contain,
           ),
           const SizedBox(height: 16),
