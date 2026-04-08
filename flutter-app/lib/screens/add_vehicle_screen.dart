@@ -68,6 +68,11 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     setState(() {
       _filteredModels =
           AppConstants.vehicleModels[_selectedMake] ?? [];
+      // Safety: if current model is not in the filtered list, add it
+      if (_modelController.text.isNotEmpty &&
+          !_filteredModels.contains(_modelController.text)) {
+        _filteredModels = [..._filteredModels, _modelController.text];
+      }
     });
   }
 
