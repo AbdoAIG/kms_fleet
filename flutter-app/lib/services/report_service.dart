@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:syncfusion_flutter_pdf/pdf.dart' as sfp;
 import 'package:excel/excel.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
@@ -88,15 +89,13 @@ class ReportService {
     ];
   }
 
-  /// Loads the watermark image from assets for PDF reports.
-  static Future<pw.MemoryImage> _loadWatermarkImage() async {
+  /// Loads the watermark raw bytes from assets.
+  static Future<Uint8List> _loadWatermarkBytes() async {
     final bytes = await rootBundle.load('assets/images/kms_watermark.png');
-    return pw.MemoryImage(bytes.buffer.asUint8List());
+    return bytes.buffer.asUint8List();
   }
 
   /// Wraps content in a Column for MultiPage PDF generation.
-  /// The watermark is added separately via the MultiPage header parameter
-  /// to avoid Stack-based pagination issues.
   static pw.Widget wrapContent(List<pw.Widget> content) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
@@ -104,24 +103,39 @@ class ReportService {
     );
   }
 
-  /// Builds a watermark widget for the PDF header.
-  /// Shows at top of each page with 20% opacity and full width.
-  static pw.Widget buildPageWatermark(pw.MemoryImage watermarkImage) {
-    const a4 = PdfPageFormat.a4;
-    final wmWidth = a4.width - 64;
-    final wmHeight = wmWidth * 0.4;
+  /// Adds a centered watermark overlay to every page of a PDF document
+  /// using Syncfusion's reliable full-page graphics API.
+  static Future<List<int>> _applyWatermark(
+    List<int> pdfBytes,
+    Uint8List watermarkBytes,
+  ) async {
+    try {
+      final document = sfp.PdfDocument(inputBytes: Uint8List.fromList(pdfBytes));
+      final bitmap = sfp.PdfBitmap(watermarkBytes);
 
-    return pw.Center(
-      child: pw.Opacity(
-        opacity: 0.2,
-        child: pw.Image(
-          watermarkImage,
-          width: wmWidth,
-          height: wmHeight,
-          fit: pw.BoxFit.contain,
-        ),
-      ),
-    );
+      for (int i = 0; i < document.pages.count; i++) {
+        final page = document.pages[i];
+        final pageSize = page.size;
+        const margin = 32.0;
+
+        final wmWidth = pageSize.width - (margin * 2);
+        final wmHeight = wmWidth * 0.4;
+        final x = margin;
+        final y = (pageSize.height - wmHeight) / 2;
+
+        page.graphics.save();
+        page.graphics.setTransparency(0.2);
+        page.graphics.drawImage(bitmap, Offset(x, y), Size(wmWidth, wmHeight));
+        page.graphics.restore();
+      }
+
+      final result = document.saveSync();
+      document.dispose();
+      return result;
+    } catch (e) {
+      debugPrint('ReportService: watermark overlay failed: $e');
+      return pdfBytes;
+    }
   }
 
   // ── Shared helpers ───────────────────────────────────────────────────────
@@ -218,7 +232,7 @@ class ReportService {
   static Future<String> generateMaintenancePDF() async {
     try {
       final font = await _loadCairoFont();
-      final watermarkImage = await _loadWatermarkImage();
+      final watermarkBytes = await _loadWatermarkBytes();
       final records = await DatabaseService.getAllMaintenanceRecords();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -240,7 +254,6 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -301,7 +314,8 @@ class ReportService {
         ),
       );
 
-      final bytes = await pdf.save();
+      final rawBytes = await pdf.save();
+      final bytes = await _applyWatermark(rawBytes, watermarkBytes);
       final fileName = 'تقرير_الصيانة_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
       return _shareBytes(bytes, fileName);
     } catch (e) {
@@ -317,7 +331,7 @@ class ReportService {
   static Future<String> generateVehiclesPDF() async {
     try {
       final font = await _loadCairoFont();
-      final watermarkImage = await _loadWatermarkImage();
+      final watermarkBytes = await _loadWatermarkBytes();
       final vehicles = await DatabaseService.getAllVehicles();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -336,7 +350,6 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -407,7 +420,8 @@ class ReportService {
         ),
       );
 
-      final bytes = await pdf.save();
+      final rawBytes = await pdf.save();
+      final bytes = await _applyWatermark(rawBytes, watermarkBytes);
       final fileName = 'تقرير_الأسطول_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
       return _shareBytes(bytes, fileName);
     } catch (e) {
@@ -585,7 +599,7 @@ class ReportService {
   static Future<String> generateWorkOrdersPDF() async {
     try {
       final font = await _loadCairoFont();
-      final watermarkImage = await _loadWatermarkImage();
+      final watermarkBytes = await _loadWatermarkBytes();
       final orders = await DatabaseService.getAllWorkOrders();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -614,7 +628,6 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -715,7 +728,8 @@ class ReportService {
         ),
       );
 
-      final bytes = await pdf.save();
+      final rawBytes = await pdf.save();
+      final bytes = await _applyWatermark(rawBytes, watermarkBytes);
       final fileName = 'تقرير_أوامر_العمل_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
       return _shareBytes(bytes, fileName);
     } catch (e) {
@@ -731,7 +745,7 @@ class ReportService {
   static Future<String> generateMonthlyCostPDF() async {
     try {
       final font = await _loadCairoFont();
-      final watermarkImage = await _loadWatermarkImage();
+      final watermarkBytes = await _loadWatermarkBytes();
       final expenses = await DatabaseService.getAllExpenses();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -804,7 +818,6 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -951,7 +964,8 @@ class ReportService {
         ),
       );
 
-      final bytes = await pdf.save();
+      final rawBytes = await pdf.save();
+      final bytes = await _applyWatermark(rawBytes, watermarkBytes);
       final fileName = 'تقرير_التكاليف_الشهري_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
       return _shareBytes(bytes, fileName);
     } catch (e) {
@@ -1170,7 +1184,7 @@ class ReportService {
   static Future<String> generateSingleVehiclePDF(Vehicle vehicle) async {
     try {
       final font = await _loadCairoFont();
-      final watermarkImage = await _loadWatermarkImage();
+      final watermarkBytes = await _loadWatermarkBytes();
       final vehicleId = vehicle.id ?? 0;
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -1219,7 +1233,6 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1414,7 +1427,8 @@ class ReportService {
         ),
       );
 
-      final bytes = await pdf.save();
+      final rawBytes = await pdf.save();
+      final bytes = await _applyWatermark(rawBytes, watermarkBytes);
       final dateStr = DateFormat('yyyyMMdd').format(DateTime.now());
       final fileName = 'تقرير_سيارة_${vehicle.plateNumber}_$dateStr.pdf';
       return _shareBytes(bytes, fileName);
@@ -1600,7 +1614,7 @@ class ReportService {
   static Future<String> generateSingleMaintenancePDF(MaintenanceRecord record) async {
     try {
       final font = await _loadCairoFont();
-      final watermarkImage = await _loadWatermarkImage();
+      final watermarkBytes = await _loadWatermarkBytes();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
       // Pre-build header
@@ -1633,7 +1647,6 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1730,7 +1743,8 @@ class ReportService {
         ),
       );
 
-      final bytes = await pdf.save();
+      final rawBytes = await pdf.save();
+      final bytes = await _applyWatermark(rawBytes, watermarkBytes);
       final dateStr = DateFormat('yyyyMMdd').format(DateTime.now());
       final fileName = 'عطل_${plateLabel}_$dateStr.pdf';
       return _shareBytes(bytes, fileName);
