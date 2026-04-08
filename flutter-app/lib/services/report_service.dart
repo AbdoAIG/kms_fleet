@@ -120,7 +120,7 @@ class ReportService {
     final y = (a4.height - wmHeight) / 2;
 
     // Draw directly on the page canvas — bypasses widget clipping
-    final canvas = context.page.canvas;
+    final canvas = context.canvas;
     canvas
       ..saveContext()
       ..setGraphicState(const PdfGraphicState(opacity: 0.2))
@@ -128,7 +128,7 @@ class ReportService {
       ..restoreContext();
 
     // Return zero-height widget — no layout impact
-    return const pw.SizedBox(width: 0, height: 0);
+    return pw.SizedBox(width: 0, height: 0);
   }
 
   // ── Shared helpers ───────────────────────────────────────────────────────
