@@ -104,31 +104,31 @@ class ReportService {
     );
   }
 
-  /// Builds a full-width, semi-transparent watermark positioned at the
-  /// vertical center of every page. Returns an empty-constraint widget
-  /// with absolute positioning via Transform.translate.
-  static pw.Widget buildPageWatermark(pw.MemoryImage watermarkImage) {
+  /// Draws a full-width, semi-transparent watermark at the vertical center
+  /// of every page using direct canvas drawing. Returns a zero-height widget
+  /// so the watermark has no layout impact on content.
+  static pw.Widget buildPageWatermark(
+    pw.MemoryImage watermarkImage,
+    pw.Context context,
+  ) {
     const a4 = PdfPageFormat.a4;
     const margin = 32.0;
 
     final wmWidth = a4.width - (margin * 2);
     final wmHeight = wmWidth * 0.4;
+    final x = margin;
+    final y = (a4.height - wmHeight) / 2;
 
-    // Move from header origin down to page center
-    final offsetY = (a4.height - wmHeight) / 2 - margin;
+    // Draw directly on the page canvas — bypasses widget clipping
+    final canvas = context.page.canvas;
+    canvas
+      ..saveContext()
+      ..setGraphicState(const PdfGraphicState(opacity: 0.2))
+      ..drawImage(watermarkImage, x, y, wmWidth, wmHeight)
+      ..restoreContext();
 
-    return pw.Transform.translate(
-      offset: PdfPoint(0, offsetY),
-      child: pw.Opacity(
-        opacity: 0.2,
-        child: pw.Image(
-          watermarkImage,
-          width: wmWidth,
-          height: wmHeight,
-          fit: pw.BoxFit.contain,
-        ),
-      ),
-    );
+    // Return zero-height widget — no layout impact
+    return const pw.SizedBox(width: 0, height: 0);
   }
 
   // ── Shared helpers ───────────────────────────────────────────────────────
@@ -247,7 +247,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
+          header: (context) => buildPageWatermark(watermarkImage, context),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -343,7 +343,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
+          header: (context) => buildPageWatermark(watermarkImage, context),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -621,7 +621,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
+          header: (context) => buildPageWatermark(watermarkImage, context),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -811,7 +811,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
+          header: (context) => buildPageWatermark(watermarkImage, context),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1226,7 +1226,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
+          header: (context) => buildPageWatermark(watermarkImage, context),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1640,7 +1640,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (_) => buildPageWatermark(watermarkImage),
+          header: (context) => buildPageWatermark(watermarkImage, context),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
