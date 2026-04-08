@@ -104,38 +104,20 @@ class ReportService {
     );
   }
 
-  /// Creates a PageTheme with a centered watermark on every page.
-  static pw.PageTheme watermarkTheme(pw.MemoryImage watermarkImage) {
+  /// Builds a watermark widget for the PDF header.
+  /// Shows at top of each page with 20% opacity and full width.
+  static pw.Widget buildPageWatermark(pw.MemoryImage watermarkImage) {
     const a4 = PdfPageFormat.a4;
-    const margin = 32.0;
-    final wmWidth = a4.width - (margin * 2);
+    final wmWidth = a4.width - 64;
     final wmHeight = wmWidth * 0.4;
 
-    return pw.PageTheme(
-      margin: const pw.EdgeInsets.all(margin),
-      buildForeground: (final context) {
-        return pw.Opacity(
-          opacity: 0.2,
-          child: pw.Image(
-            watermarkImage,
-            width: wmWidth,
-            height: wmHeight,
-            fit: pw.BoxFit.contain,
-          ),
-        );
-      },
-    );
-  }
-
-  /// Builds a simple watermark for header fallback.
-  static pw.Widget buildPageWatermark(pw.MemoryImage watermarkImage) {
     return pw.Center(
       child: pw.Opacity(
         opacity: 0.2,
         child: pw.Image(
           watermarkImage,
-          width: 500,
-          height: 225,
+          width: wmWidth,
+          height: wmHeight,
           fit: pw.BoxFit.contain,
         ),
       ),
@@ -256,8 +238,9 @@ class ReportService {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: watermarkTheme(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -351,8 +334,9 @@ class ReportService {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: watermarkTheme(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -628,8 +612,9 @@ class ReportService {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: watermarkTheme(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -817,8 +802,9 @@ class ReportService {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: watermarkTheme(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1231,8 +1217,9 @@ class ReportService {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: watermarkTheme(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1644,8 +1631,9 @@ class ReportService {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageTheme: watermarkTheme(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
