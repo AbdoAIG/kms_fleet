@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
@@ -34,6 +36,7 @@ class _MainScreenState extends State<MainScreen>
   int _currentIndex = 0;
   bool _isSyncing = false;
   bool _sidebarExpanded = true;
+  DateTime? _lastPressedAt;
 
   late final List<Widget> _screens = [
     DashboardScreen(onNavigateToTab: _switchToTab),
@@ -129,7 +132,32 @@ class _MainScreenState extends State<MainScreen>
     super.build(context);
     final isWide = MediaQuery.of(context).size.width > 768;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final now = DateTime.now();
+        final backButtonHasNotBeenPressedOrTimerExpired =
+            _lastPressedAt == null || now.difference(_lastPressedAt!) > Duration(seconds: 2);
+        if (backButtonHasNotBeenPressedOrTimerExpired) {
+          _lastPressedAt = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('اضغط مرة أخرى للخروج', style: TextStyle(fontFamily: 'Cairo', fontSize: 14)),
+              backgroundColor: AppColors.primary,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        } else {
+          if (Platform.isAndroid) {
+            SystemNavigator.pop();
+          } else {
+            exit(0);
+          }
+        }
+      },
+      child: Scaffold(
       body: Column(
         children: [
           _buildTopHeader(),
@@ -149,6 +177,7 @@ class _MainScreenState extends State<MainScreen>
         ],
       ),
       bottomNavigationBar: isWide ? null : _buildBottomNav(),
+    ),
     );
   }
 
@@ -184,9 +213,24 @@ class _MainScreenState extends State<MainScreen>
           padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 14),
           child: Row(
             children: [
-              Image.asset('assets/images/kms_logo.png', width: 56, height: 56, fit: BoxFit.contain),
+              SizedBox(
+                width: 56,
+                height: 56,
+                child: Image.asset('assets/images/kms_logo.png', fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.local_shipping, size: 28, color: Colors.white),
+                    );
+                  },
+                ),
+              ),
               const SizedBox(width: 12),
-              Column(
+              Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -210,16 +254,17 @@ class _MainScreenState extends State<MainScreen>
                   ),
                 ],
               ),
+              ),
               const Spacer(),
-              _buildSyncIndicator(),
-              const SizedBox(width: 10),
+              if (isWide) _buildSyncIndicator() else _buildCompactSyncIndicator(),
+              const SizedBox(width: 6),
               _buildNotificationBell(),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               GestureDetector(
                 onTap: _showProfileMenu,
                 child: Container(
-                  width: 36,
-                  height: 36,
+                  width: 34,
+                  height: 34,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(10),
@@ -388,6 +433,19 @@ class _MainScreenState extends State<MainScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCompactSyncIndicator() {
+    return InkWell(
+      onTap: _isSyncing ? null : _performSync,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: _isSyncing
+            ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : Icon(supabaseReady ? Icons.cloud_done : Icons.cloud_off, size: 18, color: Colors.white.withOpacity(0.9)),
       ),
     );
   }

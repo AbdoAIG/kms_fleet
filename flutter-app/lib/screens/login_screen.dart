@@ -654,6 +654,17 @@ class _LoginScreenState extends State<LoginScreen> {
             width: 200,
             height: 200,
             fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(Icons.local_shipping, size: 80, color: Colors.white),
+              );
+            },
           ),
           const SizedBox(height: 16),
           const Text(
