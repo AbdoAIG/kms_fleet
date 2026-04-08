@@ -119,8 +119,10 @@ class ReportService {
     final x = margin;
     final y = (a4.height - wmHeight) / 2;
 
-    // Create a raw PDF image from PNG bytes
-    final pdfImage = PdfImage(context.document, image: watermarkBytes);
+    // Create a raw PDF image from PNG bytes (read dimensions from PNG header)
+    final w = (watermarkBytes[16] << 24) | (watermarkBytes[17] << 16) | (watermarkBytes[18] << 8) | watermarkBytes[19];
+    final h = (watermarkBytes[20] << 24) | (watermarkBytes[21] << 16) | (watermarkBytes[22] << 8) | watermarkBytes[23];
+    final pdfImage = PdfImage(context.document, image: watermarkBytes, width: w, height: h);
 
     // Draw directly on the page canvas — bypasses widget clipping
     final canvas = context.canvas;
