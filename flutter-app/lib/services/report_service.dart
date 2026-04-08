@@ -917,48 +917,6 @@ class ReportService {
                 bottom: pw.BorderSide(color: PdfColors.grey400),
               ),
             ),
-            pw.SizedBox(height: 16),
-            pw.Divider(),
-            pw.SizedBox(height: 8),
-            pw.Text(
-              'الإجمالي الشهري',
-              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 4),
-            pw.TableHelper.fromTextArray(
-              headers: [
-                'الشهر', 'الصيانة', 'الوقود', 'الغرامات', 'التأمين', 'أخرى', 'الإجمالي',
-              ],
-              data: monthlyTotals.values.map((t) {
-                final total = t.maintenance + t.fuel + t.violations + t.insurance + t.other;
-                return [
-                  t.month,
-                  '${t.maintenance.toStringAsFixed(2)}',
-                  '${t.fuel.toStringAsFixed(2)}',
-                  '${t.violations.toStringAsFixed(2)}',
-                  '${t.insurance.toStringAsFixed(2)}',
-                  '${t.other.toStringAsFixed(2)}',
-                  '${total.toStringAsFixed(2)} ج.م',
-                ];
-              }).toList(),
-              headerStyle: pw.TextStyle(
-                fontSize: 8,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.white,
-              ),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.teal800),
-              cellStyle: const pw.TextStyle(fontSize: 7),
-              cellAlignment: pw.Alignment.center,
-              headerAlignment: pw.Alignment.center,
-              border: const pw.TableBorder(
-                horizontalInside: pw.BorderSide(color: PdfColors.grey300),
-                verticalInside: pw.BorderSide(color: PdfColors.grey300),
-                left: pw.BorderSide(color: PdfColors.grey400),
-                right: pw.BorderSide(color: PdfColors.grey400),
-                top: pw.BorderSide(color: PdfColors.grey400),
-                bottom: pw.BorderSide(color: PdfColors.grey400),
-              ),
-            ),
               ]),
             ],
         ),
