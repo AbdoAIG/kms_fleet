@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
@@ -84,10 +85,37 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               onSelected: (value) async {
                 setState(() { _isExporting = true; });
                 try {
+                  String result = '';
+                  String label = '';
                   if (value == 'pdf') {
-                    await ReportService.generateSingleVehiclePDF(vehicle);
+                    result = await ReportService.generateSingleVehiclePDF(vehicle);
+                    label = 'PDF';
                   } else if (value == 'excel') {
-                    await ReportService.generateSingleVehicleExcel(vehicle);
+                    result = await ReportService.generateSingleVehicleExcel(vehicle);
+                    label = 'Excel';
+                  }
+                  if (result.isNotEmpty && mounted) {
+                    final isDesktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+                    final msg = isDesktop
+                        ? 'تم حفظ $label بنجاح ✅\n$result'
+                        : 'تم حفظ $label بنجاح ✅';
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(msg),
+                        backgroundColor: AppColors.success,
+                        duration: Duration(seconds: isDesktop ? 5 : 3),
+                      ),
+                    );
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('فشل التصدير'), backgroundColor: AppColors.error),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.error),
+                    );
                   }
                 } finally {
                   if (mounted) setState(() { _isExporting = false; });
