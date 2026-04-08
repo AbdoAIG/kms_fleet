@@ -105,24 +105,27 @@ class ReportService {
   }
 
   /// Builds a full-width, semi-transparent watermark positioned at the
-  /// vertical center of the page, behind the content.
-  /// Uses [Transform.translate] with [PdfPoint] to move from header to center.
+  /// vertical center of every page. Uses [Transform.translate] to move
+  /// from header origin to page center, with zero layout height so it
+  /// does not push content down.
   static pw.Widget buildPageWatermark(pw.MemoryImage watermarkImage) {
     const a4 = PdfPageFormat.a4;
     const margin = 32.0;
 
-    // Full width minus margins
+    // Full page width minus margins
     final wmWidth = a4.width - (margin * 2);
     final wmHeight = wmWidth * 0.42;
 
-    // Vertical offset from header top to page center
-    final offsetY = (a4.height / 2) - (wmHeight / 2) - margin;
+    // Offset from header origin to page center
+    final offsetY = (a4.height - wmHeight) / 2 - margin;
 
-    return pw.Transform.translate(
-      offset: PdfPoint(0, offsetY),
-      child: pw.Center(
+    return pw.SizedBox(
+      height: 0,
+      width: double.infinity,
+      child: pw.Transform.translate(
+        offset: PdfPoint(0, offsetY),
         child: pw.Opacity(
-          opacity: 0.08,
+          opacity: 0.2,
           child: pw.Image(
             watermarkImage,
             width: wmWidth,
