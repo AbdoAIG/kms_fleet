@@ -36,6 +36,16 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   String _selectedMake = '';
   List<String> _filteredModels = [];
 
+  /// Helper: if [value] is a map value (e.g. 'أبيض') instead of a key (e.g. 'white'),
+  /// return the matching key. If still not found, return [fallback].
+  String _toMapKey(String value, Map<String, String> map, String fallback) {
+    if (map.containsKey(value)) return value;
+    for (final entry in map.entries) {
+      if (entry.value == value) return entry.key;
+    }
+    return fallback;
+  }
+
   bool _isSaving = false;
 
   bool get _isEditing => widget.vehicle != null;
@@ -55,11 +65,20 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       _driverLicenseController.text = widget.vehicle!.driverLicenseNumber ?? '';
       _driverLicenseExpiry = widget.vehicle!.driverLicenseExpiry;
       _driverStatus = widget.vehicle!.driverStatus ?? 'active';
-      _selectedColor = widget.vehicle!.color;
-      _selectedFuelType = widget.vehicle!.fuelType;
-      _selectedStatus = widget.vehicle!.status;
+      // Safety: handle Arabic values stored instead of English keys
+      _selectedColor = _toMapKey(widget.vehicle!.color, AppConstants.vehicleColors, 'white');
+      _selectedFuelType = _toMapKey(widget.vehicle!.fuelType, AppConstants.fuelTypes, 'petrol');
+      _selectedStatus = _toMapKey(widget.vehicle!.status, AppConstants.vehicleStatuses, 'active');
       _selectedVehicleType = widget.vehicle!.vehicleType ?? '';
+      // Safety: if vehicle type not in the predefined list, keep it as-is
+      if (_selectedVehicleType.isNotEmpty && !AppConstants.vehicleTypes.containsKey(_selectedVehicleType)) {
+        _selectedVehicleType = '';
+      }
       _selectedMake = widget.vehicle!.make;
+      // Safety: if make not in the predefined list, add it
+      if (!AppConstants.vehicleMakes.contains(_selectedMake) && _selectedMake.isNotEmpty) {
+        // keep it — user may have a custom make
+      }
       _updateModels();
     }
   }

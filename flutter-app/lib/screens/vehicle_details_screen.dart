@@ -407,8 +407,8 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
           Row(
             children: [
               Expanded(child: _InfoCell(icon: Icons.speed, label: 'العداد', value: AppFormatters.formatNumber(vehicle.currentOdometer), unit: 'كم')),
-              Expanded(child: _InfoCell(icon: Icons.local_gas_station, label: 'الوقود', value: AppConstants.fuelTypes[vehicle.fuelType] ?? '')),
-              Expanded(child: _InfoCell(icon: Icons.palette, label: 'اللون', value: AppConstants.vehicleColors[vehicle.color] ?? '')),
+              Expanded(child: _InfoCell(icon: Icons.local_gas_station, label: 'الوقود', value: AppConstants.fuelTypes[vehicle.fuelType] ?? vehicle.fuelType)),
+              Expanded(child: _InfoCell(icon: Icons.palette, label: 'اللون', value: AppConstants.vehicleColors[vehicle.color] ?? vehicle.color)),
               Expanded(child: _InfoCell(icon: Icons.calendar_today, label: 'السنة', value: '${vehicle.year}')),
             ],
           ),
