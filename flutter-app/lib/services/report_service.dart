@@ -117,7 +117,7 @@ class ReportService {
     final offsetY = (a4.height - margin * 2) / 2 - wmHeight / 2;
 
     return pw.Stack(
-      clipBehavior: pw.Clip.none,
+      overflow: pw.Overflow.visible,
       children: [
         pw.Positioned(
           top: offsetY,
