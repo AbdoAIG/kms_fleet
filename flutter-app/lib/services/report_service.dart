@@ -104,17 +104,34 @@ class ReportService {
     );
   }
 
-  /// Creates a [pw.BoxDecoration] that renders the watermark image
-  /// centered on every PDF page at 20% opacity behind all content.
-  /// Uses [pw.MultiPage.pageDecoration] so it applies to all pages
-  /// automatically without affecting page-break logic.
-  static pw.BoxDecoration watermarkDecoration(pw.MemoryImage image) {
-    return pw.BoxDecoration(
-      image: pw.DecorationImage(
-        image: image,
-        opacity: 0.2,
-        fit: pw.BoxFit.contain,
-      ),
+  /// Builds a watermark widget for the MultiPage header.
+  /// Uses Stack with Overflow.visible so the watermark can extend beyond
+  /// the header bounds and appear at the vertical center of the page.
+  static pw.Widget buildPageWatermark(pw.MemoryImage watermarkImage) {
+    const a4 = PdfPageFormat.a4;
+    const margin = 32.0;
+
+    final wmWidth = a4.width - (margin * 2);
+    final wmHeight = wmWidth * 0.4;
+    // Vertical offset from header top to page center
+    final offsetY = (a4.height - margin * 2) / 2 - wmHeight / 2;
+
+    return pw.Stack(
+      clipBehavior: pw.Clip.none,
+      children: [
+        pw.Positioned(
+          top: offsetY,
+          child: pw.Opacity(
+            opacity: 0.2,
+            child: pw.Image(
+              watermarkImage,
+              width: wmWidth,
+              height: wmHeight,
+              fit: pw.BoxFit.contain,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -234,7 +251,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageDecoration: watermarkDecoration(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -330,7 +347,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageDecoration: watermarkDecoration(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -608,7 +625,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageDecoration: watermarkDecoration(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -798,7 +815,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageDecoration: watermarkDecoration(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1213,7 +1230,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageDecoration: watermarkDecoration(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1627,7 +1644,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          pageDecoration: watermarkDecoration(watermarkImage),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
