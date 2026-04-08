@@ -88,10 +88,10 @@ class ReportService {
     ];
   }
 
-  /// Loads the watermark image raw bytes from assets.
-  static Future<Uint8List> _loadWatermarkBytes() async {
+  /// Loads the watermark image from assets for PDF reports.
+  static Future<pw.MemoryImage> _loadWatermarkImage() async {
     final bytes = await rootBundle.load('assets/images/kms_watermark.png');
-    return bytes.buffer.asUint8List();
+    return pw.MemoryImage(bytes.buffer.asUint8List());
   }
 
   /// Wraps content in a Column for MultiPage PDF generation.
@@ -104,36 +104,30 @@ class ReportService {
     );
   }
 
-  /// Draws a full-width, semi-transparent watermark at the vertical center
-  /// of every page using direct canvas drawing. Returns a zero-height widget
-  /// so the watermark has no layout impact on content.
-  static pw.Widget buildPageWatermark(
-    Uint8List watermarkBytes,
-    pw.Context context,
-  ) {
+  /// Builds a full-width, semi-transparent watermark widget for the
+  /// MultiPage header. Positioned at the vertical center of each page.
+  static pw.Widget buildPageWatermark(pw.MemoryImage watermarkImage) {
     const a4 = PdfPageFormat.a4;
     const margin = 32.0;
 
     final wmWidth = a4.width - (margin * 2);
     final wmHeight = wmWidth * 0.4;
-    final x = margin;
-    final y = (a4.height - wmHeight) / 2;
 
-    // Create a raw PDF image from PNG bytes (read dimensions from PNG header)
-    final w = (watermarkBytes[16] << 24) | (watermarkBytes[17] << 16) | (watermarkBytes[18] << 8) | watermarkBytes[19];
-    final h = (watermarkBytes[20] << 24) | (watermarkBytes[21] << 16) | (watermarkBytes[22] << 8) | watermarkBytes[23];
-    final pdfImage = PdfImage(context.document, image: watermarkBytes, width: w, height: h);
+    // Offset: move down from header (top) to page vertical center
+    final offsetY = (a4.height - margin * 2) / 2 - wmHeight / 2;
 
-    // Draw directly on the page canvas — bypasses widget clipping
-    final canvas = context.canvas;
-    canvas
-      ..saveContext()
-      ..setGraphicState(const PdfGraphicState(opacity: 0.2))
-      ..drawImage(pdfImage, x, y, wmWidth, wmHeight)
-      ..restoreContext();
-
-    // Return zero-height widget — no layout impact
-    return pw.SizedBox(width: 0, height: 0);
+    return pw.Transform.translate(
+      offset: PdfPoint(0, offsetY),
+      child: pw.Opacity(
+        opacity: 0.2,
+        child: pw.Image(
+          watermarkImage,
+          width: wmWidth,
+          height: wmHeight,
+          fit: pw.BoxFit.contain,
+        ),
+      ),
+    );
   }
 
   // ── Shared helpers ───────────────────────────────────────────────────────
@@ -230,7 +224,7 @@ class ReportService {
   static Future<String> generateMaintenancePDF() async {
     try {
       final font = await _loadCairoFont();
-      final watermarkBytes = await _loadWatermarkBytes();
+      final watermarkImage = await _loadWatermarkImage();
       final records = await DatabaseService.getAllMaintenanceRecords();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -252,7 +246,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (context) => buildPageWatermark(watermarkBytes, context),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -329,7 +323,7 @@ class ReportService {
   static Future<String> generateVehiclesPDF() async {
     try {
       final font = await _loadCairoFont();
-      final watermarkBytes = await _loadWatermarkBytes();
+      final watermarkImage = await _loadWatermarkImage();
       final vehicles = await DatabaseService.getAllVehicles();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -348,7 +342,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (context) => buildPageWatermark(watermarkBytes, context),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -597,7 +591,7 @@ class ReportService {
   static Future<String> generateWorkOrdersPDF() async {
     try {
       final font = await _loadCairoFont();
-      final watermarkBytes = await _loadWatermarkBytes();
+      final watermarkImage = await _loadWatermarkImage();
       final orders = await DatabaseService.getAllWorkOrders();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -626,7 +620,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (context) => buildPageWatermark(watermarkBytes, context),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -743,7 +737,7 @@ class ReportService {
   static Future<String> generateMonthlyCostPDF() async {
     try {
       final font = await _loadCairoFont();
-      final watermarkBytes = await _loadWatermarkBytes();
+      final watermarkImage = await _loadWatermarkImage();
       final expenses = await DatabaseService.getAllExpenses();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -816,7 +810,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (context) => buildPageWatermark(watermarkBytes, context),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1182,7 +1176,7 @@ class ReportService {
   static Future<String> generateSingleVehiclePDF(Vehicle vehicle) async {
     try {
       final font = await _loadCairoFont();
-      final watermarkBytes = await _loadWatermarkBytes();
+      final watermarkImage = await _loadWatermarkImage();
       final vehicleId = vehicle.id ?? 0;
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
@@ -1231,7 +1225,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (context) => buildPageWatermark(watermarkBytes, context),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
@@ -1612,7 +1606,7 @@ class ReportService {
   static Future<String> generateSingleMaintenancePDF(MaintenanceRecord record) async {
     try {
       final font = await _loadCairoFont();
-      final watermarkBytes = await _loadWatermarkBytes();
+      final watermarkImage = await _loadWatermarkImage();
       final now = DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.now());
 
       // Pre-build header
@@ -1645,7 +1639,7 @@ class ReportService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           textDirection: pw.TextDirection.rtl,
-          header: (context) => buildPageWatermark(watermarkBytes, context),
+          header: (_) => buildPageWatermark(watermarkImage),
           build: (context) => [
               wrapContent([
                 ...headerWidgets,
