@@ -252,15 +252,14 @@ class _VehiclePreviewSheetContent extends StatelessWidget {
         color: AppColors.background,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Row(
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
         children: [
-          Expanded(child: _infoCell(Icons.calendar_today, 'السنة', '${vehicle.year}')),
-          const SizedBox(width: 6),
-          Expanded(child: _infoCell(Icons.color_lens, 'اللون', colorLabel)),
-          const SizedBox(width: 6),
-          Expanded(child: _infoCell(Icons.local_gas_station, 'الوقود', fuelLabel)),
-          const SizedBox(width: 6),
-          Expanded(child: _infoCell(Icons.speed, 'العداد', '${vehicle.currentOdometer} كم')),
+          SizedBox(width: 80, child: _infoCell(Icons.calendar_today, 'السنة', '${vehicle.year}')),
+          SizedBox(width: 80, child: _infoCell(Icons.color_lens, 'اللون', colorLabel)),
+          SizedBox(width: 80, child: _infoCell(Icons.local_gas_station, 'الوقود', fuelLabel)),
+          SizedBox(width: 80, child: _infoCell(Icons.speed, 'العداد', '${vehicle.currentOdometer} كم')),
         ],
       ),
     );

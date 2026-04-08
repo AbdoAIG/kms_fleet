@@ -903,6 +903,7 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
                 ),
               ),
               PopupMenuButton<int?>(
+                key: const ValueKey('fuel_screen_menu'),
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(

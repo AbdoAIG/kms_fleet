@@ -286,6 +286,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                             ),
                           ),
                           PopupMenuButton<String>(
+                            key: const ValueKey('checklist_screen_menu'),
                             icon: const Icon(Icons.more_vert, color: AppColors.textHint, size: 18),
                             padding: EdgeInsets.zero,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

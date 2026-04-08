@@ -173,6 +173,7 @@ class Vehicle3DCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           // Menu
                           PopupMenuButton<String>(
+                            key: ValueKey('menu_${vehicle.plateNumber}'),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             icon: Icon(Icons.more_vert, color: AppColors.textHint.withOpacity(0.5), size: 18),

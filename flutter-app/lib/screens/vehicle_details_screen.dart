@@ -68,7 +68,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(vehicle.displayName),
+        title: Text(vehicle.displayName, overflow: TextOverflow.ellipsis),
         actions: [
           if (_isExporting)
             const Padding(
@@ -81,6 +81,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             )
           else
             PopupMenuButton<String>(
+              key: const ValueKey('vehicle_details_export'),
               icon: const Icon(Icons.file_download),
               onSelected: (value) async {
                 setState(() { _isExporting = true; });
