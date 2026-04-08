@@ -37,6 +37,7 @@ class _MainScreenState extends State<MainScreen>
   bool _isSyncing = false;
   bool _sidebarExpanded = true;
   DateTime? _lastPressedAt;
+  bool _isWide = false;
 
   late final List<Widget> _screens = [
     DashboardScreen(onNavigateToTab: _switchToTab),
@@ -131,6 +132,7 @@ class _MainScreenState extends State<MainScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final isWide = MediaQuery.of(context).size.width > 768;
+    _isWide = isWide;
 
     return PopScope(
       canPop: false,
@@ -256,7 +258,7 @@ class _MainScreenState extends State<MainScreen>
               ),
               ),
               const Spacer(),
-              if (isWide) _buildSyncIndicator() else _buildCompactSyncIndicator(),
+              if (_isWide) _buildSyncIndicator() else _buildCompactSyncIndicator(),
               const SizedBox(width: 6),
               _buildNotificationBell(),
               const SizedBox(width: 6),
