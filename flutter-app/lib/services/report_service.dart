@@ -104,15 +104,24 @@ class ReportService {
     );
   }
 
-  /// Builds a simple watermark widget for the PDF header.
+  /// Builds a watermark widget centered on every PDF page at 20% opacity.
+  /// Uses Transform.translate to shift from header origin to page center.
   static pw.Widget buildPageWatermark(pw.MemoryImage watermarkImage) {
-    return pw.Center(
+    const a4 = PdfPageFormat.a4;
+    const margin = 32.0;
+    final wmWidth = a4.width - (margin * 2);
+    final wmHeight = wmWidth * 0.4;
+    // Shift from header top (y=0) to page vertical center
+    final offsetY = (a4.height - margin * 2) / 2 - wmHeight / 2;
+
+    return pw.Transform.translate(
+      offset: PdfPoint(0, offsetY),
       child: pw.Opacity(
         opacity: 0.2,
         child: pw.Image(
           watermarkImage,
-          width: 500,
-          height: 225,
+          width: wmWidth,
+          height: wmHeight,
           fit: pw.BoxFit.contain,
         ),
       ),
