@@ -125,7 +125,7 @@ class ReportService {
 
         page.graphics.save();
         page.graphics.setTransparency(0.2);
-        page.graphics.drawImage(bitmap, Offset(x, y), Size(wmWidth, wmHeight));
+        page.graphics.drawImage(bitmap, Rect.fromLTWH(x, y, wmWidth, wmHeight));
         page.graphics.restore();
       }
 
