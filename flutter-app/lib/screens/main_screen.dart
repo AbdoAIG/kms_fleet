@@ -51,7 +51,7 @@ class _MainScreenState extends State<MainScreen>
     _NavItem(Icons.dashboard_outlined, Icons.dashboard, 'الرئيسية'),
     _NavItem(Icons.directions_car_outlined, Icons.directions_car, 'السيارات'),
     _NavItem(Icons.build_outlined, Icons.build, 'الصيانة'),
-    _NavItem(Icons.calculate_outlined, Icons.calculate, 'النولون+الوقود'),
+    _NavItem(Icons.local_gas_station_outlined, Icons.local_gas_station, 'الوقود'),
     _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, 'التقارير'),
   ];
 
