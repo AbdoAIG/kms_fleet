@@ -24,21 +24,21 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.kmsfleet.app"
+    namespace "com.kmsfleet.kms_fleet"
     compileSdk flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
     defaultConfig {
-        applicationId "com.kmsfleet.app"
+        applicationId "com.kmsfleet.kms_fleet"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
