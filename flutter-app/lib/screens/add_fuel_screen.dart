@@ -21,6 +21,7 @@ class AddFuelScreen extends StatefulWidget {
 
 class _AddFuelScreenState extends State<AddFuelScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _searchController = TextEditingController();
   final _odometerController = TextEditingController();
   final _litersController = TextEditingController();
   final _costPerLiterController = TextEditingController();
@@ -33,6 +34,10 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
   bool _fullTank = true;
   int? _selectedVehicleId;
   List<Vehicle> _vehicles = [];
+  List<Vehicle> _filteredVehicles = [];
+  String _searchQuery = '';
+  Vehicle? _selectedVehicle;
+  bool _showVehicleDropdown = false;
 
   bool _isSaving = false;
   bool get _isEditing => widget.record != null;
@@ -59,6 +64,8 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
       _selectedVehicleId = widget.record!.vehicleId;
     } else if (widget.vehicle != null) {
       _selectedVehicleId = widget.vehicle!.id;
+      _selectedVehicle = widget.vehicle;
+      _searchController.text = '${widget.vehicle!.plateNumber} - ${widget.vehicle!.make} ${widget.vehicle!.model}';
       _odometerController.text =
           widget.vehicle!.currentOdometer.toString();
       _selectedFuelType = widget.vehicle!.fuelType;
@@ -72,11 +79,63 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
     final provider = context.read<VehicleProvider>();
     setState(() {
       _vehicles = provider.allVehicles;
+      _filteredVehicles = _vehicles;
+    });
+    // After loading vehicles, set selected vehicle info for editing
+    if (_selectedVehicleId != null && _selectedVehicle == null) {
+      final vehicle = _vehicles.where((v) => v.id == _selectedVehicleId).firstOrNull;
+      if (vehicle != null) {
+        setState(() {
+          _selectedVehicle = vehicle;
+          _searchController.text = '${vehicle.plateNumber} - ${vehicle.make} ${vehicle.model}';
+        });
+      }
+    }
+  }
+
+  void _filterVehicles(String query) {
+    setState(() {
+      _searchQuery = query;
+      if (query.trim().isEmpty) {
+        _filteredVehicles = _vehicles;
+        _showVehicleDropdown = false;
+      } else {
+        final q = query.trim().toLowerCase();
+        _filteredVehicles = _vehicles.where((v) {
+          return v.plateNumber.toLowerCase().contains(q) ||
+              v.make.toLowerCase().contains(q) ||
+              v.model.toLowerCase().contains(q) ||
+              (v.driverName != null && v.driverName!.toLowerCase().contains(q)) ||
+              (v.displayName.toLowerCase().contains(q));
+        }).toList();
+        _showVehicleDropdown = _filteredVehicles.isNotEmpty;
+      }
+    });
+  }
+
+  void _selectVehicle(Vehicle vehicle) {
+    setState(() {
+      _selectedVehicle = vehicle;
+      _selectedVehicleId = vehicle.id;
+      _searchController.text = '${vehicle.plateNumber} - ${vehicle.make} ${vehicle.model}';
+      _showVehicleDropdown = false;
+      _odometerController.text = vehicle.currentOdometer.toString();
+    });
+  }
+
+  void _clearVehicleSelection() {
+    setState(() {
+      _selectedVehicle = null;
+      _selectedVehicleId = null;
+      _searchController.clear();
+      _showVehicleDropdown = false;
+      _filteredVehicles = _vehicles;
     });
   }
 
   @override
   void dispose() {
+    _searchController.dispose();
     _odometerController.dispose();
     _litersController.dispose();
     _costPerLiterController.dispose();
@@ -179,44 +238,90 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // ── Vehicle Selection ──
-            _buildSectionTitle('السيارة'),
+            // ── Vehicle Search ──
+            _buildSectionTitle('السيارة *', isRequired: true),
             const SizedBox(height: 8),
-            DropdownButtonFormField<int>(
-              value: _selectedVehicleId,
-              decoration: const InputDecoration(
-                labelText: 'اختر السيارة',
-                prefixIcon: Icon(Icons.directions_car),
-              ),
-              items: _vehicles.map((v) {
-                return DropdownMenuItem(
-                  value: v.id,
-                  child: Text(
-                      '${v.make} ${v.model} - ${v.plateNumber}',
-                      overflow: TextOverflow.ellipsis),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedVehicleId = value;
-                  final vehicle = _vehicles.firstWhere(
-                    (v) => v.id == value,
-                    orElse: () => Vehicle(
-                      plateNumber: '',
-                      make: '',
-                      model: '',
-                      year: 2024,
-                      color: 'white',
-                      fuelType: 'petrol',
-                      currentOdometer: 0,
-                      status: 'active',
+            _buildVehicleSearchField(),
+            if (_showVehicleDropdown)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                constraints: const BoxConstraints(maxHeight: 220),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
                     ),
-                  );
-                  _odometerController.text =
-                      vehicle.currentOdometer.toString();
-                });
-              },
-            ),
+                  ],
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  itemCount: _filteredVehicles.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1, indent: 16, endIndent: 16),
+                  itemBuilder: (context, index) {
+                    final v = _filteredVehicles[index];
+                    return InkWell(
+                      onTap: () => _selectVehicle(v),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppConstants.vehicleTypeColors[v.vehicleType]?.withOpacity(0.1) ?? AppColors.primaryContainer,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                AppConstants.vehicleTypeIcons[v.vehicleType] ?? Icons.directions_car,
+                                size: 20,
+                                color: AppConstants.vehicleTypeColors[v.vehicleType] ?? AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    v.plateNumber,
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${v.make} ${v.model} - ${AppConstants.vehicleTypes[v.vehicleType] ?? ''}',
+                                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (v.hasDriver) ...[
+                              Icon(Icons.person_outline, size: 14, color: AppColors.textHint),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  v.driverName ?? '',
+                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             const SizedBox(height: 20),
 
             // ── Fill Info ──
@@ -545,16 +650,49 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
     }
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, {bool isRequired = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: AppColors.primary,
-        ),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+            ),
+          ),
+          if (isRequired)
+            const Text(
+              ' *',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.error,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVehicleSearchField() {
+    return TextFormField(
+      controller: _searchController,
+      onChanged: _filterVehicles,
+      readOnly: _selectedVehicleId != null && !_showVehicleDropdown,
+      decoration: InputDecoration(
+        labelText: 'ابحث برقم السيارة أو اسم السائق *',
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: _selectedVehicleId != null
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 20),
+                onPressed: _clearVehicleSelection,
+              )
+            : null,
+        hintText: 'مثال: 12345 أو أحمد',
+        hintStyle: const TextStyle(fontSize: 13, color: AppColors.textHint),
       ),
     );
   }

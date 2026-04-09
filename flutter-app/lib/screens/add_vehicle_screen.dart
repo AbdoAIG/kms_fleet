@@ -33,8 +33,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   String _selectedFuelType = 'petrol';
   String _selectedStatus = 'active';
   String _selectedVehicleType = '';
-  String _selectedMake = '';
-  List<String> _filteredModels = [];
 
   /// Helper: if [value] is a map value (e.g. 'أبيض') instead of a key (e.g. 'white'),
   /// return the matching key. If still not found, return [fallback].
@@ -74,25 +72,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       if (_selectedVehicleType.isNotEmpty && !AppConstants.vehicleTypes.containsKey(_selectedVehicleType)) {
         _selectedVehicleType = '';
       }
-      _selectedMake = widget.vehicle!.make;
-      // Safety: if make not in the predefined list, add it
-      if (!AppConstants.vehicleMakes.contains(_selectedMake) && _selectedMake.isNotEmpty) {
-        // keep it — user may have a custom make
-      }
-      _updateModels();
     }
-  }
-
-  void _updateModels() {
-    setState(() {
-      _filteredModels =
-          AppConstants.vehicleModels[_selectedMake] ?? [];
-      // Safety: if current model is not in the filtered list, add it
-      if (_modelController.text.isNotEmpty &&
-          !_filteredModels.contains(_modelController.text)) {
-        _filteredModels = [..._filteredModels, _modelController.text];
-      }
-    });
   }
 
   @override
@@ -222,56 +202,33 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               },
             ),
             const SizedBox(height: 12),
-            // Make Dropdown
-            DropdownButtonFormField<String>(
-              value: _selectedMake.isEmpty ? null : _selectedMake,
+            // Make Text Field
+            TextFormField(
+              controller: _makeController,
               decoration: const InputDecoration(
                 labelText: 'الماركة',
                 prefixIcon: Icon(Icons.directions_car),
+                hintText: 'أدخل ماركة السيارة',
               ),
-              items: AppConstants.vehicleMakes.map((make) {
-                return DropdownMenuItem(
-                  value: make,
-                  child: Text(make),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedMake = value ?? '';
-                  _makeController.text = _selectedMake;
-                  _modelController.clear();
-                  _updateModels();
-                });
-              },
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'يرجى اختيار الماركة';
+                if (value == null || value.trim().isEmpty) {
+                  return 'يرجى إدخال الماركة';
                 }
                 return null;
               },
             ),
             const SizedBox(height: 12),
-            // Model Dropdown
-            DropdownButtonFormField<String>(
-              value: _modelController.text.isEmpty
-                  ? null
-                  : _modelController.text,
+            // Model Text Field
+            TextFormField(
+              controller: _modelController,
               decoration: const InputDecoration(
                 labelText: 'الموديل',
                 prefixIcon: Icon(Icons.time_to_leave),
+                hintText: 'أدخل موديل السيارة',
               ),
-              items: _filteredModels.map((model) {
-                return DropdownMenuItem(
-                  value: model,
-                  child: Text(model),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() => _modelController.text = value ?? '');
-              },
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'يرجى اختيار الموديل';
+                if (value == null || value.trim().isEmpty) {
+                  return 'يرجى إدخال الموديل';
                 }
                 return null;
               },
