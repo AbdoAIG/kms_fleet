@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/vehicle.dart';
 import '../models/maintenance_record.dart';
@@ -67,7 +68,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(vehicle.displayName),
+        title: Text(vehicle.displayName, overflow: TextOverflow.ellipsis),
         actions: [
           if (_isExporting)
             const Padding(
@@ -80,14 +81,42 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             )
           else
             PopupMenuButton<String>(
+              key: const ValueKey('vehicle_details_export'),
               icon: const Icon(Icons.file_download),
               onSelected: (value) async {
                 setState(() { _isExporting = true; });
                 try {
+                  String result = '';
+                  String label = '';
                   if (value == 'pdf') {
-                    await ReportService.generateSingleVehiclePDF(vehicle);
+                    result = await ReportService.generateSingleVehiclePDF(vehicle);
+                    label = 'PDF';
                   } else if (value == 'excel') {
-                    await ReportService.generateSingleVehicleExcel(vehicle);
+                    result = await ReportService.generateSingleVehicleExcel(vehicle);
+                    label = 'Excel';
+                  }
+                  if (result.isNotEmpty && mounted) {
+                    final isDesktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+                    final msg = isDesktop
+                        ? 'تم حفظ $label بنجاح ✅\n$result'
+                        : 'تم حفظ $label بنجاح ✅';
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(msg),
+                        backgroundColor: AppColors.success,
+                        duration: Duration(seconds: isDesktop ? 5 : 3),
+                      ),
+                    );
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('فشل التصدير'), backgroundColor: AppColors.error),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.error),
+                    );
                   }
                 } finally {
                   if (mounted) setState(() { _isExporting = false; });
@@ -378,8 +407,8 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
           Row(
             children: [
               Expanded(child: _InfoCell(icon: Icons.speed, label: 'العداد', value: AppFormatters.formatNumber(vehicle.currentOdometer), unit: 'كم')),
-              Expanded(child: _InfoCell(icon: Icons.local_gas_station, label: 'الوقود', value: AppConstants.fuelTypes[vehicle.fuelType] ?? '')),
-              Expanded(child: _InfoCell(icon: Icons.palette, label: 'اللون', value: AppConstants.vehicleColors[vehicle.color] ?? '')),
+              Expanded(child: _InfoCell(icon: Icons.local_gas_station, label: 'الوقود', value: AppConstants.fuelTypes[vehicle.fuelType] ?? vehicle.fuelType)),
+              Expanded(child: _InfoCell(icon: Icons.palette, label: 'اللون', value: AppConstants.vehicleColors[vehicle.color] ?? vehicle.color)),
               Expanded(child: _InfoCell(icon: Icons.calendar_today, label: 'السنة', value: '${vehicle.year}')),
             ],
           ),

@@ -446,3 +446,20 @@ Stage Summary:
 - Logo replaced in all locations (login, header, PDF header, watermark)
 - Driver performance report completely removed
 - PDF watermark now appears behind text (not on separate page)
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix syncfusion_flutter_pdf dependency resolution error + remove duplicate table
+
+Work Log:
+- User reported `flutter run` failing with dependency resolution error for syncfusion_flutter_pdf
+- Updated pubspec.yaml: syncfusion_flutter_pdf from ^27.1.0 to ^33.1.47
+- Fixed duplicate "الإجمالي الشهري" table in generateMonthlyCostPDF() (was rendered twice in PDF)
+- Watermark approach confirmed working: uses Syncfusion's PdfDocument API to post-process PDFs and overlay watermark centered on every page at 20% opacity
+- Committed and pushed to GitHub (commit edaf914)
+
+Stage Summary:
+- syncfusion_flutter_pdf upgraded to ^33.1.47 resolving pub dependency conflict
+- Removed 43 lines of duplicate monthly totals table code
+- 2 files changed, 1 insertion, 43 deletions

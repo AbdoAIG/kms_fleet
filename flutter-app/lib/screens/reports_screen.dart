@@ -115,6 +115,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
             duration: Duration(seconds: isDesktop ? 5 : 3),
           ),
         );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل إنشاء $label — تحقق من الاتصال بالإنترنت',
+                style: TextStyle(fontSize: 14)),
+            backgroundColor: AppColors.error,
+            duration: Duration(seconds: 4),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {

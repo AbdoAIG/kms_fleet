@@ -111,6 +111,7 @@ class MaintenanceCard extends StatelessWidget {
                           ),
                           if (onEdit != null || onDelete != null)
                             PopupMenuButton<String>(
+                              key: ValueKey('maint_card_${record.id ?? 0}'),
                               icon: const Icon(Icons.more_vert, color: AppColors.textHint, size: 18),
                               padding: EdgeInsets.zero,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

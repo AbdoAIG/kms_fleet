@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1050475065620",
+    "project_id": "kms-fleet",
+    "storage_bucket": "kms-fleet.firebasestorage.app",
+    "firebase_url": "https://kms-fleet-default-rtdb.firebaseio.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1050475065620:android:4f2a8e9d3b1c6f7e8a9b0c",
+        "android_client_info": {
+          "package_name": "com.kmsfleet.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCIK4ixL4zh-MxE9WQKQDQtHj1T8VtIZOY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -63,7 +63,7 @@ class Vehicle3DCard extends StatelessWidget {
       AppConstants.vehicleStatusColors[vehicle.status] ?? AppColors.textSecondary;
 
   String get _statusLabel =>
-      AppConstants.vehicleStatuses[vehicle.status] ?? '';
+      AppConstants.vehicleStatuses[vehicle.status] ?? vehicle.status;
 
   String? get _vehicleImage => _vehicleImages[vehicle.vehicleType];
 
@@ -173,6 +173,7 @@ class Vehicle3DCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           // Menu
                           PopupMenuButton<String>(
+                            key: ValueKey('menu_${vehicle.plateNumber}'),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             icon: Icon(Icons.more_vert, color: AppColors.textHint.withOpacity(0.5), size: 18),
@@ -240,7 +241,7 @@ class Vehicle3DCard extends StatelessWidget {
                           Flexible(
                             child: _QuickStat(
                               icon: Icons.local_gas_station,
-                              value: AppConstants.fuelTypes[vehicle.fuelType] ?? '',
+                              value: AppConstants.fuelTypes[vehicle.fuelType] ?? vehicle.fuelType,
                             ),
                           ),
                           if (vehicle.hasDriver) ...[

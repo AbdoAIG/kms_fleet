@@ -201,6 +201,7 @@ class VehicleCard extends StatelessWidget {
                   // Actions menu
                   if (onEdit != null || onMaintenance != null)
                     PopupMenuButton<String>(
+                      key: ValueKey('vcard_menu_${vehicle.plateNumber}'),
                       icon: const Icon(Icons.more_vert, color: AppColors.textHint, size: 18),
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
