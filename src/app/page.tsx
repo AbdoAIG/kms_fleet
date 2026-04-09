@@ -11,6 +11,7 @@ import {
   Menu,
   Sun,
   Moon,
+  Truck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -74,11 +75,9 @@ function SidebarContent({
           isSheet ? 'p-6 pt-10' : 'p-6'
         )}
       >
-        <img
-          src="/logo.png"
-          alt="KMS Fleet Logo"
-          className="w-11 h-11 rounded-xl object-contain shrink-0 bg-white/10 p-1"
-        />
+        <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+          <Truck className="w-6 h-6 text-white" />
+        </div>
         <div className="min-w-0">
           <h1 className="font-bold text-white text-sm leading-tight truncate">
             نظام إدارة صيانة
