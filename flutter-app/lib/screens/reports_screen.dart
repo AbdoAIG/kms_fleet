@@ -292,15 +292,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
     ];
 
     if (isWide) {
-      return Row(
-        children: exportItems
-            .map((item) => Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: _buildExportCard(item),
-                  ),
-                ))
-            .toList(),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // Responsive grid: 3 columns for very wide, 2 for medium
+          final crossAxisCount = constraints.maxWidth > 700 ? 3 : 2;
+          final spacing = 10.0;
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: exportItems.map((item) {
+              return SizedBox(
+                width: (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount,
+                height: 190,
+                child: _buildExportCard(item, isGrid: true),
+              );
+            }).toList(),
+          );
+        },
       );
     }
     return Column(
@@ -313,7 +321,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildExportCard(_ExportItem item) {
+  Widget _buildExportCard(_ExportItem item, {bool isGrid = false}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -324,87 +332,182 @@ class _ReportsScreenState extends State<ReportsScreen> {
           BoxShadow(color: AppColors.shadowLight, blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: item.formatColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(item.icon, color: item.formatColor, size: 24),
+      child: isGrid
+          ? _buildGridCard(item)
+          : _buildListCard(item),
+    );
+  }
+
+  /// Horizontal layout for mobile (single column)
+  Widget _buildListCard(_ExportItem item) {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: item.formatColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+          child: Icon(item.icon, color: item.formatColor, size: 24),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                   ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: item.formatColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      item.format,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: item.formatColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                item.description,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
                 ),
-                const SizedBox(height: 2),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        InkWell(
+          onTap: () => _handleExport(item.type),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.download, size: 14, color: Colors.white),
+                SizedBox(width: 4),
                 Text(
-                  item.description,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
+                  'تحميل',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
                 ),
               ],
             ),
           ),
-          Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: item.formatColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  item.format,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: item.formatColor,
-                  ),
+        ),
+      ],
+    );
+  }
+
+  /// Vertical layout for desktop/tablet (grid mode)
+  Widget _buildGridCard(_ExportItem item) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: item.formatColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(item.icon, color: item.formatColor, size: 22),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: item.formatColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                item.format,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: item.formatColor,
                 ),
               ),
-              const SizedBox(height: 6),
-              InkWell(
-                onTap: () => _handleExport(item.type),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.download, size: 14, color: Colors.white),
-                      SizedBox(width: 4),
-                      Text(
-                        'تحميل',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(
+          item.title,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 4),
+        Expanded(
+          child: Text(
+            item.description,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: InkWell(
+            onTap: () => _handleExport(item.type),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.download, size: 14, color: Colors.white),
+                  SizedBox(width: 6),
+                  Text(
+                    'تحميل',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
