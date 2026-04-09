@@ -194,102 +194,183 @@ class _MainScreenState extends State<MainScreen>
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0A5C56), Color(0xFF0F766E), Color(0xFF14B8A6)],
+          colors: [
+            Color(0xFF064E3B),
+            Color(0xFF065F46),
+            Color(0xFF047857),
+            Color(0xFF059669),
+          ],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
+          stops: [0.0, 0.3, 0.7, 1.0],
+        ),
+        boxShadow: [
+          // Deep shadow for depth
+          BoxShadow(
+            color: const Color(0xFF064E3B).withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+          // Subtle glow
+          BoxShadow(
+            color: const Color(0xFF10B981).withOpacity(0.15),
+            blurRadius: 30,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Decorative mesh pattern overlay
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.03,
+              child: CustomPaint(
+                painter: _MeshPatternPainter(),
+              ),
+            ),
+          ),
+          // Subtle gold accent line at top
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 2,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFFD4A853),
+                    Color(0xFFF0D78C),
+                    Color(0xFFD4A853),
+                    Color(0xFFF0D78C),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 12),
+              child: Row(
+                children: [
+                  // Premium Logo with golden border
+                  _buildPremiumLogo(),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          AppConstants.appNameAr,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            height: 1.2,
+                            letterSpacing: 0.5,
+                            shadows: [
+                              Shadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 1)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        // Premium subtitle with gold accent
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFFD4A853).withOpacity(0.15),
+                                const Color(0xFFF0D78C).withOpacity(0.1),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: const Color(0xFFD4A853).withOpacity(0.25),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.verified,
+                                size: 10,
+                                color: const Color(0xFFD4A853).withOpacity(0.8),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                AppConstants.appName,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: const Color(0xFFD4A853).withOpacity(0.9),
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_isWide) _buildSyncIndicator() else _buildCompactSyncIndicator(),
+                  const SizedBox(width: 6),
+                  _buildNotificationBell(),
+                  const SizedBox(width: 6),
+                  _buildProfileAvatar(displayName),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumLogo() {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFD4A853), Color(0xFFF0D78C), Color(0xFFD4A853)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: const Color(0xFFD4A853).withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFF5EEAD4), width: 0.5),
-        ),
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 16, right: 16, top: 6, bottom: 10),
-          child: Row(
-            children: [
-              // Logo with modern container
-              Container(
-                width: 46,
-                height: 46,
+      child: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: const Color(0xFF064E3B),
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(11),
+          child: Image.asset(
+            'assets/images/kms_logo.png',
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(13),
-                  border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(11),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset('assets/images/kms_logo.png', fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.local_shipping, size: 24, color: Colors.white),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      AppConstants.appNameAr,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        height: 1.2,
-                        shadows: [
-                          Shadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 1)),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        AppConstants.appName,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.white.withOpacity(0.85),
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              if (_isWide) _buildSyncIndicator() else _buildCompactSyncIndicator(),
-              const SizedBox(width: 8),
-              _buildNotificationBell(),
-              const SizedBox(width: 8),
-              _buildProfileAvatar(displayName),
-            ],
+                child: const Icon(Icons.local_shipping, size: 24, color: Colors.white),
+              );
+            },
           ),
         ),
       ),
@@ -419,11 +500,11 @@ class _MainScreenState extends State<MainScreen>
   Widget _buildSyncIndicator() {
     if (!supabaseReady) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: const Color(0xFFFCA5A5).withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1), width: 0.5),
+          border: Border.all(color: const Color(0xFFFCA5A5).withOpacity(0.2), width: 0.5),
         ),
         child: const Row(
           mainAxisSize: MainAxisSize.min,
@@ -439,23 +520,32 @@ class _MainScreenState extends State<MainScreen>
       onTap: _isSyncing ? null : _performSync,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          gradient: LinearGradient(
+            colors: [
+              Colors.white.withOpacity(0.1),
+              Colors.white.withOpacity(0.05),
+            ],
+          ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1), width: 0.5),
+          border: Border.all(color: const Color(0xFFD4A853).withOpacity(0.25), width: 0.5),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_isSyncing)
-              const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF5EEAD4)))
+              SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: const Color(0xFFF0D78C)))
             else
-              const Icon(Icons.cloud_done, size: 14, color: Color(0xFF5EEAD4)),
+              const Icon(Icons.cloud_done, size: 14, color: Color(0xFFD4A853)),
             const SizedBox(width: 5),
             Text(
               _isSyncing ? 'جاري...' : 'متصل',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white.withOpacity(0.9)),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFFD4A853).withOpacity(0.9),
+              ),
             ),
           ],
         ),
@@ -471,17 +561,25 @@ class _MainScreenState extends State<MainScreen>
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.12),
+          gradient: LinearGradient(
+            colors: [
+              Colors.white.withOpacity(0.08),
+              Colors.white.withOpacity(0.03),
+            ],
+          ),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.15), width: 0.5),
+          border: Border.all(
+            color: const Color(0xFFD4A853).withOpacity(0.2),
+            width: 0.5,
+          ),
         ),
         child: Center(
           child: _isSyncing
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF5EEAD4)))
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF0D78C)))
               : Icon(
-                  supabaseReady ? Icons.cloud_done : Icons.cloud_off,
+                  supabaseReady ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
                   size: 20,
-                  color: supabaseReady ? const Color(0xFF5EEAD4) : const Color(0xFFFCA5A5),
+                  color: supabaseReady ? const Color(0xFFD4A853) : const Color(0xFFFCA5A5),
                 ),
         ),
       ),
@@ -490,50 +588,88 @@ class _MainScreenState extends State<MainScreen>
 
   Widget _buildNotificationBell() {
     final unreadCount = context.select<NotificationProvider, int>((p) => p.unreadCount);
+    final hasUnread = unreadCount > 0;
+
     return InkWell(
       onTap: _showNotificationsPanel,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 40,
-        height: 40,
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 42,
+        height: 42,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.15), width: 0.5),
+          gradient: hasUnread
+              ? LinearGradient(
+                  colors: [
+                    const Color(0xFFD4A853).withOpacity(0.2),
+                    const Color(0xFFF0D78C).withOpacity(0.15),
+                  ],
+                )
+              : LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.1),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: hasUnread
+                ? const Color(0xFFD4A853).withOpacity(0.4)
+                : Colors.white.withOpacity(0.12),
+            width: hasUnread ? 1 : 0.5,
+          ),
         ),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Center(
               child: Icon(
-                unreadCount > 0 ? Icons.notifications_active : Icons.notifications_outlined,
+                hasUnread ? Icons.notifications_rounded : Icons.notifications_none_rounded,
                 size: 22,
-                color: unreadCount > 0 ? const Color(0xFF5EEAD4) : Colors.white.withOpacity(0.9),
+                color: hasUnread
+                    ? const Color(0xFFF0D78C)
+                    : Colors.white.withOpacity(0.85),
               ),
             ),
-            if (unreadCount > 0)
+            if (hasUnread)
               Positioned(
-                left: -2,
-                top: -2,
-                child: Container(
-                  width: 20,
-                  height: 20,
+                left: -3,
+                top: -3,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: AppColors.error,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(color: const Color(0xFF064E3B), width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.error.withOpacity(0.4),
-                        blurRadius: 6,
+                        color: AppColors.error.withOpacity(0.5),
+                        blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Center(
-                    child: Text(
-                      unreadCount > 9 ? '9+' : '$unreadCount',
-                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white, height: 1),
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        unreadCount > 9 ? '9+' : '$unreadCount',
+                        style: const TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          height: 1,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -548,14 +684,20 @@ class _MainScreenState extends State<MainScreen>
     final initial = displayName.isNotEmpty ? displayName[0] : 'م';
     return GestureDetector(
       onTap: _showProfileMenu,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFF5EEAD4), width: 2),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFD4A853), Color(0xFFF0D78C), Color(0xFFD4A853)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 8,
+              color: const Color(0xFFD4A853).withOpacity(0.3),
+              blurRadius: 10,
               offset: const Offset(0, 2),
             ),
           ],
@@ -565,7 +707,7 @@ class _MainScreenState extends State<MainScreen>
           height: 38,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF14B8A6), Color(0xFF0F766E)],
+              colors: [Color(0xFF065F46), Color(0xFF047857)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -579,6 +721,9 @@ class _MainScreenState extends State<MainScreen>
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
                 height: 1,
+                shadows: [
+                  Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 1)),
+                ],
               ),
             ),
           ),
@@ -956,4 +1101,27 @@ class _NotificationTile extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Decorative Pattern Painter ──────────────────────────────────────────
+
+class _MeshPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    final spacing = 30.0;
+    for (var x = 0.0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (var y = 0.0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
