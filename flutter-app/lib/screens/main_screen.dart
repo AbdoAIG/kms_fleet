@@ -100,7 +100,7 @@ class _MainScreenState extends State<MainScreen>
                 Expanded(child: Text('تم تحديث البيانات بنجاح', style: TextStyle(fontFamily: 'Cairo'))),
               ],
             ),
-            backgroundColor: const Color(0xFF1565C0),
+            backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
             duration: Duration(seconds: 2),
           ),
@@ -193,97 +193,102 @@ class _MainScreenState extends State<MainScreen>
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [const Color(0xFF1565C0), const Color(0xFF42A5F5)],
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0A5C56), Color(0xFF0F766E), Color(0xFF14B8A6)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1565C0).withOpacity(0.3),
-            blurRadius: 12,
+            color: AppColors.primary.withOpacity(0.25),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border(
-          bottom: BorderSide(color: const Color(0xFF90CAF9).withOpacity(0.5), width: 1),
+        border: const Border(
+          bottom: BorderSide(color: Color(0xFF5EEAD4), width: 0.5),
         ),
       ),
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 14),
+          padding: const EdgeInsets.only(left: 16, right: 16, top: 6, bottom: 10),
           child: Row(
             children: [
-              SizedBox(
-                width: 56,
-                height: 56,
-                child: Image.asset('assets/images/kms_logo.png', fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.local_shipping, size: 28, color: Colors.white),
-                    );
-                  },
+              // Logo with modern container
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(13),
+                  border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset('assets/images/kms_logo.png', fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.local_shipping, size: 24, color: Colors.white),
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    AppConstants.appNameAr,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      height: 1.2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      AppConstants.appNameAr,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        height: 1.2,
+                        shadows: [
+                          Shadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 1)),
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    AppConstants.appName,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.white.withOpacity(0.7),
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        AppConstants.appName,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.white.withOpacity(0.85),
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
               ),
               const Spacer(),
               if (_isWide) _buildSyncIndicator() else _buildCompactSyncIndicator(),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               _buildNotificationBell(),
-              const SizedBox(width: 6),
-              GestureDetector(
-                onTap: _showProfileMenu,
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-                  ),
-                  child: Center(
-                    child: Text(
-                      displayName.isNotEmpty ? displayName[0] : 'م',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              const SizedBox(width: 8),
+              _buildProfileAvatar(displayName),
             ],
           ),
         ),
@@ -320,12 +325,29 @@ class _MainScreenState extends State<MainScreen>
               ),
             ),
             const SizedBox(height: 16),
-            CircleAvatar(
-              radius: 36,
-              backgroundColor: AppColors.primaryContainer,
-              child: Text(
-                displayName.isNotEmpty ? displayName[0] : 'م',
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.primary),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppColors.primaryLight, AppColors.primary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  displayName.isNotEmpty ? displayName[0] : 'م',
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -397,41 +419,43 @@ class _MainScreenState extends State<MainScreen>
   Widget _buildSyncIndicator() {
     if (!supabaseReady) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.1), width: 0.5),
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off, size: 13, color: Colors.white.withOpacity(0.8)),
-            const SizedBox(width: 4),
-            Text('غير متصل', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white.withOpacity(0.8))),
+            Icon(Icons.cloud_off, size: 14, color: Color(0xFFFCA5A5)),
+            SizedBox(width: 5),
+            Text('غير متصل', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFFFCA5A5))),
           ],
         ),
       );
     }
     return InkWell(
       onTap: _isSyncing ? null : _performSync,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.1), width: 0.5),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_isSyncing)
-              SizedBox(width: 13, height: 13, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF5EEAD4)))
             else
-              Icon(Icons.cloud_done, size: 13, color: Colors.white.withOpacity(0.9)),
-            const SizedBox(width: 4),
+              const Icon(Icons.cloud_done, size: 14, color: Color(0xFF5EEAD4)),
+            const SizedBox(width: 5),
             Text(
               _isSyncing ? 'جاري...' : 'متصل',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white.withOpacity(0.9)),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white.withOpacity(0.9)),
             ),
           ],
         ),
@@ -442,12 +466,24 @@ class _MainScreenState extends State<MainScreen>
   Widget _buildCompactSyncIndicator() {
     return InkWell(
       onTap: _isSyncing ? null : _performSync,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: _isSyncing
-            ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : Icon(supabaseReady ? Icons.cloud_done : Icons.cloud_off, size: 18, color: Colors.white.withOpacity(0.9)),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.15), width: 0.5),
+        ),
+        child: Center(
+          child: _isSyncing
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF5EEAD4)))
+              : Icon(
+                  supabaseReady ? Icons.cloud_done : Icons.cloud_off,
+                  size: 20,
+                  color: supabaseReady ? const Color(0xFF5EEAD4) : const Color(0xFFFCA5A5),
+                ),
+        ),
       ),
     );
   }
@@ -456,36 +492,96 @@ class _MainScreenState extends State<MainScreen>
     final unreadCount = context.select<NotificationProvider, int>((p) => p.unreadCount);
     return InkWell(
       onTap: _showNotificationsPanel,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.15), width: 0.5),
         ),
         child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            Icon(Icons.notifications_outlined, size: 20, color: Colors.white.withOpacity(0.9)),
+            Center(
+              child: Icon(
+                unreadCount > 0 ? Icons.notifications_active : Icons.notifications_outlined,
+                size: 22,
+                color: unreadCount > 0 ? const Color(0xFF5EEAD4) : Colors.white.withOpacity(0.9),
+              ),
+            ),
             if (unreadCount > 0)
               Positioned(
-                left: 0,
-                top: 0,
+                left: -2,
+                top: -2,
                 child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: const BoxDecoration(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
                     color: AppColors.error,
                     shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.error.withOpacity(0.4),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Center(
                     child: Text(
                       unreadCount > 9 ? '9+' : '$unreadCount',
-                      style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: Colors.white),
+                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white, height: 1),
                     ),
                   ),
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileAvatar(String displayName) {
+    final initial = displayName.isNotEmpty ? displayName[0] : 'م';
+    return GestureDetector(
+      onTap: _showProfileMenu,
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFF5EEAD4), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF14B8A6), Color(0xFF0F766E)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              initial,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                height: 1,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -567,7 +663,7 @@ class _MainScreenState extends State<MainScreen>
           duration: const Duration(milliseconds: 200),
           padding: EdgeInsets.symmetric(horizontal: _sidebarExpanded ? 14 : 0, vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF1565C0) : Colors.transparent,
+            color: isSelected ? AppColors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -671,11 +767,11 @@ class _MainScreenState extends State<MainScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (_isSyncing)
-                      SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: const Color(0xFF1565C0)))
+                      SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
                     else
-                      Icon(Icons.sync, size: 14, color: const Color(0xFF1565C0)),
+                      Icon(Icons.sync, size: 14, color: AppColors.primary),
                     const SizedBox(width: 4),
-                    Text('مزامنة', style: TextStyle(fontFamily: 'Cairo', fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF1565C0))),
+                    Text('مزامنة', style: TextStyle(fontFamily: 'Cairo', fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary)),
                   ],
                 ),
               ),
@@ -699,7 +795,7 @@ class _MainScreenState extends State<MainScreen>
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF1565C0) : Colors.transparent,
+                color: isSelected ? AppColors.primary : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(

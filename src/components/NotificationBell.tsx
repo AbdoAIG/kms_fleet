@@ -14,6 +14,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { ar } from 'date-fns/locale'
@@ -114,12 +115,12 @@ export default function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className="relative h-9 w-9"
           aria-label="الإشعارات"
         >
-          <Bell className="h-5 w-5" />
+          <Bell className={cn("h-[18px] w-[18px]", unreadCount > 0 && "text-teal-500")} />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -left-0.5 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+            <span className="absolute -top-0.5 -left-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none ring-2 ring-background shadow-sm">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}

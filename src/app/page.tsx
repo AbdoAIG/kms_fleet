@@ -12,8 +12,22 @@ import {
   Sun,
   Moon,
   Truck,
+  LogOut,
+  Settings,
+  Shield,
+  UserCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Sheet,
   SheetContent,
@@ -24,6 +38,7 @@ import {
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { useAppStore, type Page } from '@/lib/store'
+import NotificationBell from '@/components/NotificationBell'
 
 import DashboardView from '@/components/views/DashboardView'
 import VehiclesView from '@/components/views/VehiclesView'
@@ -56,6 +71,61 @@ const pageDescriptions: Record<Page, string> = {
   reports: 'تقارير وتحليلات مفصلة',
 }
 
+/* ─── Profile Dropdown ─── */
+function ProfileDropdown() {
+  return (
+    <DropdownMenu dir="rtl">
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="relative h-9 w-9 rounded-full p-0 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+          aria-label="قائمة المستخدم"
+        >
+          <Avatar className="h-9 w-9 border-2 border-emerald-400 shadow-sm">
+            <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-700 text-white text-sm font-bold">
+              م
+            </AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        className="w-56"
+        align="start"
+        sideOffset={8}
+      >
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-semibold leading-none">مدير النظام</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              admin@fleet.com
+            </p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem className="cursor-pointer gap-2">
+            <UserCircle className="h-4 w-4 text-muted-foreground" />
+            <span>الملف الشخصي</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="cursor-pointer gap-2">
+            <Settings className="h-4 w-4 text-muted-foreground" />
+            <span>الإعدادات</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="cursor-pointer gap-2">
+            <Shield className="h-4 w-4 text-muted-foreground" />
+            <span>إدارة المستخدمين</span>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="cursor-pointer gap-2 text-red-600 focus:text-red-600">
+          <LogOut className="h-4 w-4" />
+          <span>تسجيل الخروج</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 /* ─── Sidebar Content (shared between desktop & mobile) ─── */
 function SidebarContent({
   currentPage,
@@ -75,8 +145,13 @@ function SidebarContent({
           isSheet ? 'p-6 pt-10' : 'p-6'
         )}
       >
-        <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-          <Truck className="w-6 h-6 text-white" />
+        <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="KMS Fleet"
+            className="w-full h-full object-contain"
+          />
         </div>
         <div className="min-w-0">
           <h1 className="font-bold text-white text-sm leading-tight truncate">
@@ -112,7 +187,7 @@ function SidebarContent({
       {/* Bottom user info */}
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-9 h-9 rounded-full bg-emerald-500/30 flex items-center justify-center text-sm font-bold text-white shrink-0">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-400 to-emerald-600 flex items-center justify-center text-sm font-bold text-white shrink-0 shadow-md ring-2 ring-white/20">
             م
           </div>
           <div className="min-w-0">
@@ -167,13 +242,13 @@ export default function Home() {
         <div className="flex-1 flex flex-col min-h-screen">
           {/* Header */}
           <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b">
-            <div className="flex items-center justify-between px-4 md:px-6 h-16">
+            <div className="flex items-center justify-between px-4 md:px-6 h-14">
               {/* Right side: hamburger + title */}
               <div className="flex items-center gap-3">
                 {/* Mobile hamburger → Sheet */}
                 <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="md:hidden">
+                    <Button variant="ghost" size="icon" className="md:hidden h-9 w-9">
                       <Menu className="w-5 h-5" />
                       <span className="sr-only">فتح القائمة</span>
                     </Button>
@@ -196,28 +271,35 @@ export default function Home() {
                 </Sheet>
 
                 <div>
-                  <h2 className="text-lg font-bold text-foreground leading-tight">
+                  <h2 className="text-base font-bold text-foreground leading-tight">
                     {pageTitles[currentPage]}
                   </h2>
-                  <p className="text-xs text-muted-foreground hidden sm:block">
+                  <p className="text-[11px] text-muted-foreground hidden sm:block">
                     {pageDescriptions[currentPage]}
                   </p>
                 </div>
               </div>
 
               {/* Left side: actions */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
+                {/* Notification Bell */}
+                <NotificationBell />
+
                 {/* Theme toggle */}
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="h-9 w-9"
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                   aria-label="تبديل المظهر"
                 >
-                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                  <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                  <Sun className="h-[18px] w-[18px] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                  <Moon className="absolute h-[18px] w-[18px] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                   <span className="sr-only">تبديل المظهر</span>
                 </Button>
+
+                {/* Profile avatar */}
+                <ProfileDropdown />
               </div>
             </div>
           </header>
@@ -231,9 +313,9 @@ export default function Home() {
           </main>
 
           {/* Footer */}
-          <footer className="border-t bg-background/95 backdrop-blur-sm px-4 md:px-6 py-3">
+          <footer className="border-t bg-background/95 backdrop-blur-sm px-4 md:px-6 py-3 mt-auto">
             <p className="text-center text-xs text-muted-foreground">
-              © 2025 شركة صيانة السيارات - جميع الحقوق محفوظة
+              © 2025 شركة KMS Fleet - جميع الحقوق محفوظة
             </p>
           </footer>
         </div>
