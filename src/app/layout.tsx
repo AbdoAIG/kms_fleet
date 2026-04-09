@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: "نظام إدارة صيانة السيارات",
   description: "نظام متكامل لإدارة صيانة أسطيل السيارات - تتبع الصيانة والفحص والتكاليف",
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/logo.png",
   },
 };
 
