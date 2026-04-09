@@ -333,45 +333,23 @@ class _MainScreenState extends State<MainScreen>
   }
 
   Widget _buildPremiumLogo() {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFD4A853), Color(0xFFF0D78C), Color(0xFFD4A853)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD4A853).withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          color: const Color(0xFF064E3B),
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(11),
-          child: Image.asset(
-            'assets/images/kms_logo.png',
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: const Icon(Icons.local_shipping, size: 24, color: Colors.white),
-              );
-            },
-          ),
+    return SizedBox(
+      width: 56,
+      height: 56,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.asset(
+          'assets/images/kms_logo.png',
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.local_shipping, size: 32, color: Colors.white),
+            );
+          },
         ),
       ),
     );
