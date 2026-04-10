@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' hide Key;
 import 'package:encrypt/encrypt.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -91,7 +91,7 @@ class SecurityService {
     final prefs = await SharedPreferences.getInstance();
 
     // bcrypt: generates salt internally and embeds it in the hash ($2a$12$...)
-    final hash = BCrypt.hashpw(password, BCrypt.gensaltWithRounds(12));
+    final hash = BCrypt.hashpw(password, BCrypt.gensalt(logRounds: 12));
 
     await prefs.setString(_keyStoredEmail, email.toLowerCase().trim());
     await prefs.setString(_keyStoredPasswordHash, hash);
