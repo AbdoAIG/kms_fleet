@@ -90,7 +90,9 @@ class WorkOrderProvider extends ChangeNotifier {
   Future<int> addOrder(WorkOrder order) async {
     final id = await DatabaseService.insertWorkOrder(order);
     if (id > 0) {
-      await loadOrders();
+      // Update local list directly instead of re-fetching
+      _orders.insert(0, order.copyWith(id: id));
+      _applyFilters();
     }
     return id;
   }
@@ -98,7 +100,12 @@ class WorkOrderProvider extends ChangeNotifier {
   Future<bool> updateOrder(WorkOrder order) async {
     final rows = await DatabaseService.updateWorkOrder(order);
     if (rows > 0) {
-      await loadOrders();
+      // Update local list directly
+      final index = _orders.indexWhere((o) => o.id == order.id);
+      if (index >= 0) {
+        _orders[index] = order;
+      }
+      _applyFilters();
     }
     return rows > 0;
   }
@@ -106,7 +113,9 @@ class WorkOrderProvider extends ChangeNotifier {
   Future<bool> deleteOrder(int id) async {
     final rows = await DatabaseService.deleteWorkOrder(id);
     if (rows > 0) {
-      await loadOrders();
+      // Update local list directly
+      _orders.removeWhere((o) => o.id == id);
+      _applyFilters();
     }
     return rows > 0;
   }

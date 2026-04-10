@@ -90,7 +90,9 @@ class ExpenseProvider extends ChangeNotifier {
   Future<int> addExpense(Expense expense) async {
     final id = await DatabaseService.insertExpense(expense);
     if (id > 0) {
-      await loadExpenses();
+      // Update local list directly instead of re-fetching
+      _expenses.insert(0, expense.copyWith(id: id));
+      notifyListeners();
     }
     return id;
   }
@@ -98,7 +100,12 @@ class ExpenseProvider extends ChangeNotifier {
   Future<int> updateExpense(Expense expense) async {
     final result = await DatabaseService.updateExpense(expense);
     if (result > 0) {
-      await loadExpenses();
+      // Update local list directly
+      final index = _expenses.indexWhere((e) => e.id == expense.id);
+      if (index >= 0) {
+        _expenses[index] = expense;
+      }
+      notifyListeners();
     }
     return result;
   }
@@ -106,7 +113,9 @@ class ExpenseProvider extends ChangeNotifier {
   Future<int> deleteExpense(int id) async {
     final result = await DatabaseService.deleteExpense(id);
     if (result > 0) {
-      await loadExpenses();
+      // Update local list directly
+      _expenses.removeWhere((e) => e.id == id);
+      notifyListeners();
     }
     return result;
   }

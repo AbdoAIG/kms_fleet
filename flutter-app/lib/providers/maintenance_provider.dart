@@ -109,7 +109,9 @@ class MaintenanceProvider extends ChangeNotifier {
   Future<int> addRecord(MaintenanceRecord record) async {
     final id = await DatabaseService.insertMaintenanceRecord(record);
     if (id > 0) {
-      await loadRecords();
+      // Update local list directly instead of re-fetching
+      _records.insert(0, record.copyWith(id: id));
+      _applyFilters();
     }
     return id;
   }
@@ -117,7 +119,12 @@ class MaintenanceProvider extends ChangeNotifier {
   Future<bool> updateRecord(MaintenanceRecord record) async {
     final rows = await DatabaseService.updateMaintenanceRecord(record);
     if (rows > 0) {
-      await loadRecords();
+      // Update local list directly
+      final index = _records.indexWhere((r) => r.id == record.id);
+      if (index >= 0) {
+        _records[index] = record;
+      }
+      _applyFilters();
     }
     return rows > 0;
   }
@@ -125,7 +132,9 @@ class MaintenanceProvider extends ChangeNotifier {
   Future<bool> deleteRecord(int id) async {
     final rows = await DatabaseService.deleteMaintenanceRecord(id);
     if (rows > 0) {
-      await loadRecords();
+      // Update local list directly
+      _records.removeWhere((r) => r.id == id);
+      _applyFilters();
     }
     return rows > 0;
   }

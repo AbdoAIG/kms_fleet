@@ -86,7 +86,9 @@ class VehicleProvider extends ChangeNotifier {
   Future<int> addVehicle(Vehicle vehicle) async {
     final id = await DatabaseService.insertVehicle(vehicle);
     if (id > 0) {
-      await loadVehicles();
+      // Update local list directly instead of re-fetching from Supabase
+      _vehicles.insert(0, vehicle.copyWith(id: id));
+      _applyFilters();
     }
     return id;
   }
@@ -94,7 +96,12 @@ class VehicleProvider extends ChangeNotifier {
   Future<bool> updateVehicle(Vehicle vehicle) async {
     final rows = await DatabaseService.updateVehicle(vehicle);
     if (rows > 0) {
-      await loadVehicles();
+      // Update local list directly
+      final index = _vehicles.indexWhere((v) => v.id == vehicle.id);
+      if (index >= 0) {
+        _vehicles[index] = vehicle;
+      }
+      _applyFilters();
     }
     return rows > 0;
   }
@@ -102,7 +109,9 @@ class VehicleProvider extends ChangeNotifier {
   Future<bool> deleteVehicle(int id) async {
     final rows = await DatabaseService.deleteVehicle(id);
     if (rows > 0) {
-      await loadVehicles();
+      // Update local list directly
+      _vehicles.removeWhere((v) => v.id == id);
+      _applyFilters();
     }
     return rows > 0;
   }

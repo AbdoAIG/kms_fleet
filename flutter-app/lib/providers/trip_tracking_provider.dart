@@ -50,7 +50,17 @@ class TripTrackingProvider extends ChangeNotifier {
   Future<int> saveTrip(TripTracking trip) async {
     try {
       final id = await DatabaseService.insertTrip(trip);
-      await loadTrips();
+      if (id > 0) {
+        // Update local list directly instead of re-fetching
+        final newTrip = trip.copyWith(id: id);
+        _trips.insert(0, newTrip);
+        // Also update _vehicleTrips if matching
+        final vehicleId = trip.vehicleId;
+        if (_vehicleTrips.isNotEmpty && _vehicleTrips.first.vehicleId == vehicleId) {
+          _vehicleTrips.insert(0, newTrip);
+        }
+        notifyListeners();
+      }
       return id;
     } catch (e) {
       debugPrint('Error saving trip: $e');
@@ -64,8 +74,18 @@ class TripTrackingProvider extends ChangeNotifier {
         status: 'cancelled',
         updatedAt: DateTime.now(),
       );
-      await DatabaseService.insertTrip(cancelledTrip);
-      await loadTrips();
+      final id = await DatabaseService.insertTrip(cancelledTrip);
+      if (id > 0) {
+        // Update local list directly
+        final newTrip = cancelledTrip.copyWith(id: id);
+        _trips.insert(0, newTrip);
+        // Also update _vehicleTrips if matching
+        final vehicleId = trip.vehicleId;
+        if (_vehicleTrips.isNotEmpty && _vehicleTrips.first.vehicleId == vehicleId) {
+          _vehicleTrips.insert(0, newTrip);
+        }
+        notifyListeners();
+      }
       return true;
     } catch (e) {
       debugPrint('Error cancelling trip: $e');

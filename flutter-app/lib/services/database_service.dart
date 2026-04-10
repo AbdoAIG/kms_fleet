@@ -116,6 +116,8 @@ class DatabaseService {
   }
 
   /// If Supabase tables are empty for this user, seed with sample data.
+  /// FIX: Removes id/created_at/updated_at from seed data so Supabase
+  /// auto-generates BIGSERIAL IDs instead of conflicting with the sequence.
   static Future<void> _seedIfEmpty() async {
     try {
       final response = await _db.from('vehicles').select('id').eq('user_id', _uid!).limit(1);
@@ -123,13 +125,24 @@ class DatabaseService {
         debugPrint('DB: No data found for user, seeding sample data...');
         // Seed vehicles first (other entities reference them)
         for (final v in _seedVehicles()) {
-          await _db.from('vehicles').insert(_toSupabaseRow(v.toMap()));
+          final map = _toSupabaseRow(v.toMap());
+          map.remove('id');
+          map.remove('created_at');
+          map.remove('updated_at');
+          await _db.from('vehicles').insert(map);
         }
         for (final r in _seedRecords()) {
-          await _db.from('maintenance_records').insert(_toSupabaseRow(r.toMap()));
+          final map = _toSupabaseRow(r.toMap());
+          map.remove('id');
+          map.remove('created_at');
+          map.remove('updated_at');
+          await _db.from('maintenance_records').insert(map);
         }
         for (final c in _seedChecklists()) {
           final map = _toSupabaseRow(c.toMap());
+          map.remove('id');
+          map.remove('created_at');
+          map.remove('updated_at');
           if (map['items'] is String) {
             try { map['items'] = jsonDecode(map['items']); } catch (_) {}
           }
@@ -137,21 +150,39 @@ class DatabaseService {
         }
         for (final f in _seedFuelRecords()) {
           final map = _toSupabaseRow(f.toMap());
+          map.remove('id');
+          map.remove('created_at');
+          map.remove('updated_at');
           if (map['full_tank'] is int) map['full_tank'] = (map['full_tank'] as int) != 0;
           if (map['is_abnormal'] is int) map['is_abnormal'] = (map['is_abnormal'] as int) != 0;
           await _db.from('fuel_records').insert(map);
         }
         for (final v in _seedViolations()) {
-          await _db.from('driver_violations').insert(_toSupabaseRow(v.toMap()));
+          final map = _toSupabaseRow(v.toMap());
+          map.remove('id');
+          map.remove('created_at');
+          map.remove('updated_at');
+          await _db.from('driver_violations').insert(map);
         }
         for (final e in _seedExpenses()) {
-          await _db.from('expenses').insert(_toSupabaseRow(e.toMap()));
+          final map = _toSupabaseRow(e.toMap());
+          map.remove('id');
+          map.remove('created_at');
+          map.remove('updated_at');
+          await _db.from('expenses').insert(map);
         }
         for (final o in _seedWorkOrders()) {
-          await _db.from('work_orders').insert(_toSupabaseRow(o.toMap()));
+          final map = _toSupabaseRow(o.toMap());
+          map.remove('id');
+          map.remove('created_at');
+          map.remove('updated_at');
+          await _db.from('work_orders').insert(map);
         }
         for (final t in _seedTrips()) {
           final map = _toSupabaseRow(t.toMap());
+          map.remove('id');
+          map.remove('created_at');
+          map.remove('updated_at');
           final rawPoints = map['trip_points_json'];
           if (rawPoints is String && rawPoints.isNotEmpty) {
             try { map['trip_points_json'] = jsonDecode(rawPoints); } catch (_) {}
@@ -338,11 +369,14 @@ class DatabaseService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /// Convert a model's toMap() output to a Supabase-compatible row (adds user_id).
+  /// FIX: Also removes null values to avoid Supabase column issues.
   static Map<String, dynamic> _toSupabaseRow(Map<String, dynamic> map) {
     final row = Map<String, dynamic>.from(map);
     row['user_id'] = _uid;
     // Don't send null id for inserts — let Postgres auto-generate BIGSERIAL
     if (row['id'] == null) row.remove('id');
+    // Remove null values to avoid Supabase column issues
+    row.removeWhere((key, value) => value == null);
     return row;
   }
 
@@ -381,11 +415,21 @@ class DatabaseService {
   //  VEHICLE CRUD
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /// FIX: Merge Supabase data with local-only items to avoid losing locally-added vehicles.
   static Future<List<Vehicle>> getAllVehicles() async {
     if (_offline) return List.from(_memVehicles);
     try {
       final response = await _db.from('vehicles').select().eq('user_id', _uid!).order('created_at', ascending: false);
-      return response.map((r) => Vehicle.fromMap(_fromSupabaseRow(r))).toList();
+      final supabaseVehicles = response.map((r) => Vehicle.fromMap(_fromSupabaseRow(r))).toList();
+
+      // Merge with local-only items not yet in Supabase
+      final supabaseIds = supabaseVehicles.where((v) => v.id != null).map((v) => v.id!).toSet();
+      final localOnly = _memVehicles.where((v) => v.id != null && !supabaseIds.contains(v.id)).toList();
+
+      // Update memory to keep in sync
+      _memVehicles = [...supabaseVehicles, ...localOnly];
+
+      return List.from(_memVehicles);
     } catch (e) {
       debugPrint('DB: Error fetching vehicles: $e');
       return List.from(_memVehicles);
@@ -414,24 +458,35 @@ class DatabaseService {
         (v.driverName != null && v.driverName!.toLowerCase().contains(q))).toList();
   }
 
+  /// FIX: Always generate a local ID first. On Supabase failure, fall back to offline storage.
   static Future<int> insertVehicle(Vehicle v) async {
+    // Always generate a local ID first
+    final maxId = _memVehicles.isEmpty ? 0 : _memVehicles.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+    final localId = maxId + 1;
+
     if (_offline) {
-      final maxId = _memVehicles.isEmpty ? 0 : _memVehicles.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
-      _memVehicles.insert(0, v.copyWith(id: maxId + 1));
+      _memVehicles.insert(0, v.copyWith(id: localId));
       await _persistOffline();
-      return maxId + 1;
+      return localId;
     }
+
     try {
       final row = _toSupabaseRow(v.toMap());
       // Remove created_at/updated_at so Supabase uses defaults
       row.remove('created_at');
       row.remove('updated_at');
       final response = await _db.from('vehicles').insert(row).select('id').single();
-      return (response['id'] as int?) ?? -1;
+      final supabaseId = (response['id'] as int?) ?? localId;
+      _memVehicles.insert(0, v.copyWith(id: supabaseId));
+      await _persistOffline();
+      return supabaseId;
     } catch (e) {
-      debugPrint('DB: Error inserting vehicle: $e');
+      debugPrint('DB: Supabase insert failed, using offline fallback: $e');
       debugPrint('DB: Vehicle data: plate=${v.plateNumber}, type=${v.vehicleType}, user=$_uid');
-      return -1;
+      // Fallback: save locally
+      _memVehicles.insert(0, v.copyWith(id: localId));
+      await _persistOffline();
+      return localId;
     }
   }
 
@@ -467,6 +522,7 @@ class DatabaseService {
   //  MAINTENANCE CRUD
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /// FIX: Merge Supabase data with local-only items.
   static Future<List<MaintenanceRecord>> getAllMaintenanceRecords() async {
     final vehicles = await getAllVehicles();
     if (_offline) {
@@ -477,7 +533,16 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('maintenance_records').select().eq('user_id', _uid!).order('maintenance_date', ascending: false);
-      return _joinVehicles(response.map((m) => MaintenanceRecord.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
+      final supabaseRecords = response.map((m) => MaintenanceRecord.fromMap(_fromSupabaseRow(m))).toList();
+
+      // Merge with local-only items
+      final supabaseIds = supabaseRecords.where((r) => r.id != null).map((r) => r.id!).toSet();
+      final localOnly = _memRecords.where((r) => r.id != null && !supabaseIds.contains(r.id)).toList();
+
+      // Update memory
+      _memRecords = [...supabaseRecords, ...localOnly];
+
+      return _joinVehicles(List.from(_memRecords), vehicles);
     } catch (e) {
       debugPrint('DB: Error fetching maintenance: $e');
       return List.from(_memRecords);
@@ -495,22 +560,32 @@ class DatabaseService {
     } catch (e) { return []; }
   }
 
+  /// FIX: Always generate a local ID first. On Supabase failure, fall back to offline storage.
   static Future<int> insertMaintenanceRecord(MaintenanceRecord r) async {
+    final maxId = _memRecords.isEmpty ? 0 : _memRecords.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+    final localId = maxId + 1;
+
     if (_offline) {
-      final maxId = _memRecords.isEmpty ? 0 : _memRecords.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
-      _memRecords.insert(0, r.copyWith(id: maxId + 1));
+      _memRecords.insert(0, r.copyWith(id: localId));
       await _persistOffline();
-      return maxId + 1;
+      return localId;
     }
+
     try {
       final row = _toSupabaseRow(r.toMap());
       row.remove('created_at');
       row.remove('updated_at');
       final response = await _db.from('maintenance_records').insert(row).select('id').single();
-      return (response['id'] as int?) ?? -1;
+      final supabaseId = (response['id'] as int?) ?? localId;
+      _memRecords.insert(0, r.copyWith(id: supabaseId));
+      await _persistOffline();
+      return supabaseId;
     } catch (e) {
-      debugPrint('DB: Error inserting maintenance: $e');
-      return -1;
+      debugPrint('DB: Supabase insert failed, using offline fallback: $e');
+      debugPrint('DB: Maintenance data: vehicleId=${r.vehicleId}, type=${r.type}');
+      _memRecords.insert(0, r.copyWith(id: localId));
+      await _persistOffline();
+      return localId;
     }
   }
 
@@ -542,6 +617,7 @@ class DatabaseService {
   //  CHECKLIST CRUD
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /// FIX: Merge Supabase data with local-only items.
   static Future<List<Checklist>> getAllChecklists() async {
     final vehicles = await getAllVehicles();
     if (_offline) {
@@ -552,7 +628,16 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('checklists').select().eq('user_id', _uid!).order('inspection_date', ascending: false);
-      return _joinVehiclesChecklists(response.map((m) => Checklist.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
+      final supabaseChecklists = response.map((m) => Checklist.fromMap(_fromSupabaseRow(m))).toList();
+
+      // Merge with local-only items
+      final supabaseIds = supabaseChecklists.where((c) => c.id != null).map((c) => c.id!).toSet();
+      final localOnly = _memChecklists.where((c) => c.id != null && !supabaseIds.contains(c.id)).toList();
+
+      // Update memory
+      _memChecklists = [...supabaseChecklists, ...localOnly];
+
+      return _joinVehiclesChecklists(List.from(_memChecklists), vehicles);
     } catch (e) {
       debugPrint('DB: Error fetching checklists: $e');
       return List.from(_memChecklists);
@@ -591,13 +676,17 @@ class DatabaseService {
     } catch (e) { return []; }
   }
 
+  /// FIX: Always generate a local ID first. On Supabase failure, fall back to offline storage.
   static Future<int> insertChecklist(Checklist c) async {
+    final maxId = _memChecklists.isEmpty ? 0 : _memChecklists.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+    final localId = maxId + 1;
+
     if (_offline) {
-      final maxId = _memChecklists.isEmpty ? 0 : _memChecklists.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
-      _memChecklists.insert(0, c.copyWith(id: maxId + 1));
+      _memChecklists.insert(0, c.copyWith(id: localId));
       await _persistOffline();
-      return maxId + 1;
+      return localId;
     }
+
     try {
       final map = _toSupabaseRow(c.toMap());
       // Convert JSON string items to List for JSONB column
@@ -608,8 +697,17 @@ class DatabaseService {
       map.remove('created_at');
       map.remove('updated_at');
       final response = await _db.from('checklists').insert(map).select('id').single();
-      return (response['id'] as int?) ?? -1;
-    } catch (e) { debugPrint('DB: Error inserting checklist: $e'); return -1; }
+      final supabaseId = (response['id'] as int?) ?? localId;
+      _memChecklists.insert(0, c.copyWith(id: supabaseId));
+      await _persistOffline();
+      return supabaseId;
+    } catch (e) {
+      debugPrint('DB: Supabase insert failed, using offline fallback: $e');
+      debugPrint('DB: Checklist data: vehicleId=${c.vehicleId}, type=${c.type}');
+      _memChecklists.insert(0, c.copyWith(id: localId));
+      await _persistOffline();
+      return localId;
+    }
   }
 
   static Future<int> updateChecklist(Checklist c) async {
@@ -642,6 +740,7 @@ class DatabaseService {
   //  FUEL RECORD CRUD
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /// FIX: Merge Supabase data with local-only items.
   static Future<List<FuelRecord>> getAllFuelRecords() async {
     final vehicles = await getAllVehicles();
     if (_offline) {
@@ -652,7 +751,16 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('fuel_records').select().eq('user_id', _uid!).order('fill_date', ascending: false);
-      return _joinVehiclesFuel(response.map((m) => FuelRecord.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
+      final supabaseRecords = response.map((m) => FuelRecord.fromMap(_fromSupabaseRow(m))).toList();
+
+      // Merge with local-only items
+      final supabaseIds = supabaseRecords.where((f) => f.id != null).map((f) => f.id!).toSet();
+      final localOnly = _memFuelRecords.where((f) => f.id != null && !supabaseIds.contains(f.id)).toList();
+
+      // Update memory
+      _memFuelRecords = [...supabaseRecords, ...localOnly];
+
+      return _joinVehiclesFuel(List.from(_memFuelRecords), vehicles);
     } catch (e) {
       debugPrint('DB: Error fetching fuel: $e');
       return List.from(_memFuelRecords);
@@ -691,15 +799,19 @@ class DatabaseService {
     } catch (e) { return []; }
   }
 
+  /// FIX: Always generate a local ID first. On Supabase failure, fall back to offline storage.
   static Future<int> insertFuelRecord(FuelRecord f) async {
+    final maxId = _memFuelRecords.isEmpty ? 0 : _memFuelRecords.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+    final localId = maxId + 1;
+
     if (_offline) {
-      final maxId = _memFuelRecords.isEmpty ? 0 : _memFuelRecords.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
-      final record = f.copyWith(id: maxId + 1);
+      final record = f.copyWith(id: localId);
       _memFuelRecords.insert(0, record);
       _calculateAndUpdateConsumptionRate(record, _memFuelRecords);
       await _persistOffline();
-      return maxId + 1;
+      return localId;
     }
+
     try {
       final map = _toSupabaseRow(f.toMap());
       // Convert int booleans to real booleans for Supabase
@@ -708,8 +820,21 @@ class DatabaseService {
       map.remove('created_at');
       map.remove('updated_at');
       final response = await _db.from('fuel_records').insert(map).select('id').single();
-      return (response['id'] as int?) ?? -1;
-    } catch (e) { debugPrint('DB: Error inserting fuel: $e'); return -1; }
+      final supabaseId = (response['id'] as int?) ?? localId;
+      final record = f.copyWith(id: supabaseId);
+      _memFuelRecords.insert(0, record);
+      _calculateAndUpdateConsumptionRate(record, _memFuelRecords);
+      await _persistOffline();
+      return supabaseId;
+    } catch (e) {
+      debugPrint('DB: Supabase insert failed, using offline fallback: $e');
+      debugPrint('DB: Fuel data: vehicleId=${f.vehicleId}, liters=${f.liters}');
+      final record = f.copyWith(id: localId);
+      _memFuelRecords.insert(0, record);
+      _calculateAndUpdateConsumptionRate(record, _memFuelRecords);
+      await _persistOffline();
+      return localId;
+    }
   }
 
   static Future<int> updateFuelRecord(FuelRecord f) async {
@@ -814,6 +939,7 @@ class DatabaseService {
   //  DRIVER VIOLATION CRUD
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /// FIX: Merge Supabase data with local-only items.
   static Future<List<DriverViolation>> getAllViolations() async {
     final vehicles = await getAllVehicles();
     if (_offline) {
@@ -824,7 +950,16 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('driver_violations').select().eq('user_id', _uid!).order('date', ascending: false);
-      return _joinVehiclesViolations(response.map((m) => DriverViolation.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
+      final supabaseViolations = response.map((m) => DriverViolation.fromMap(_fromSupabaseRow(m))).toList();
+
+      // Merge with local-only items
+      final supabaseIds = supabaseViolations.where((v) => v.id != null).map((v) => v.id!).toSet();
+      final localOnly = _memViolations.where((v) => v.id != null && !supabaseIds.contains(v.id)).toList();
+
+      // Update memory
+      _memViolations = [...supabaseViolations, ...localOnly];
+
+      return _joinVehiclesViolations(List.from(_memViolations), vehicles);
     } catch (e) {
       debugPrint('DB: Error fetching violations: $e');
       return List.from(_memViolations);
@@ -843,20 +978,33 @@ class DatabaseService {
     } catch (e) { return []; }
   }
 
+  /// FIX: Always generate a local ID first. On Supabase failure, fall back to offline storage.
   static Future<int> insertViolation(DriverViolation v) async {
+    final maxId = _memViolations.isEmpty ? 0 : _memViolations.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+    final localId = maxId + 1;
+
     if (_offline) {
-      final maxId = _memViolations.isEmpty ? 0 : _memViolations.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
-      _memViolations.insert(0, v.copyWith(id: maxId + 1));
+      _memViolations.insert(0, v.copyWith(id: localId));
       await _persistOffline();
-      return maxId + 1;
+      return localId;
     }
+
     try {
       final row = _toSupabaseRow(v.toMap());
       row.remove('created_at');
       row.remove('updated_at');
       final response = await _db.from('driver_violations').insert(row).select('id').single();
-      return (response['id'] as int?) ?? -1;
-    } catch (e) { debugPrint('DB: Error inserting violation: $e'); return -1; }
+      final supabaseId = (response['id'] as int?) ?? localId;
+      _memViolations.insert(0, v.copyWith(id: supabaseId));
+      await _persistOffline();
+      return supabaseId;
+    } catch (e) {
+      debugPrint('DB: Supabase insert failed, using offline fallback: $e');
+      debugPrint('DB: Violation data: vehicleId=${v.vehicleId}, type=${v.type}');
+      _memViolations.insert(0, v.copyWith(id: localId));
+      await _persistOffline();
+      return localId;
+    }
   }
 
   static Future<int> updateViolation(DriverViolation v) async {
@@ -884,6 +1032,7 @@ class DatabaseService {
   //  EXPENSE CRUD
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /// FIX: Merge Supabase data with local-only items.
   static Future<List<Expense>> getAllExpenses() async {
     final vehicles = await getAllVehicles();
     if (_offline) {
@@ -894,7 +1043,16 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('expenses').select().eq('user_id', _uid!).order('date', ascending: false);
-      return _joinVehiclesExpenses(response.map((m) => Expense.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
+      final supabaseExpenses = response.map((m) => Expense.fromMap(_fromSupabaseRow(m))).toList();
+
+      // Merge with local-only items
+      final supabaseIds = supabaseExpenses.where((e) => e.id != null).map((e) => e.id!).toSet();
+      final localOnly = _memExpenses.where((e) => e.id != null && !supabaseIds.contains(e.id)).toList();
+
+      // Update memory
+      _memExpenses = [...supabaseExpenses, ...localOnly];
+
+      return _joinVehiclesExpenses(List.from(_memExpenses), vehicles);
     } catch (e) {
       debugPrint('DB: Error fetching expenses: $e');
       return List.from(_memExpenses);
@@ -918,20 +1076,33 @@ class DatabaseService {
     return all.where((e) => e.type == type).toList();
   }
 
+  /// FIX: Always generate a local ID first. On Supabase failure, fall back to offline storage.
   static Future<int> insertExpense(Expense e) async {
+    final maxId = _memExpenses.isEmpty ? 0 : _memExpenses.map((x) => x.id ?? 0).reduce((a, b) => a > b ? a : b);
+    final localId = maxId + 1;
+
     if (_offline) {
-      final maxId = _memExpenses.isEmpty ? 0 : _memExpenses.map((x) => x.id ?? 0).reduce((a, b) => a > b ? a : b);
-      _memExpenses.insert(0, e.copyWith(id: maxId + 1));
+      _memExpenses.insert(0, e.copyWith(id: localId));
       await _persistOffline();
-      return maxId + 1;
+      return localId;
     }
+
     try {
       final row = _toSupabaseRow(e.toMap());
       row.remove('created_at');
       row.remove('updated_at');
       final response = await _db.from('expenses').insert(row).select('id').single();
-      return (response['id'] as int?) ?? -1;
-    } catch (ex) { debugPrint('DB: Error inserting expense: $ex'); return -1; }
+      final supabaseId = (response['id'] as int?) ?? localId;
+      _memExpenses.insert(0, e.copyWith(id: supabaseId));
+      await _persistOffline();
+      return supabaseId;
+    } catch (ex) {
+      debugPrint('DB: Supabase insert failed, using offline fallback: $ex');
+      debugPrint('DB: Expense data: vehicleId=${e.vehicleId}, type=${e.type}');
+      _memExpenses.insert(0, e.copyWith(id: localId));
+      await _persistOffline();
+      return localId;
+    }
   }
 
   static Future<int> updateExpense(Expense e) async {
@@ -959,6 +1130,7 @@ class DatabaseService {
   //  WORK ORDER CRUD
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /// FIX: Merge Supabase data with local-only items.
   static Future<List<WorkOrder>> getAllWorkOrders() async {
     final vehicles = await getAllVehicles();
     if (_offline) {
@@ -969,7 +1141,16 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('work_orders').select().eq('user_id', _uid!).order('created_at', ascending: false);
-      return _joinVehiclesWorkOrders(response.map((m) => WorkOrder.fromMap(_fromSupabaseRow(m))).toList(), vehicles);
+      final supabaseWorkOrders = response.map((m) => WorkOrder.fromMap(_fromSupabaseRow(m))).toList();
+
+      // Merge with local-only items
+      final supabaseIds = supabaseWorkOrders.where((o) => o.id != null).map((o) => o.id!).toSet();
+      final localOnly = _memWorkOrders.where((o) => o.id != null && !supabaseIds.contains(o.id)).toList();
+
+      // Update memory
+      _memWorkOrders = [...supabaseWorkOrders, ...localOnly];
+
+      return _joinVehiclesWorkOrders(List.from(_memWorkOrders), vehicles);
     } catch (e) {
       debugPrint('DB: Error fetching work orders: $e');
       return List.from(_memWorkOrders);
@@ -987,20 +1168,33 @@ class DatabaseService {
     } catch (e) { return []; }
   }
 
+  /// FIX: Always generate a local ID first. On Supabase failure, fall back to offline storage.
   static Future<int> insertWorkOrder(WorkOrder o) async {
+    final maxId = _memWorkOrders.isEmpty ? 0 : _memWorkOrders.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+    final localId = maxId + 1;
+
     if (_offline) {
-      final maxId = _memWorkOrders.isEmpty ? 0 : _memWorkOrders.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
-      _memWorkOrders.insert(0, o.copyWith(id: maxId + 1));
+      _memWorkOrders.insert(0, o.copyWith(id: localId));
       await _persistOffline();
-      return maxId + 1;
+      return localId;
     }
+
     try {
       final row = _toSupabaseRow(o.toMap());
       row.remove('created_at');
       row.remove('updated_at');
       final response = await _db.from('work_orders').insert(row).select('id').single();
-      return (response['id'] as int?) ?? -1;
-    } catch (e) { debugPrint('DB: Error inserting work order: $e'); return -1; }
+      final supabaseId = (response['id'] as int?) ?? localId;
+      _memWorkOrders.insert(0, o.copyWith(id: supabaseId));
+      await _persistOffline();
+      return supabaseId;
+    } catch (e) {
+      debugPrint('DB: Supabase insert failed, using offline fallback: $e');
+      debugPrint('DB: Work order data: vehicleId=${o.vehicleId}, type=${o.type}');
+      _memWorkOrders.insert(0, o.copyWith(id: localId));
+      await _persistOffline();
+      return localId;
+    }
   }
 
   static Future<int> updateWorkOrder(WorkOrder o) async {
@@ -1028,11 +1222,21 @@ class DatabaseService {
   //  TRIP TRACKING CRUD
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /// FIX: Merge Supabase data with local-only items.
   static Future<List<TripTracking>> getAllTrips() async {
     if (_offline) return List.from(_memTrips);
     try {
       final response = await _db.from('trip_trackings').select().eq('user_id', _uid!).order('created_at', ascending: false);
-      return response.map((m) => TripTracking.fromMap(_fromSupabaseRow(m))).toList();
+      final supabaseTrips = response.map((m) => TripTracking.fromMap(_fromSupabaseRow(m))).toList();
+
+      // Merge with local-only items
+      final supabaseIds = supabaseTrips.where((t) => t.id != null).map((t) => t.id!).toSet();
+      final localOnly = _memTrips.where((t) => t.id != null && !supabaseIds.contains(t.id)).toList();
+
+      // Update memory
+      _memTrips = [...supabaseTrips, ...localOnly];
+
+      return List.from(_memTrips);
     } catch (e) {
       debugPrint('DB: Error fetching trips: $e');
       return List.from(_memTrips);
@@ -1047,13 +1251,17 @@ class DatabaseService {
     } catch (e) { return []; }
   }
 
+  /// FIX: Always generate a local ID first. On Supabase failure, fall back to offline storage.
   static Future<int> insertTrip(TripTracking t) async {
+    final maxId = _memTrips.isEmpty ? 0 : _memTrips.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
+    final localId = maxId + 1;
+
     if (_offline) {
-      final maxId = _memTrips.isEmpty ? 0 : _memTrips.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
-      _memTrips.insert(0, t.copyWith(id: maxId + 1));
+      _memTrips.insert(0, t.copyWith(id: localId));
       await _persistOffline();
-      return maxId + 1;
+      return localId;
     }
+
     try {
       final map = _toSupabaseRow(t.toMap());
       // Convert JSON string trip_points to List for JSONB column
@@ -1064,8 +1272,17 @@ class DatabaseService {
       map.remove('created_at');
       map.remove('updated_at');
       final response = await _db.from('trip_trackings').insert(map).select('id').single();
-      return (response['id'] as int?) ?? -1;
-    } catch (e) { debugPrint('DB: Error inserting trip: $e'); return -1; }
+      final supabaseId = (response['id'] as int?) ?? localId;
+      _memTrips.insert(0, t.copyWith(id: supabaseId));
+      await _persistOffline();
+      return supabaseId;
+    } catch (e) {
+      debugPrint('DB: Supabase insert failed, using offline fallback: $e');
+      debugPrint('DB: Trip data: vehicleId=${t.vehicleId}, status=${t.status}');
+      _memTrips.insert(0, t.copyWith(id: localId));
+      await _persistOffline();
+      return localId;
+    }
   }
 
   static Future<int> updateTrip(TripTracking t) async {

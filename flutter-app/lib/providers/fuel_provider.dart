@@ -70,7 +70,10 @@ class FuelProvider extends ChangeNotifier {
   Future<int> addFuelRecord(FuelRecord record) async {
     final id = await DatabaseService.insertFuelRecord(record);
     if (id > 0) {
-      await loadFuelRecords();
+      // Update local list directly instead of re-fetching
+      _fuelRecords.insert(0, record.copyWith(id: id));
+      _stats = await DatabaseService.getFuelConsumptionStats();
+      _applyFilters();
     }
     return id;
   }
@@ -78,7 +81,13 @@ class FuelProvider extends ChangeNotifier {
   Future<bool> updateFuelRecord(FuelRecord record) async {
     final rows = await DatabaseService.updateFuelRecord(record);
     if (rows > 0) {
-      await loadFuelRecords();
+      // Update local list directly
+      final index = _fuelRecords.indexWhere((i) => i.id == record.id);
+      if (index >= 0) {
+        _fuelRecords[index] = record;
+      }
+      _stats = await DatabaseService.getFuelConsumptionStats();
+      _applyFilters();
     }
     return rows > 0;
   }
@@ -86,7 +95,10 @@ class FuelProvider extends ChangeNotifier {
   Future<bool> deleteFuelRecord(int id) async {
     final rows = await DatabaseService.deleteFuelRecord(id);
     if (rows > 0) {
-      await loadFuelRecords();
+      // Update local list directly
+      _fuelRecords.removeWhere((i) => i.id == id);
+      _stats = await DatabaseService.getFuelConsumptionStats();
+      _applyFilters();
     }
     return rows > 0;
   }

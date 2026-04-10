@@ -90,7 +90,9 @@ class ChecklistProvider extends ChangeNotifier {
   Future<int> addChecklist(Checklist checklist) async {
     final id = await DatabaseService.insertChecklist(checklist);
     if (id > 0) {
-      await loadChecklists();
+      // Update local list directly instead of re-fetching
+      _checklists.insert(0, checklist.copyWith(id: id));
+      _applyFilters();
     }
     return id;
   }
@@ -98,7 +100,12 @@ class ChecklistProvider extends ChangeNotifier {
   Future<bool> updateChecklist(Checklist checklist) async {
     final rows = await DatabaseService.updateChecklist(checklist);
     if (rows > 0) {
-      await loadChecklists();
+      // Update local list directly
+      final index = _checklists.indexWhere((c) => c.id == checklist.id);
+      if (index >= 0) {
+        _checklists[index] = checklist;
+      }
+      _applyFilters();
     }
     return rows > 0;
   }
@@ -106,7 +113,9 @@ class ChecklistProvider extends ChangeNotifier {
   Future<bool> deleteChecklist(int id) async {
     final rows = await DatabaseService.deleteChecklist(id);
     if (rows > 0) {
-      await loadChecklists();
+      // Update local list directly
+      _checklists.removeWhere((c) => c.id == id);
+      _applyFilters();
     }
     return rows > 0;
   }
