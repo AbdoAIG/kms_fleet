@@ -418,25 +418,35 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memVehicles.isEmpty ? 0 : _memVehicles.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memVehicles.insert(0, v.copyWith(id: maxId + 1));
-      _persistOffline();
+      await _persistOffline();
       return maxId + 1;
     }
     try {
       final row = _toSupabaseRow(v.toMap());
+      // Remove created_at/updated_at so Supabase uses defaults
+      row.remove('created_at');
+      row.remove('updated_at');
       final response = await _db.from('vehicles').insert(row).select('id').single();
       return (response['id'] as int?) ?? -1;
-    } catch (e) { debugPrint('DB: Error inserting vehicle: $e'); return -1; }
+    } catch (e) {
+      debugPrint('DB: Error inserting vehicle: $e');
+      debugPrint('DB: Vehicle data: plate=${v.plateNumber}, type=${v.vehicleType}, user=$_uid');
+      return -1;
+    }
   }
 
   static Future<int> updateVehicle(Vehicle v) async {
     if (_offline) {
       for (int i = 0; i < _memVehicles.length; i++) {
-        if (_memVehicles[i].id == v.id) { _memVehicles[i] = v; _persistOffline(); return 1; }
+        if (_memVehicles[i].id == v.id) { _memVehicles[i] = v; await _persistOffline(); return 1; }
       }
       return 0;
     }
     try {
-      await _db.from('vehicles').update(v.toMap()).eq('id', v.id!).eq('user_id', _uid!);
+      final map = v.toMap();
+      map.remove('created_at');
+      map['updated_at'] = DateTime.now().toIso8601String();
+      await _db.from('vehicles').update(map).eq('id', v.id!).eq('user_id', _uid!);
       return 1;
     } catch (e) { debugPrint('DB: Error updating vehicle: $e'); return 0; }
   }
@@ -444,7 +454,7 @@ class DatabaseService {
   static Future<int> deleteVehicle(int id) async {
     if (_offline) {
       _memVehicles.removeWhere((v) => v.id == id);
-      _persistOffline();
+      await _persistOffline();
       return 1;
     }
     try {
@@ -489,31 +499,39 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memRecords.isEmpty ? 0 : _memRecords.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memRecords.insert(0, r.copyWith(id: maxId + 1));
-      _persistOffline();
+      await _persistOffline();
       return maxId + 1;
     }
     try {
       final row = _toSupabaseRow(r.toMap());
+      row.remove('created_at');
+      row.remove('updated_at');
       final response = await _db.from('maintenance_records').insert(row).select('id').single();
       return (response['id'] as int?) ?? -1;
-    } catch (e) { debugPrint('DB: Error inserting maintenance: $e'); return -1; }
+    } catch (e) {
+      debugPrint('DB: Error inserting maintenance: $e');
+      return -1;
+    }
   }
 
   static Future<int> updateMaintenanceRecord(MaintenanceRecord r) async {
     if (_offline) {
       for (int i = 0; i < _memRecords.length; i++) {
-        if (_memRecords[i].id == r.id) { _memRecords[i] = r; _persistOffline(); return 1; }
+        if (_memRecords[i].id == r.id) { _memRecords[i] = r; await _persistOffline(); return 1; }
       }
       return 0;
     }
     try {
-      await _db.from('maintenance_records').update(r.toMap()).eq('id', r.id!).eq('user_id', _uid!);
+      final map = r.toMap();
+      map.remove('created_at');
+      map['updated_at'] = DateTime.now().toIso8601String();
+      await _db.from('maintenance_records').update(map).eq('id', r.id!).eq('user_id', _uid!);
       return 1;
     } catch (e) { return 0; }
   }
 
   static Future<int> deleteMaintenanceRecord(int id) async {
-    if (_offline) { _memRecords.removeWhere((r) => r.id == id); _persistOffline(); return 1; }
+    if (_offline) { _memRecords.removeWhere((r) => r.id == id); await _persistOffline(); return 1; }
     try {
       await _db.from('maintenance_records').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -577,7 +595,7 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memChecklists.isEmpty ? 0 : _memChecklists.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memChecklists.insert(0, c.copyWith(id: maxId + 1));
-      _persistOffline();
+      await _persistOffline();
       return maxId + 1;
     }
     try {
@@ -587,6 +605,8 @@ class DatabaseService {
       if (rawItems is String && rawItems.isNotEmpty) {
         try { map['items'] = jsonDecode(rawItems); } catch (_) {}
       }
+      map.remove('created_at');
+      map.remove('updated_at');
       final response = await _db.from('checklists').insert(map).select('id').single();
       return (response['id'] as int?) ?? -1;
     } catch (e) { debugPrint('DB: Error inserting checklist: $e'); return -1; }
@@ -595,7 +615,7 @@ class DatabaseService {
   static Future<int> updateChecklist(Checklist c) async {
     if (_offline) {
       for (int i = 0; i < _memChecklists.length; i++) {
-        if (_memChecklists[i].id == c.id) { _memChecklists[i] = c; _persistOffline(); return 1; }
+        if (_memChecklists[i].id == c.id) { _memChecklists[i] = c; await _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -611,7 +631,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteChecklist(int id) async {
-    if (_offline) { _memChecklists.removeWhere((c) => c.id == id); _persistOffline(); return 1; }
+    if (_offline) { _memChecklists.removeWhere((c) => c.id == id); await _persistOffline(); return 1; }
     try {
       await _db.from('checklists').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -677,7 +697,7 @@ class DatabaseService {
       final record = f.copyWith(id: maxId + 1);
       _memFuelRecords.insert(0, record);
       _calculateAndUpdateConsumptionRate(record, _memFuelRecords);
-      _persistOffline();
+      await _persistOffline();
       return maxId + 1;
     }
     try {
@@ -685,6 +705,8 @@ class DatabaseService {
       // Convert int booleans to real booleans for Supabase
       if (map['full_tank'] is int) map['full_tank'] = (map['full_tank'] as int) != 0;
       if (map['is_abnormal'] is int) map['is_abnormal'] = (map['is_abnormal'] as int) != 0;
+      map.remove('created_at');
+      map.remove('updated_at');
       final response = await _db.from('fuel_records').insert(map).select('id').single();
       return (response['id'] as int?) ?? -1;
     } catch (e) { debugPrint('DB: Error inserting fuel: $e'); return -1; }
@@ -693,7 +715,7 @@ class DatabaseService {
   static Future<int> updateFuelRecord(FuelRecord f) async {
     if (_offline) {
       for (int i = 0; i < _memFuelRecords.length; i++) {
-        if (_memFuelRecords[i].id == f.id) { _memFuelRecords[i] = f; _persistOffline(); return 1; }
+        if (_memFuelRecords[i].id == f.id) { _memFuelRecords[i] = f; await _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -707,7 +729,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteFuelRecord(int id) async {
-    if (_offline) { _memFuelRecords.removeWhere((f) => f.id == id); _persistOffline(); return 1; }
+    if (_offline) { _memFuelRecords.removeWhere((f) => f.id == id); await _persistOffline(); return 1; }
     try {
       await _db.from('fuel_records').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -825,11 +847,13 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memViolations.isEmpty ? 0 : _memViolations.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memViolations.insert(0, v.copyWith(id: maxId + 1));
-      _persistOffline();
+      await _persistOffline();
       return maxId + 1;
     }
     try {
       final row = _toSupabaseRow(v.toMap());
+      row.remove('created_at');
+      row.remove('updated_at');
       final response = await _db.from('driver_violations').insert(row).select('id').single();
       return (response['id'] as int?) ?? -1;
     } catch (e) { debugPrint('DB: Error inserting violation: $e'); return -1; }
@@ -838,7 +862,7 @@ class DatabaseService {
   static Future<int> updateViolation(DriverViolation v) async {
     if (_offline) {
       for (int i = 0; i < _memViolations.length; i++) {
-        if (_memViolations[i].id == v.id) { _memViolations[i] = v; _persistOffline(); return 1; }
+        if (_memViolations[i].id == v.id) { _memViolations[i] = v; await _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -849,7 +873,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteViolation(int id) async {
-    if (_offline) { _memViolations.removeWhere((v) => v.id == id); _persistOffline(); return 1; }
+    if (_offline) { _memViolations.removeWhere((v) => v.id == id); await _persistOffline(); return 1; }
     try {
       await _db.from('driver_violations').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -898,11 +922,13 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memExpenses.isEmpty ? 0 : _memExpenses.map((x) => x.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memExpenses.insert(0, e.copyWith(id: maxId + 1));
-      _persistOffline();
+      await _persistOffline();
       return maxId + 1;
     }
     try {
       final row = _toSupabaseRow(e.toMap());
+      row.remove('created_at');
+      row.remove('updated_at');
       final response = await _db.from('expenses').insert(row).select('id').single();
       return (response['id'] as int?) ?? -1;
     } catch (ex) { debugPrint('DB: Error inserting expense: $ex'); return -1; }
@@ -911,7 +937,7 @@ class DatabaseService {
   static Future<int> updateExpense(Expense e) async {
     if (_offline) {
       for (int i = 0; i < _memExpenses.length; i++) {
-        if (_memExpenses[i].id == e.id) { _memExpenses[i] = e; _persistOffline(); return 1; }
+        if (_memExpenses[i].id == e.id) { _memExpenses[i] = e; await _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -922,7 +948,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteExpense(int id) async {
-    if (_offline) { _memExpenses.removeWhere((e) => e.id == id); _persistOffline(); return 1; }
+    if (_offline) { _memExpenses.removeWhere((e) => e.id == id); await _persistOffline(); return 1; }
     try {
       await _db.from('expenses').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -965,11 +991,13 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memWorkOrders.isEmpty ? 0 : _memWorkOrders.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memWorkOrders.insert(0, o.copyWith(id: maxId + 1));
-      _persistOffline();
+      await _persistOffline();
       return maxId + 1;
     }
     try {
       final row = _toSupabaseRow(o.toMap());
+      row.remove('created_at');
+      row.remove('updated_at');
       final response = await _db.from('work_orders').insert(row).select('id').single();
       return (response['id'] as int?) ?? -1;
     } catch (e) { debugPrint('DB: Error inserting work order: $e'); return -1; }
@@ -978,7 +1006,7 @@ class DatabaseService {
   static Future<int> updateWorkOrder(WorkOrder o) async {
     if (_offline) {
       for (int i = 0; i < _memWorkOrders.length; i++) {
-        if (_memWorkOrders[i].id == o.id) { _memWorkOrders[i] = o; _persistOffline(); return 1; }
+        if (_memWorkOrders[i].id == o.id) { _memWorkOrders[i] = o; await _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -989,7 +1017,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteWorkOrder(int id) async {
-    if (_offline) { _memWorkOrders.removeWhere((o) => o.id == id); _persistOffline(); return 1; }
+    if (_offline) { _memWorkOrders.removeWhere((o) => o.id == id); await _persistOffline(); return 1; }
     try {
       await _db.from('work_orders').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -1023,7 +1051,7 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memTrips.isEmpty ? 0 : _memTrips.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memTrips.insert(0, t.copyWith(id: maxId + 1));
-      _persistOffline();
+      await _persistOffline();
       return maxId + 1;
     }
     try {
@@ -1033,6 +1061,8 @@ class DatabaseService {
       if (rawPoints is String && rawPoints.isNotEmpty) {
         try { map['trip_points_json'] = jsonDecode(rawPoints); } catch (_) {}
       }
+      map.remove('created_at');
+      map.remove('updated_at');
       final response = await _db.from('trip_trackings').insert(map).select('id').single();
       return (response['id'] as int?) ?? -1;
     } catch (e) { debugPrint('DB: Error inserting trip: $e'); return -1; }
@@ -1041,7 +1071,7 @@ class DatabaseService {
   static Future<int> updateTrip(TripTracking t) async {
     if (_offline) {
       for (int i = 0; i < _memTrips.length; i++) {
-        if (_memTrips[i].id == t.id) { _memTrips[i] = t; _persistOffline(); return 1; }
+        if (_memTrips[i].id == t.id) { _memTrips[i] = t; await _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -1057,7 +1087,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteTrip(int id) async {
-    if (_offline) { _memTrips.removeWhere((t) => t.id == id); _persistOffline(); return 1; }
+    if (_offline) { _memTrips.removeWhere((t) => t.id == id); await _persistOffline(); return 1; }
     try {
       await _db.from('trip_trackings').delete().eq('id', id).eq('user_id', _uid!);
       return 1;

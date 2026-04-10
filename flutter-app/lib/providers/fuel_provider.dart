@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/fuel_record.dart';
 import '../services/database_service.dart';
-import '../services/connectivity_service.dart';
 
 class FuelProvider extends ChangeNotifier {
   List<FuelRecord> _fuelRecords = [];
@@ -70,22 +69,25 @@ class FuelProvider extends ChangeNotifier {
 
   Future<int> addFuelRecord(FuelRecord record) async {
     final id = await DatabaseService.insertFuelRecord(record);
-    await loadFuelRecords();
-    ConnectivityService.onWriteOperation('fuel');
+    if (id > 0) {
+      await loadFuelRecords();
+    }
     return id;
   }
 
   Future<bool> updateFuelRecord(FuelRecord record) async {
     final rows = await DatabaseService.updateFuelRecord(record);
-    await loadFuelRecords();
-    ConnectivityService.onWriteOperation('fuel');
+    if (rows > 0) {
+      await loadFuelRecords();
+    }
     return rows > 0;
   }
 
   Future<bool> deleteFuelRecord(int id) async {
     final rows = await DatabaseService.deleteFuelRecord(id);
-    await loadFuelRecords();
-    ConnectivityService.onWriteOperation('fuel');
+    if (rows > 0) {
+      await loadFuelRecords();
+    }
     return rows > 0;
   }
 

@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import '../models/work_order.dart';
 import '../models/vehicle.dart';
 import '../services/database_service.dart';
-import '../services/connectivity_service.dart';
 
 class WorkOrderProvider extends ChangeNotifier {
   List<WorkOrder> _orders = [];
@@ -90,22 +89,25 @@ class WorkOrderProvider extends ChangeNotifier {
 
   Future<int> addOrder(WorkOrder order) async {
     final id = await DatabaseService.insertWorkOrder(order);
-    await loadOrders();
-    ConnectivityService.onWriteOperation('work_order');
+    if (id > 0) {
+      await loadOrders();
+    }
     return id;
   }
 
   Future<bool> updateOrder(WorkOrder order) async {
     final rows = await DatabaseService.updateWorkOrder(order);
-    await loadOrders();
-    ConnectivityService.onWriteOperation('work_order');
+    if (rows > 0) {
+      await loadOrders();
+    }
     return rows > 0;
   }
 
   Future<bool> deleteOrder(int id) async {
     final rows = await DatabaseService.deleteWorkOrder(id);
-    await loadOrders();
-    ConnectivityService.onWriteOperation('work_order');
+    if (rows > 0) {
+      await loadOrders();
+    }
     return rows > 0;
   }
 

@@ -214,13 +214,22 @@ class _AddChecklistScreenState extends State<AddChecklistScreen> {
       );
 
       if (_isEditing) {
-        await context.read<ChecklistProvider>().updateChecklist(checklist);
-        AppHelpers.showSnackBar(context, 'تم تعديل قائمة الفحص بنجاح');
+        final ok = await context.read<ChecklistProvider>().updateChecklist(checklist);
+        if (ok) {
+          AppHelpers.showSnackBar(context, 'تم تعديل قائمة الفحص بنجاح');
+          Navigator.pop(context, true);
+        } else {
+          AppHelpers.showSnackBar(context, 'فشل تعديل قائمة الفحص - حاول مرة أخرى', isError: true);
+        }
       } else {
-        await context.read<ChecklistProvider>().addChecklist(checklist);
-        AppHelpers.showSnackBar(context, 'تم إضافة قائمة الفحص بنجاح');
+        final id = await context.read<ChecklistProvider>().addChecklist(checklist);
+        if (id > 0) {
+          AppHelpers.showSnackBar(context, 'تم إضافة قائمة الفحص بنجاح');
+          Navigator.pop(context, true);
+        } else {
+          AppHelpers.showSnackBar(context, 'فشل إضافة قائمة الفحص - حاول مرة أخرى', isError: true);
+        }
       }
-      Navigator.pop(context, true);
     } catch (e) {
       AppHelpers.showSnackBar(context, 'حدث خطأ أثناء الحفظ', isError: true);
     }

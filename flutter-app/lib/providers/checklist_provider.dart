@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/checklist.dart';
 import '../services/database_service.dart';
-import '../services/connectivity_service.dart';
 
 class ChecklistProvider extends ChangeNotifier {
   List<Checklist> _checklists = [];
@@ -90,22 +89,25 @@ class ChecklistProvider extends ChangeNotifier {
 
   Future<int> addChecklist(Checklist checklist) async {
     final id = await DatabaseService.insertChecklist(checklist);
-    await loadChecklists();
-    ConnectivityService.onWriteOperation('checklist');
+    if (id > 0) {
+      await loadChecklists();
+    }
     return id;
   }
 
   Future<bool> updateChecklist(Checklist checklist) async {
     final rows = await DatabaseService.updateChecklist(checklist);
-    await loadChecklists();
-    ConnectivityService.onWriteOperation('checklist');
+    if (rows > 0) {
+      await loadChecklists();
+    }
     return rows > 0;
   }
 
   Future<bool> deleteChecklist(int id) async {
     final rows = await DatabaseService.deleteChecklist(id);
-    await loadChecklists();
-    ConnectivityService.onWriteOperation('checklist');
+    if (rows > 0) {
+      await loadChecklists();
+    }
     return rows > 0;
   }
 

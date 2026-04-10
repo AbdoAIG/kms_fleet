@@ -125,13 +125,22 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       );
 
       if (_isEditing) {
-        await context.read<VehicleProvider>().updateVehicle(vehicle);
-        AppHelpers.showSnackBar(context, 'تم تعديل السيارة بنجاح');
+        final ok = await context.read<VehicleProvider>().updateVehicle(vehicle);
+        if (ok) {
+          AppHelpers.showSnackBar(context, 'تم تعديل السيارة بنجاح');
+          Navigator.pop(context, true);
+        } else {
+          AppHelpers.showSnackBar(context, 'فشل تعديل السيارة - حاول مرة أخرى', isError: true);
+        }
       } else {
-        await context.read<VehicleProvider>().addVehicle(vehicle);
-        AppHelpers.showSnackBar(context, 'تم إضافة السيارة بنجاح');
+        final id = await context.read<VehicleProvider>().addVehicle(vehicle);
+        if (id > 0) {
+          AppHelpers.showSnackBar(context, 'تم إضافة السيارة بنجاح');
+          Navigator.pop(context, true);
+        } else {
+          AppHelpers.showSnackBar(context, 'فشل إضافة السيارة - حاول مرة أخرى', isError: true);
+        }
       }
-      Navigator.pop(context, true);
     } catch (e) {
       AppHelpers.showSnackBar(context, 'حدث خطأ أثناء الحفظ', isError: true);
     }

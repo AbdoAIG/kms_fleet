@@ -90,13 +90,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       );
 
       if (_isEdit) {
-        await DatabaseService.updateExpense(expense);
-        if (mounted) AppHelpers.showSnackBar(context, 'تم تعديل المصروف بنجاح');
+        final result = await DatabaseService.updateExpense(expense);
+        if (mounted && result > 0) {
+          AppHelpers.showSnackBar(context, 'تم تعديل المصروف بنجاح');
+          Navigator.pop(context, true);
+        } else if (mounted) {
+          AppHelpers.showSnackBar(context, 'فشل تعديل المصروف - حاول مرة أخرى', isError: true);
+        }
       } else {
-        await DatabaseService.insertExpense(expense);
-        if (mounted) AppHelpers.showSnackBar(context, 'تم إضافة المصروف بنجاح');
+        final id = await DatabaseService.insertExpense(expense);
+        if (mounted && id > 0) {
+          AppHelpers.showSnackBar(context, 'تم إضافة المصروف بنجاح');
+          Navigator.pop(context, true);
+        } else if (mounted) {
+          AppHelpers.showSnackBar(context, 'فشل إضافة المصروف - حاول مرة أخرى', isError: true);
+        }
       }
-      if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) AppHelpers.showSnackBar(context, 'حدث خطأ أثناء الحفظ', isError: true);
     } finally {

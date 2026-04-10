@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/maintenance_record.dart';
 import '../services/database_service.dart';
-import '../services/connectivity_service.dart';
 
 class MaintenanceProvider extends ChangeNotifier {
   List<MaintenanceRecord> _records = [];
@@ -109,22 +108,25 @@ class MaintenanceProvider extends ChangeNotifier {
 
   Future<int> addRecord(MaintenanceRecord record) async {
     final id = await DatabaseService.insertMaintenanceRecord(record);
-    await loadRecords();
-    ConnectivityService.onWriteOperation('maintenance');
+    if (id > 0) {
+      await loadRecords();
+    }
     return id;
   }
 
   Future<bool> updateRecord(MaintenanceRecord record) async {
     final rows = await DatabaseService.updateMaintenanceRecord(record);
-    await loadRecords();
-    ConnectivityService.onWriteOperation('maintenance');
+    if (rows > 0) {
+      await loadRecords();
+    }
     return rows > 0;
   }
 
   Future<bool> deleteRecord(int id) async {
     final rows = await DatabaseService.deleteMaintenanceRecord(id);
-    await loadRecords();
-    ConnectivityService.onWriteOperation('maintenance');
+    if (rows > 0) {
+      await loadRecords();
+    }
     return rows > 0;
   }
 

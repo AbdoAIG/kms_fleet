@@ -190,13 +190,22 @@ class _AddMaintenanceScreenState extends State<AddMaintenanceScreen> {
       );
 
       if (_isEditing) {
-        await context.read<MaintenanceProvider>().updateRecord(record);
-        AppHelpers.showSnackBar(context, 'تم تعديل سجل الصيانة بنجاح');
+        final ok = await context.read<MaintenanceProvider>().updateRecord(record);
+        if (ok) {
+          AppHelpers.showSnackBar(context, 'تم تعديل سجل الصيانة بنجاح');
+          Navigator.pop(context, true);
+        } else {
+          AppHelpers.showSnackBar(context, 'فشل تعديل سجل الصيانة - حاول مرة أخرى', isError: true);
+        }
       } else {
-        await context.read<MaintenanceProvider>().addRecord(record);
-        AppHelpers.showSnackBar(context, 'تم إضافة سجل الصيانة بنجاح');
+        final id = await context.read<MaintenanceProvider>().addRecord(record);
+        if (id > 0) {
+          AppHelpers.showSnackBar(context, 'تم إضافة سجل الصيانة بنجاح');
+          Navigator.pop(context, true);
+        } else {
+          AppHelpers.showSnackBar(context, 'فشل إضافة سجل الصيانة - حاول مرة أخرى', isError: true);
+        }
       }
-      Navigator.pop(context, true);
     } catch (e) {
       AppHelpers.showSnackBar(context, 'حدث خطأ أثناء الحفظ', isError: true);
     }

@@ -199,19 +199,26 @@ class _AddFuelScreenState extends State<AddFuelScreen> {
       );
 
       if (_isEditing) {
-        await context
+        final ok = await context
             .read<FuelProvider>()
             .updateFuelRecord(record);
-        AppHelpers.showSnackBar(
-            context, 'تم تعديل سجل الوقود بنجاح');
+        if (ok) {
+          AppHelpers.showSnackBar(context, 'تم تعديل سجل الوقود بنجاح');
+          Navigator.pop(context, true);
+        } else {
+          AppHelpers.showSnackBar(context, 'فشل تعديل سجل الوقود - حاول مرة أخرى', isError: true);
+        }
       } else {
-        await context
+        final id = await context
             .read<FuelProvider>()
             .addFuelRecord(record);
-        AppHelpers.showSnackBar(
-            context, 'تم إضافة سجل الوقود بنجاح');
+        if (id > 0) {
+          AppHelpers.showSnackBar(context, 'تم إضافة سجل الوقود بنجاح');
+          Navigator.pop(context, true);
+        } else {
+          AppHelpers.showSnackBar(context, 'فشل إضافة سجل الوقود - حاول مرة أخرى', isError: true);
+        }
       }
-      Navigator.pop(context, true);
     } catch (e) {
       AppHelpers.showSnackBar(
           context, 'حدث خطأ أثناء الحفظ',

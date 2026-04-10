@@ -136,13 +136,22 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
       );
 
       if (_isEditing) {
-        await context.read<WorkOrderProvider>().updateOrder(order);
-        AppHelpers.showSnackBar(context, 'تم تعديل أمر العمل بنجاح');
+        final ok = await context.read<WorkOrderProvider>().updateOrder(order);
+        if (ok) {
+          AppHelpers.showSnackBar(context, 'تم تعديل أمر العمل بنجاح');
+          Navigator.pop(context, true);
+        } else {
+          AppHelpers.showSnackBar(context, 'فشل تعديل أمر العمل - حاول مرة أخرى', isError: true);
+        }
       } else {
-        await context.read<WorkOrderProvider>().addOrder(order);
-        AppHelpers.showSnackBar(context, 'تم إضافة أمر العمل بنجاح');
+        final id = await context.read<WorkOrderProvider>().addOrder(order);
+        if (id > 0) {
+          AppHelpers.showSnackBar(context, 'تم إضافة أمر العمل بنجاح');
+          Navigator.pop(context, true);
+        } else {
+          AppHelpers.showSnackBar(context, 'فشل إضافة أمر العمل - حاول مرة أخرى', isError: true);
+        }
       }
-      Navigator.pop(context, true);
     } catch (e) {
       AppHelpers.showSnackBar(context, 'حدث خطأ أثناء الحفظ', isError: true);
     }
