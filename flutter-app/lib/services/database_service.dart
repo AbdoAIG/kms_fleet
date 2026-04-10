@@ -35,6 +35,18 @@ class DatabaseService {
   static List<TripTracking> _memTrips = [];
   static List<AppUser> _memUsers = [];
 
+  // ── Pending delete tracking ───────────────────────────────────────────────
+  // IDs deleted locally but not yet synced to Supabase.
+  // These are excluded during merge so deleted items don't reappear.
+  static final Set<int> _deletedVehicleIds = {};
+  static final Set<int> _deletedMaintenanceIds = {};
+  static final Set<int> _deletedChecklistIds = {};
+  static final Set<int> _deletedFuelRecordIds = {};
+  static final Set<int> _deletedViolationIds = {};
+  static final Set<int> _deletedExpenseIds = {};
+  static final Set<int> _deletedWorkOrderIds = {};
+  static final Set<int> _deletedTripIds = {};
+
   // ── Supabase convenience ──────────────────────────────────────────────────
   static String? get _uid => currentUserId;
   static bool get _isOnline => !_offline && supabaseReady && _uid != null;
@@ -113,6 +125,109 @@ class DatabaseService {
     ConnectivityService.onWriteOperation(entity);
   }
 
+  /// Try to sync pending deletions to Supabase in the background.
+  static void _trySyncPendingDelete(String table) {
+    if (!supabaseReady || _uid == null) return;
+    debugPrint('DB: Triggering background sync for pending $table deletions');
+    _processPendingDeletions();
+  }
+
+  /// Process all pending deletions — delete from Supabase any items that were
+  /// deleted locally but couldn't be synced at the time.
+  static Future<void> _processPendingDeletions() async {
+    if (!supabaseReady || _uid == null) return;
+
+    try {
+      // Process vehicle deletions
+      if (_deletedVehicleIds.isNotEmpty) {
+        for (final id in List.from(_deletedVehicleIds)) {
+          try {
+            await _db.from('vehicles').delete().eq('id', id).eq('user_id', _uid!);
+            _deletedVehicleIds.remove(id);
+            debugPrint('DB: Pending vehicle deletion synced (id=$id)');
+          } catch (e) {
+            debugPrint('DB: Pending vehicle deletion still failing (id=$id): $e');
+          }
+        }
+      }
+
+      // Process maintenance record deletions
+      if (_deletedMaintenanceIds.isNotEmpty) {
+        for (final id in List.from(_deletedMaintenanceIds)) {
+          try {
+            await _db.from('maintenance_records').delete().eq('id', id).eq('user_id', _uid!);
+            _deletedMaintenanceIds.remove(id);
+            debugPrint('DB: Pending maintenance deletion synced (id=$id)');
+          } catch (e) {
+            debugPrint('DB: Pending maintenance deletion still failing (id=$id): $e');
+          }
+        }
+      }
+
+      // Process checklist deletions
+      if (_deletedChecklistIds.isNotEmpty) {
+        for (final id in List.from(_deletedChecklistIds)) {
+          try {
+            await _db.from('checklists').delete().eq('id', id).eq('user_id', _uid!);
+            _deletedChecklistIds.remove(id);
+          } catch (_) {}
+        }
+      }
+
+      // Process fuel record deletions
+      if (_deletedFuelRecordIds.isNotEmpty) {
+        for (final id in List.from(_deletedFuelRecordIds)) {
+          try {
+            await _db.from('fuel_records').delete().eq('id', id).eq('user_id', _uid!);
+            _deletedFuelRecordIds.remove(id);
+          } catch (_) {}
+        }
+      }
+
+      // Process violation deletions
+      if (_deletedViolationIds.isNotEmpty) {
+        for (final id in List.from(_deletedViolationIds)) {
+          try {
+            await _db.from('driver_violations').delete().eq('id', id).eq('user_id', _uid!);
+            _deletedViolationIds.remove(id);
+          } catch (_) {}
+        }
+      }
+
+      // Process expense deletions
+      if (_deletedExpenseIds.isNotEmpty) {
+        for (final id in List.from(_deletedExpenseIds)) {
+          try {
+            await _db.from('expenses').delete().eq('id', id).eq('user_id', _uid!);
+            _deletedExpenseIds.remove(id);
+          } catch (_) {}
+        }
+      }
+
+      // Process work order deletions
+      if (_deletedWorkOrderIds.isNotEmpty) {
+        for (final id in List.from(_deletedWorkOrderIds)) {
+          try {
+            await _db.from('work_orders').delete().eq('id', id).eq('user_id', _uid!);
+            _deletedWorkOrderIds.remove(id);
+          } catch (_) {}
+        }
+      }
+
+      // Process trip deletions
+      if (_deletedTripIds.isNotEmpty) {
+        for (final id in List.from(_deletedTripIds)) {
+          try {
+            await _db.from('trip_trackings').delete().eq('id', id).eq('user_id', _uid!);
+            _deletedTripIds.remove(id);
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      debugPrint('DB: Error processing pending deletions: $e');
+    }
+  }
+
   /// Public method for providers to trigger sync after a write operation.
   static void triggerSync(String entity) {
     ConnectivityService.onWriteOperation(entity);
@@ -127,6 +242,8 @@ class DatabaseService {
         // FIX: Only seed if both Supabase AND local memory are empty
         // (prevents overwriting locally-added data with seed data)
         await _seedIfEmpty();
+        // Process any pending deletions from offline mode
+        await _processPendingDeletions();
       }
     } catch (e) {
       debugPrint('DB: Failed to go online: $e');
@@ -455,15 +572,21 @@ class DatabaseService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /// FIX: Merge Supabase data with local-only items to avoid losing locally-added vehicles.
+  /// FIX: Also exclude IDs that were deleted locally (pending Supabase sync).
   static Future<List<Vehicle>> getAllVehicles() async {
     if (_offline) return List.from(_memVehicles);
     try {
       final response = await _db.from('vehicles').select().eq('user_id', _uid!).order('created_at', ascending: false);
-      final supabaseVehicles = response.map((r) => Vehicle.fromMap(_fromSupabaseRow(r))).toList();
+      // Exclude IDs that were deleted locally but not yet synced to Supabase
+      final supabaseVehicles = response
+          .map((r) => Vehicle.fromMap(_fromSupabaseRow(r)))
+          .where((v) => v.id == null || !_deletedVehicleIds.contains(v.id))
+          .toList();
 
-      // Merge with local-only items not yet in Supabase
+      // Merge with local-only items not yet in Supabase (also exclude deleted)
       final supabaseIds = supabaseVehicles.where((v) => v.id != null).map((v) => v.id!).toSet();
-      final localOnly = _memVehicles.where((v) => v.id != null && !supabaseIds.contains(v.id)).toList();
+      final localOnly = _memVehicles.where((v) =>
+          v.id != null && !supabaseIds.contains(v.id) && !_deletedVehicleIds.contains(v.id)).toList();
 
       // Update memory to keep in sync
       _memVehicles = [...supabaseVehicles, ...localOnly];
@@ -553,15 +676,31 @@ class DatabaseService {
   }
 
   static Future<int> deleteVehicle(int id) async {
-    if (_offline) {
-      _memVehicles.removeWhere((v) => v.id == id);
-      await _persistOffline();
+    // ALWAYS remove from local memory and persist
+    _memVehicles.removeWhere((v) => v.id == id);
+    await _persistOffline();
+    // Remove from deleted tracking (no longer pending)
+    _deletedVehicleIds.remove(id);
+
+    // Try to delete from Supabase
+    if (supabaseReady && _uid != null) {
+      try {
+        await _db.from('vehicles').delete().eq('id', id).eq('user_id', _uid!);
+        debugPrint('DB: Vehicle deleted from Supabase (id=$id)');
+        return 1;
+      } catch (e) {
+        debugPrint('DB: ⚠️ Supabase delete failed for vehicle (id=$id), queued for sync: $e');
+        // Track as pending deletion for later sync
+        _deletedVehicleIds.add(id);
+        _trySyncPendingDelete('vehicles');
+        return 1; // Still return success since local deletion worked
+      }
+    } else {
+      // Offline: track for later sync
+      _deletedVehicleIds.add(id);
+      debugPrint('DB: Vehicle deleted locally (id=$id), queued for Supabase sync');
       return 1;
     }
-    try {
-      await _db.from('vehicles').delete().eq('id', id).eq('user_id', _uid!);
-      return 1;
-    } catch (e) { debugPrint('DB: Error deleting vehicle: $e'); return 0; }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -569,6 +708,7 @@ class DatabaseService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /// FIX: Merge Supabase data with local-only items.
+  /// FIX: Also exclude IDs that were deleted locally (pending Supabase sync).
   static Future<List<MaintenanceRecord>> getAllMaintenanceRecords() async {
     final vehicles = await getAllVehicles();
     if (_offline) {
@@ -579,11 +719,16 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('maintenance_records').select().eq('user_id', _uid!).order('maintenance_date', ascending: false);
-      final supabaseRecords = response.map((m) => MaintenanceRecord.fromMap(_fromSupabaseRow(m))).toList();
+      // Exclude IDs that were deleted locally
+      final supabaseRecords = response
+          .map((m) => MaintenanceRecord.fromMap(_fromSupabaseRow(m)))
+          .where((r) => r.id == null || !_deletedMaintenanceIds.contains(r.id))
+          .toList();
 
-      // Merge with local-only items
+      // Merge with local-only items (also exclude deleted)
       final supabaseIds = supabaseRecords.where((r) => r.id != null).map((r) => r.id!).toSet();
-      final localOnly = _memRecords.where((r) => r.id != null && !supabaseIds.contains(r.id)).toList();
+      final localOnly = _memRecords.where((r) =>
+          r.id != null && !supabaseIds.contains(r.id) && !_deletedMaintenanceIds.contains(r.id)).toList();
 
       // Update memory
       _memRecords = [...supabaseRecords, ...localOnly];
@@ -656,11 +801,28 @@ class DatabaseService {
   }
 
   static Future<int> deleteMaintenanceRecord(int id) async {
-    if (_offline) { _memRecords.removeWhere((r) => r.id == id); await _persistOffline(); return 1; }
-    try {
-      await _db.from('maintenance_records').delete().eq('id', id).eq('user_id', _uid!);
+    // ALWAYS remove from local memory and persist
+    _memRecords.removeWhere((r) => r.id == id);
+    await _persistOffline();
+    _deletedMaintenanceIds.remove(id);
+
+    // Try to delete from Supabase
+    if (supabaseReady && _uid != null) {
+      try {
+        await _db.from('maintenance_records').delete().eq('id', id).eq('user_id', _uid!);
+        debugPrint('DB: Maintenance record deleted from Supabase (id=$id)');
+        return 1;
+      } catch (e) {
+        debugPrint('DB: ⚠️ Supabase delete failed for maintenance (id=$id), queued for sync: $e');
+        _deletedMaintenanceIds.add(id);
+        _trySyncPendingDelete('maintenance_records');
+        return 1;
+      }
+    } else {
+      _deletedMaintenanceIds.add(id);
+      debugPrint('DB: Maintenance record deleted locally (id=$id), queued for Supabase sync');
       return 1;
-    } catch (e) { return 0; }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -678,11 +840,13 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('checklists').select().eq('user_id', _uid!).order('inspection_date', ascending: false);
-      final supabaseChecklists = response.map((m) => Checklist.fromMap(_fromSupabaseRow(m))).toList();
+      final supabaseChecklists = response.map((m) => Checklist.fromMap(_fromSupabaseRow(m)))
+          .where((c) => c.id == null || !_deletedChecklistIds.contains(c.id)).toList();
 
       // Merge with local-only items
       final supabaseIds = supabaseChecklists.where((c) => c.id != null).map((c) => c.id!).toSet();
-      final localOnly = _memChecklists.where((c) => c.id != null && !supabaseIds.contains(c.id)).toList();
+      final localOnly = _memChecklists.where((c) =>
+          c.id != null && !supabaseIds.contains(c.id) && !_deletedChecklistIds.contains(c.id)).toList();
 
       // Update memory
       _memChecklists = [...supabaseChecklists, ...localOnly];
@@ -779,11 +943,25 @@ class DatabaseService {
   }
 
   static Future<int> deleteChecklist(int id) async {
-    if (_offline) { _memChecklists.removeWhere((c) => c.id == id); await _persistOffline(); return 1; }
-    try {
-      await _db.from('checklists').delete().eq('id', id).eq('user_id', _uid!);
+    // ALWAYS remove from local memory and persist
+    _memChecklists.removeWhere((c) => c.id == id);
+    await _persistOffline();
+    _deletedChecklistIds.remove(id);
+
+    if (supabaseReady && _uid != null) {
+      try {
+        await _db.from('checklists').delete().eq('id', id).eq('user_id', _uid!);
+        debugPrint('DB: Checklist deleted from Supabase (id=$id)');
+        return 1;
+      } catch (e) {
+        debugPrint('DB: ⚠️ Supabase delete failed for checklist (id=$id), queued: $e');
+        _deletedChecklistIds.add(id);
+        return 1;
+      }
+    } else {
+      _deletedChecklistIds.add(id);
       return 1;
-    } catch (e) { return 0; }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -801,11 +979,13 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('fuel_records').select().eq('user_id', _uid!).order('fill_date', ascending: false);
-      final supabaseRecords = response.map((m) => FuelRecord.fromMap(_fromSupabaseRow(m))).toList();
+      final supabaseRecords = response.map((m) => FuelRecord.fromMap(_fromSupabaseRow(m)))
+          .where((f) => f.id == null || !_deletedFuelRecordIds.contains(f.id)).toList();
 
       // Merge with local-only items
       final supabaseIds = supabaseRecords.where((f) => f.id != null).map((f) => f.id!).toSet();
-      final localOnly = _memFuelRecords.where((f) => f.id != null && !supabaseIds.contains(f.id)).toList();
+      final localOnly = _memFuelRecords.where((f) =>
+          f.id != null && !supabaseIds.contains(f.id) && !_deletedFuelRecordIds.contains(f.id)).toList();
 
       // Update memory
       _memFuelRecords = [...supabaseRecords, ...localOnly];
@@ -904,11 +1084,25 @@ class DatabaseService {
   }
 
   static Future<int> deleteFuelRecord(int id) async {
-    if (_offline) { _memFuelRecords.removeWhere((f) => f.id == id); await _persistOffline(); return 1; }
-    try {
-      await _db.from('fuel_records').delete().eq('id', id).eq('user_id', _uid!);
+    // ALWAYS remove from local memory and persist
+    _memFuelRecords.removeWhere((f) => f.id == id);
+    await _persistOffline();
+    _deletedFuelRecordIds.remove(id);
+
+    if (supabaseReady && _uid != null) {
+      try {
+        await _db.from('fuel_records').delete().eq('id', id).eq('user_id', _uid!);
+        debugPrint('DB: Fuel record deleted from Supabase (id=$id)');
+        return 1;
+      } catch (e) {
+        debugPrint('DB: ⚠️ Supabase delete failed for fuel (id=$id), queued: $e');
+        _deletedFuelRecordIds.add(id);
+        return 1;
+      }
+    } else {
+      _deletedFuelRecordIds.add(id);
       return 1;
-    } catch (e) { return 0; }
+    }
   }
 
   // ── Fuel Consumption Rate Calculation ──
@@ -1000,11 +1194,13 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('driver_violations').select().eq('user_id', _uid!).order('date', ascending: false);
-      final supabaseViolations = response.map((m) => DriverViolation.fromMap(_fromSupabaseRow(m))).toList();
+      final supabaseViolations = response.map((m) => DriverViolation.fromMap(_fromSupabaseRow(m)))
+          .where((v) => v.id == null || !_deletedViolationIds.contains(v.id)).toList();
 
       // Merge with local-only items
       final supabaseIds = supabaseViolations.where((v) => v.id != null).map((v) => v.id!).toSet();
-      final localOnly = _memViolations.where((v) => v.id != null && !supabaseIds.contains(v.id)).toList();
+      final localOnly = _memViolations.where((v) =>
+          v.id != null && !supabaseIds.contains(v.id) && !_deletedViolationIds.contains(v.id)).toList();
 
       // Update memory
       _memViolations = [...supabaseViolations, ...localOnly];
@@ -1071,11 +1267,25 @@ class DatabaseService {
   }
 
   static Future<int> deleteViolation(int id) async {
-    if (_offline) { _memViolations.removeWhere((v) => v.id == id); await _persistOffline(); return 1; }
-    try {
-      await _db.from('driver_violations').delete().eq('id', id).eq('user_id', _uid!);
+    // ALWAYS remove from local memory and persist
+    _memViolations.removeWhere((v) => v.id == id);
+    await _persistOffline();
+    _deletedViolationIds.remove(id);
+
+    if (supabaseReady && _uid != null) {
+      try {
+        await _db.from('driver_violations').delete().eq('id', id).eq('user_id', _uid!);
+        debugPrint('DB: Violation deleted from Supabase (id=$id)');
+        return 1;
+      } catch (e) {
+        debugPrint('DB: ⚠️ Supabase delete failed for violation (id=$id), queued: $e');
+        _deletedViolationIds.add(id);
+        return 1;
+      }
+    } else {
+      _deletedViolationIds.add(id);
       return 1;
-    } catch (e) { return 0; }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1093,11 +1303,13 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('expenses').select().eq('user_id', _uid!).order('date', ascending: false);
-      final supabaseExpenses = response.map((m) => Expense.fromMap(_fromSupabaseRow(m))).toList();
+      final supabaseExpenses = response.map((m) => Expense.fromMap(_fromSupabaseRow(m)))
+          .where((e) => e.id == null || !_deletedExpenseIds.contains(e.id)).toList();
 
       // Merge with local-only items
       final supabaseIds = supabaseExpenses.where((e) => e.id != null).map((e) => e.id!).toSet();
-      final localOnly = _memExpenses.where((e) => e.id != null && !supabaseIds.contains(e.id)).toList();
+      final localOnly = _memExpenses.where((e) =>
+          e.id != null && !supabaseIds.contains(e.id) && !_deletedExpenseIds.contains(e.id)).toList();
 
       // Update memory
       _memExpenses = [...supabaseExpenses, ...localOnly];
@@ -1169,11 +1381,25 @@ class DatabaseService {
   }
 
   static Future<int> deleteExpense(int id) async {
-    if (_offline) { _memExpenses.removeWhere((e) => e.id == id); await _persistOffline(); return 1; }
-    try {
-      await _db.from('expenses').delete().eq('id', id).eq('user_id', _uid!);
+    // ALWAYS remove from local memory and persist
+    _memExpenses.removeWhere((e) => e.id == id);
+    await _persistOffline();
+    _deletedExpenseIds.remove(id);
+
+    if (supabaseReady && _uid != null) {
+      try {
+        await _db.from('expenses').delete().eq('id', id).eq('user_id', _uid!);
+        debugPrint('DB: Expense deleted from Supabase (id=$id)');
+        return 1;
+      } catch (e) {
+        debugPrint('DB: ⚠️ Supabase delete failed for expense (id=$id), queued: $e');
+        _deletedExpenseIds.add(id);
+        return 1;
+      }
+    } else {
+      _deletedExpenseIds.add(id);
       return 1;
-    } catch (ex) { return 0; }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1191,11 +1417,13 @@ class DatabaseService {
     }
     try {
       final response = await _db.from('work_orders').select().eq('user_id', _uid!).order('created_at', ascending: false);
-      final supabaseWorkOrders = response.map((m) => WorkOrder.fromMap(_fromSupabaseRow(m))).toList();
+      final supabaseWorkOrders = response.map((m) => WorkOrder.fromMap(_fromSupabaseRow(m)))
+          .where((o) => o.id == null || !_deletedWorkOrderIds.contains(o.id)).toList();
 
       // Merge with local-only items
       final supabaseIds = supabaseWorkOrders.where((o) => o.id != null).map((o) => o.id!).toSet();
-      final localOnly = _memWorkOrders.where((o) => o.id != null && !supabaseIds.contains(o.id)).toList();
+      final localOnly = _memWorkOrders.where((o) =>
+          o.id != null && !supabaseIds.contains(o.id) && !_deletedWorkOrderIds.contains(o.id)).toList();
 
       // Update memory
       _memWorkOrders = [...supabaseWorkOrders, ...localOnly];
@@ -1261,11 +1489,25 @@ class DatabaseService {
   }
 
   static Future<int> deleteWorkOrder(int id) async {
-    if (_offline) { _memWorkOrders.removeWhere((o) => o.id == id); await _persistOffline(); return 1; }
-    try {
-      await _db.from('work_orders').delete().eq('id', id).eq('user_id', _uid!);
+    // ALWAYS remove from local memory and persist
+    _memWorkOrders.removeWhere((o) => o.id == id);
+    await _persistOffline();
+    _deletedWorkOrderIds.remove(id);
+
+    if (supabaseReady && _uid != null) {
+      try {
+        await _db.from('work_orders').delete().eq('id', id).eq('user_id', _uid!);
+        debugPrint('DB: Work order deleted from Supabase (id=$id)');
+        return 1;
+      } catch (e) {
+        debugPrint('DB: ⚠️ Supabase delete failed for work_order (id=$id), queued: $e');
+        _deletedWorkOrderIds.add(id);
+        return 1;
+      }
+    } else {
+      _deletedWorkOrderIds.add(id);
       return 1;
-    } catch (e) { return 0; }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1277,11 +1519,13 @@ class DatabaseService {
     if (_offline) return List.from(_memTrips);
     try {
       final response = await _db.from('trip_trackings').select().eq('user_id', _uid!).order('created_at', ascending: false);
-      final supabaseTrips = response.map((m) => TripTracking.fromMap(_fromSupabaseRow(m))).toList();
+      final supabaseTrips = response.map((m) => TripTracking.fromMap(_fromSupabaseRow(m)))
+          .where((t) => t.id == null || !_deletedTripIds.contains(t.id)).toList();
 
       // Merge with local-only items
       final supabaseIds = supabaseTrips.where((t) => t.id != null).map((t) => t.id!).toSet();
-      final localOnly = _memTrips.where((t) => t.id != null && !supabaseIds.contains(t.id)).toList();
+      final localOnly = _memTrips.where((t) =>
+          t.id != null && !supabaseIds.contains(t.id) && !_deletedTripIds.contains(t.id)).toList();
 
       // Update memory
       _memTrips = [...supabaseTrips, ...localOnly];
@@ -1354,11 +1598,25 @@ class DatabaseService {
   }
 
   static Future<int> deleteTrip(int id) async {
-    if (_offline) { _memTrips.removeWhere((t) => t.id == id); await _persistOffline(); return 1; }
-    try {
-      await _db.from('trip_trackings').delete().eq('id', id).eq('user_id', _uid!);
+    // ALWAYS remove from local memory and persist
+    _memTrips.removeWhere((t) => t.id == id);
+    await _persistOffline();
+    _deletedTripIds.remove(id);
+
+    if (supabaseReady && _uid != null) {
+      try {
+        await _db.from('trip_trackings').delete().eq('id', id).eq('user_id', _uid!);
+        debugPrint('DB: Trip deleted from Supabase (id=$id)');
+        return 1;
+      } catch (e) {
+        debugPrint('DB: ⚠️ Supabase delete failed for trip (id=$id), queued: $e');
+        _deletedTripIds.add(id);
+        return 1;
+      }
+    } else {
+      _deletedTripIds.add(id);
       return 1;
-    } catch (e) { return 0; }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
