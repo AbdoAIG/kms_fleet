@@ -47,6 +47,18 @@ class DatabaseService {
   static final Set<int> _deletedWorkOrderIds = {};
   static final Set<int> _deletedTripIds = {};
 
+  // ── Remote deletion detection ────────────────────────────────────────────
+  // IDs we've previously seen in Supabase. If an ID disappears from a
+  // subsequent fetch, it was deleted from another device — remove locally.
+  static Set<int> _knownSupabaseVehicleIds = {};
+  static Set<int> _knownSupabaseMaintenanceIds = {};
+  static Set<int> _knownSupabaseChecklistIds = {};
+  static Set<int> _knownSupabaseFuelIds = {};
+  static Set<int> _knownSupabaseViolationIds = {};
+  static Set<int> _knownSupabaseExpenseIds = {};
+  static Set<int> _knownSupabaseWorkOrderIds = {};
+  static Set<int> _knownSupabaseTripIds = {};
+
   // ── Supabase convenience ──────────────────────────────────────────────────
   static String? get _uid => currentUserId;
   static bool get _isOnline => !_offline && supabaseReady && _uid != null;
@@ -572,7 +584,7 @@ class DatabaseService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /// FIX: Merge Supabase data with local-only items to avoid losing locally-added vehicles.
-  /// FIX: Also exclude IDs that were deleted locally (pending Supabase sync).
+  /// FIX: Exclude IDs deleted locally AND detect remote deletions from other devices.
   static Future<List<Vehicle>> getAllVehicles() async {
     if (_offline) return List.from(_memVehicles);
     try {
@@ -583,13 +595,29 @@ class DatabaseService {
           .where((v) => v.id == null || !_deletedVehicleIds.contains(v.id))
           .toList();
 
-      // Merge with local-only items not yet in Supabase (also exclude deleted)
-      final supabaseIds = supabaseVehicles.where((v) => v.id != null).map((v) => v.id!).toSet();
+      final currentSupabaseIds = supabaseVehicles.where((v) => v.id != null).map((v) => v.id!).toSet();
+
+      // ── Remote deletion detection ──────────────────────────────────────
+      // If we've seen IDs in Supabase before, check if any disappeared.
+      // Disappeared = deleted from another device → remove from local memory.
+      if (_knownSupabaseVehicleIds.isNotEmpty) {
+        final remotelyDeleted = _knownSupabaseVehicleIds.difference(currentSupabaseIds);
+        if (remotelyDeleted.isNotEmpty) {
+          _memVehicles.removeWhere((v) => v.id != null && remotelyDeleted.contains(v.id));
+          debugPrint('DB: Detected ${remotelyDeleted.length} remote vehicle deletion(s)');
+          await _persistOffline();
+        }
+      }
+      // Remember current Supabase IDs for next sync
+      _knownSupabaseVehicleIds = currentSupabaseIds;
+
+      // Merge with truly local-only items (not in Supabase and not remotely deleted)
       final localOnly = _memVehicles.where((v) =>
-          v.id != null && !supabaseIds.contains(v.id) && !_deletedVehicleIds.contains(v.id)).toList();
+          v.id != null && !currentSupabaseIds.contains(v.id) && !_deletedVehicleIds.contains(v.id)).toList();
 
       // Update memory to keep in sync
       _memVehicles = [...supabaseVehicles, ...localOnly];
+      await _persistOffline();
 
       return List.from(_memVehicles);
     } catch (e) {
@@ -708,7 +736,7 @@ class DatabaseService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /// FIX: Merge Supabase data with local-only items.
-  /// FIX: Also exclude IDs that were deleted locally (pending Supabase sync).
+  /// FIX: Exclude IDs deleted locally AND detect remote deletions from other devices.
   static Future<List<MaintenanceRecord>> getAllMaintenanceRecords() async {
     final vehicles = await getAllVehicles();
     if (_offline) {
@@ -725,13 +753,26 @@ class DatabaseService {
           .where((r) => r.id == null || !_deletedMaintenanceIds.contains(r.id))
           .toList();
 
-      // Merge with local-only items (also exclude deleted)
-      final supabaseIds = supabaseRecords.where((r) => r.id != null).map((r) => r.id!).toSet();
+      final currentSupabaseIds = supabaseRecords.where((r) => r.id != null).map((r) => r.id!).toSet();
+
+      // ── Remote deletion detection ──
+      if (_knownSupabaseMaintenanceIds.isNotEmpty) {
+        final remotelyDeleted = _knownSupabaseMaintenanceIds.difference(currentSupabaseIds);
+        if (remotelyDeleted.isNotEmpty) {
+          _memRecords.removeWhere((r) => r.id != null && remotelyDeleted.contains(r.id));
+          debugPrint('DB: Detected ${remotelyDeleted.length} remote maintenance deletion(s)');
+          await _persistOffline();
+        }
+      }
+      _knownSupabaseMaintenanceIds = currentSupabaseIds;
+
+      // Merge with truly local-only items
       final localOnly = _memRecords.where((r) =>
-          r.id != null && !supabaseIds.contains(r.id) && !_deletedMaintenanceIds.contains(r.id)).toList();
+          r.id != null && !currentSupabaseIds.contains(r.id) && !_deletedMaintenanceIds.contains(r.id)).toList();
 
       // Update memory
       _memRecords = [...supabaseRecords, ...localOnly];
+      await _persistOffline();
 
       return _joinVehicles(List.from(_memRecords), vehicles);
     } catch (e) {
@@ -843,13 +884,26 @@ class DatabaseService {
       final supabaseChecklists = response.map((m) => Checklist.fromMap(_fromSupabaseRow(m)))
           .where((c) => c.id == null || !_deletedChecklistIds.contains(c.id)).toList();
 
-      // Merge with local-only items
-      final supabaseIds = supabaseChecklists.where((c) => c.id != null).map((c) => c.id!).toSet();
+      final currentSupabaseIds = supabaseChecklists.where((c) => c.id != null).map((c) => c.id!).toSet();
+
+      // ── Remote deletion detection ──
+      if (_knownSupabaseChecklistIds.isNotEmpty) {
+        final remotelyDeleted = _knownSupabaseChecklistIds.difference(currentSupabaseIds);
+        if (remotelyDeleted.isNotEmpty) {
+          _memChecklists.removeWhere((c) => c.id != null && remotelyDeleted.contains(c.id));
+          debugPrint('DB: Detected ${remotelyDeleted.length} remote checklist deletion(s)');
+          await _persistOffline();
+        }
+      }
+      _knownSupabaseChecklistIds = currentSupabaseIds;
+
+      // Merge with truly local-only items
       final localOnly = _memChecklists.where((c) =>
-          c.id != null && !supabaseIds.contains(c.id) && !_deletedChecklistIds.contains(c.id)).toList();
+          c.id != null && !currentSupabaseIds.contains(c.id) && !_deletedChecklistIds.contains(c.id)).toList();
 
       // Update memory
       _memChecklists = [...supabaseChecklists, ...localOnly];
+      await _persistOffline();
 
       return _joinVehiclesChecklists(List.from(_memChecklists), vehicles);
     } catch (e) {
@@ -982,13 +1036,26 @@ class DatabaseService {
       final supabaseRecords = response.map((m) => FuelRecord.fromMap(_fromSupabaseRow(m)))
           .where((f) => f.id == null || !_deletedFuelRecordIds.contains(f.id)).toList();
 
-      // Merge with local-only items
-      final supabaseIds = supabaseRecords.where((f) => f.id != null).map((f) => f.id!).toSet();
+      final currentSupabaseIds = supabaseRecords.where((f) => f.id != null).map((f) => f.id!).toSet();
+
+      // ── Remote deletion detection ──
+      if (_knownSupabaseFuelIds.isNotEmpty) {
+        final remotelyDeleted = _knownSupabaseFuelIds.difference(currentSupabaseIds);
+        if (remotelyDeleted.isNotEmpty) {
+          _memFuelRecords.removeWhere((f) => f.id != null && remotelyDeleted.contains(f.id));
+          debugPrint('DB: Detected ${remotelyDeleted.length} remote fuel deletion(s)');
+          await _persistOffline();
+        }
+      }
+      _knownSupabaseFuelIds = currentSupabaseIds;
+
+      // Merge with truly local-only items
       final localOnly = _memFuelRecords.where((f) =>
-          f.id != null && !supabaseIds.contains(f.id) && !_deletedFuelRecordIds.contains(f.id)).toList();
+          f.id != null && !currentSupabaseIds.contains(f.id) && !_deletedFuelRecordIds.contains(f.id)).toList();
 
       // Update memory
       _memFuelRecords = [...supabaseRecords, ...localOnly];
+      await _persistOffline();
 
       return _joinVehiclesFuel(List.from(_memFuelRecords), vehicles);
     } catch (e) {
@@ -1197,13 +1264,26 @@ class DatabaseService {
       final supabaseViolations = response.map((m) => DriverViolation.fromMap(_fromSupabaseRow(m)))
           .where((v) => v.id == null || !_deletedViolationIds.contains(v.id)).toList();
 
-      // Merge with local-only items
-      final supabaseIds = supabaseViolations.where((v) => v.id != null).map((v) => v.id!).toSet();
+      final currentSupabaseIds = supabaseViolations.where((v) => v.id != null).map((v) => v.id!).toSet();
+
+      // ── Remote deletion detection ──
+      if (_knownSupabaseViolationIds.isNotEmpty) {
+        final remotelyDeleted = _knownSupabaseViolationIds.difference(currentSupabaseIds);
+        if (remotelyDeleted.isNotEmpty) {
+          _memViolations.removeWhere((v) => v.id != null && remotelyDeleted.contains(v.id));
+          debugPrint('DB: Detected ${remotelyDeleted.length} remote violation deletion(s)');
+          await _persistOffline();
+        }
+      }
+      _knownSupabaseViolationIds = currentSupabaseIds;
+
+      // Merge with truly local-only items
       final localOnly = _memViolations.where((v) =>
-          v.id != null && !supabaseIds.contains(v.id) && !_deletedViolationIds.contains(v.id)).toList();
+          v.id != null && !currentSupabaseIds.contains(v.id) && !_deletedViolationIds.contains(v.id)).toList();
 
       // Update memory
       _memViolations = [...supabaseViolations, ...localOnly];
+      await _persistOffline();
 
       return _joinVehiclesViolations(List.from(_memViolations), vehicles);
     } catch (e) {
@@ -1306,13 +1386,26 @@ class DatabaseService {
       final supabaseExpenses = response.map((m) => Expense.fromMap(_fromSupabaseRow(m)))
           .where((e) => e.id == null || !_deletedExpenseIds.contains(e.id)).toList();
 
-      // Merge with local-only items
-      final supabaseIds = supabaseExpenses.where((e) => e.id != null).map((e) => e.id!).toSet();
+      final currentSupabaseIds = supabaseExpenses.where((e) => e.id != null).map((e) => e.id!).toSet();
+
+      // ── Remote deletion detection ──
+      if (_knownSupabaseExpenseIds.isNotEmpty) {
+        final remotelyDeleted = _knownSupabaseExpenseIds.difference(currentSupabaseIds);
+        if (remotelyDeleted.isNotEmpty) {
+          _memExpenses.removeWhere((e) => e.id != null && remotelyDeleted.contains(e.id));
+          debugPrint('DB: Detected ${remotelyDeleted.length} remote expense deletion(s)');
+          await _persistOffline();
+        }
+      }
+      _knownSupabaseExpenseIds = currentSupabaseIds;
+
+      // Merge with truly local-only items
       final localOnly = _memExpenses.where((e) =>
-          e.id != null && !supabaseIds.contains(e.id) && !_deletedExpenseIds.contains(e.id)).toList();
+          e.id != null && !currentSupabaseIds.contains(e.id) && !_deletedExpenseIds.contains(e.id)).toList();
 
       // Update memory
       _memExpenses = [...supabaseExpenses, ...localOnly];
+      await _persistOffline();
 
       return _joinVehiclesExpenses(List.from(_memExpenses), vehicles);
     } catch (e) {
@@ -1420,13 +1513,26 @@ class DatabaseService {
       final supabaseWorkOrders = response.map((m) => WorkOrder.fromMap(_fromSupabaseRow(m)))
           .where((o) => o.id == null || !_deletedWorkOrderIds.contains(o.id)).toList();
 
-      // Merge with local-only items
-      final supabaseIds = supabaseWorkOrders.where((o) => o.id != null).map((o) => o.id!).toSet();
+      final currentSupabaseIds = supabaseWorkOrders.where((o) => o.id != null).map((o) => o.id!).toSet();
+
+      // ── Remote deletion detection ──
+      if (_knownSupabaseWorkOrderIds.isNotEmpty) {
+        final remotelyDeleted = _knownSupabaseWorkOrderIds.difference(currentSupabaseIds);
+        if (remotelyDeleted.isNotEmpty) {
+          _memWorkOrders.removeWhere((o) => o.id != null && remotelyDeleted.contains(o.id));
+          debugPrint('DB: Detected ${remotelyDeleted.length} remote work_order deletion(s)');
+          await _persistOffline();
+        }
+      }
+      _knownSupabaseWorkOrderIds = currentSupabaseIds;
+
+      // Merge with truly local-only items
       final localOnly = _memWorkOrders.where((o) =>
-          o.id != null && !supabaseIds.contains(o.id) && !_deletedWorkOrderIds.contains(o.id)).toList();
+          o.id != null && !currentSupabaseIds.contains(o.id) && !_deletedWorkOrderIds.contains(o.id)).toList();
 
       // Update memory
       _memWorkOrders = [...supabaseWorkOrders, ...localOnly];
+      await _persistOffline();
 
       return _joinVehiclesWorkOrders(List.from(_memWorkOrders), vehicles);
     } catch (e) {
@@ -1522,13 +1628,26 @@ class DatabaseService {
       final supabaseTrips = response.map((m) => TripTracking.fromMap(_fromSupabaseRow(m)))
           .where((t) => t.id == null || !_deletedTripIds.contains(t.id)).toList();
 
-      // Merge with local-only items
-      final supabaseIds = supabaseTrips.where((t) => t.id != null).map((t) => t.id!).toSet();
+      final currentSupabaseIds = supabaseTrips.where((t) => t.id != null).map((t) => t.id!).toSet();
+
+      // ── Remote deletion detection ──
+      if (_knownSupabaseTripIds.isNotEmpty) {
+        final remotelyDeleted = _knownSupabaseTripIds.difference(currentSupabaseIds);
+        if (remotelyDeleted.isNotEmpty) {
+          _memTrips.removeWhere((t) => t.id != null && remotelyDeleted.contains(t.id));
+          debugPrint('DB: Detected ${remotelyDeleted.length} remote trip deletion(s)');
+          await _persistOffline();
+        }
+      }
+      _knownSupabaseTripIds = currentSupabaseIds;
+
+      // Merge with truly local-only items
       final localOnly = _memTrips.where((t) =>
-          t.id != null && !supabaseIds.contains(t.id) && !_deletedTripIds.contains(t.id)).toList();
+          t.id != null && !currentSupabaseIds.contains(t.id) && !_deletedTripIds.contains(t.id)).toList();
 
       // Update memory
       _memTrips = [...supabaseTrips, ...localOnly];
+      await _persistOffline();
 
       return List.from(_memTrips);
     } catch (e) {
