@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/fuel_record.dart';
 import '../services/database_service.dart';
+import '../services/supabase_sync_service.dart';
 
 class FuelProvider extends ChangeNotifier {
   List<FuelRecord> _fuelRecords = [];
@@ -70,18 +71,21 @@ class FuelProvider extends ChangeNotifier {
   Future<int> addFuelRecord(FuelRecord record) async {
     final id = await DatabaseService.insertFuelRecord(record);
     await loadFuelRecords();
+    SupabaseSyncService.syncNow();
     return id;
   }
 
   Future<bool> updateFuelRecord(FuelRecord record) async {
     final rows = await DatabaseService.updateFuelRecord(record);
     await loadFuelRecords();
+    SupabaseSyncService.syncNow();
     return rows > 0;
   }
 
   Future<bool> deleteFuelRecord(int id) async {
     final rows = await DatabaseService.deleteFuelRecord(id);
     await loadFuelRecords();
+    SupabaseSyncService.syncNow();
     return rows > 0;
   }
 

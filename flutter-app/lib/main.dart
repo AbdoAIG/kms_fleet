@@ -14,6 +14,7 @@ import 'providers/user_provider.dart';
 import 'providers/notification_provider.dart';
 import 'services/database_service.dart';
 import 'services/supabase_service.dart';
+import 'services/offline_storage_service.dart';
 import 'utils/app_theme.dart';
 import 'utils/app_colors.dart';
 import 'models/maintenance_record.dart';
@@ -84,6 +85,8 @@ class _KmsFleetAppState extends State<KmsFleetApp> {
 
   Future<void> _init() async {
     try {
+      // Initialize offline storage first (before DatabaseService)
+      await OfflineStorageService.initialize();
       // Initialize DatabaseService (uses Supabase if signed in, memory fallback otherwise)
       await DatabaseService.initialize();
       if (mounted) setState(() => _ready = true);

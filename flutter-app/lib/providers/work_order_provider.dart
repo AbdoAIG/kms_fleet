@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/work_order.dart';
 import '../models/vehicle.dart';
 import '../services/database_service.dart';
+import '../services/supabase_sync_service.dart';
 
 class WorkOrderProvider extends ChangeNotifier {
   List<WorkOrder> _orders = [];
@@ -90,18 +91,21 @@ class WorkOrderProvider extends ChangeNotifier {
   Future<int> addOrder(WorkOrder order) async {
     final id = await DatabaseService.insertWorkOrder(order);
     await loadOrders();
+    SupabaseSyncService.syncNow();
     return id;
   }
 
   Future<bool> updateOrder(WorkOrder order) async {
     final rows = await DatabaseService.updateWorkOrder(order);
     await loadOrders();
+    SupabaseSyncService.syncNow();
     return rows > 0;
   }
 
   Future<bool> deleteOrder(int id) async {
     final rows = await DatabaseService.deleteWorkOrder(id);
     await loadOrders();
+    SupabaseSyncService.syncNow();
     return rows > 0;
   }
 

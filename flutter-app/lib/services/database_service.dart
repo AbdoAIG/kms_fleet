@@ -11,6 +11,7 @@ import '../models/work_order.dart';
 import '../models/trip_tracking.dart';
 import '../models/app_user.dart';
 import 'supabase_service.dart';
+import 'offline_storage_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DatabaseService — Supabase-primary with offline memory fallback
@@ -55,7 +56,49 @@ class DatabaseService {
       debugPrint('DB: Supabase not available, using offline mode: $e');
     }
     _offline = true;
-    _seedMemory();
+    await initializeOffline();
+  }
+
+  /// Initialize offline data: try loading from cache first, fall back to seed data.
+  static Future<void> initializeOffline() async {
+    try {
+      final cachedVehicles = OfflineStorageService.loadVehicles();
+      if (cachedVehicles.isNotEmpty) {
+        _memVehicles = cachedVehicles;
+        _memRecords = OfflineStorageService.loadMaintenanceRecords();
+        _memChecklists = OfflineStorageService.loadChecklists();
+        _memFuelRecords = OfflineStorageService.loadFuelRecords();
+        _memViolations = OfflineStorageService.loadViolations();
+        _memExpenses = OfflineStorageService.loadExpenses();
+        _memWorkOrders = OfflineStorageService.loadWorkOrders();
+        _memTrips = OfflineStorageService.loadTrips();
+        _memUsers = _seedUsers();
+        debugPrint('DB: Loaded cached offline data');
+      } else {
+        _seedMemory();
+      }
+    } catch (e) {
+      debugPrint('DB: Error loading offline cache: $e');
+      _seedMemory();
+    }
+  }
+
+  /// Persist all in-memory data to offline storage (fire-and-forget).
+  static Future<void> _persistOffline() async {
+    try {
+      await OfflineStorageService.saveAll(
+        vehicles: _memVehicles,
+        maintenance: _memRecords,
+        checklists: _memChecklists,
+        fuel: _memFuelRecords,
+        violations: _memViolations,
+        expenses: _memExpenses,
+        workOrders: _memWorkOrders,
+        trips: _memTrips,
+      );
+    } catch (e) {
+      debugPrint('DB: Error persisting offline data: $e');
+    }
   }
 
   /// Call after sign-in to switch from offline to Supabase.
@@ -375,6 +418,7 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memVehicles.isEmpty ? 0 : _memVehicles.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memVehicles.insert(0, v.copyWith(id: maxId + 1));
+      _persistOffline();
       return maxId + 1;
     }
     try {
@@ -387,7 +431,7 @@ class DatabaseService {
   static Future<int> updateVehicle(Vehicle v) async {
     if (_offline) {
       for (int i = 0; i < _memVehicles.length; i++) {
-        if (_memVehicles[i].id == v.id) { _memVehicles[i] = v; return 1; }
+        if (_memVehicles[i].id == v.id) { _memVehicles[i] = v; _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -400,6 +444,7 @@ class DatabaseService {
   static Future<int> deleteVehicle(int id) async {
     if (_offline) {
       _memVehicles.removeWhere((v) => v.id == id);
+      _persistOffline();
       return 1;
     }
     try {
@@ -444,6 +489,7 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memRecords.isEmpty ? 0 : _memRecords.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memRecords.insert(0, r.copyWith(id: maxId + 1));
+      _persistOffline();
       return maxId + 1;
     }
     try {
@@ -456,7 +502,7 @@ class DatabaseService {
   static Future<int> updateMaintenanceRecord(MaintenanceRecord r) async {
     if (_offline) {
       for (int i = 0; i < _memRecords.length; i++) {
-        if (_memRecords[i].id == r.id) { _memRecords[i] = r; return 1; }
+        if (_memRecords[i].id == r.id) { _memRecords[i] = r; _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -467,7 +513,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteMaintenanceRecord(int id) async {
-    if (_offline) { _memRecords.removeWhere((r) => r.id == id); return 1; }
+    if (_offline) { _memRecords.removeWhere((r) => r.id == id); _persistOffline(); return 1; }
     try {
       await _db.from('maintenance_records').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -531,6 +577,7 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memChecklists.isEmpty ? 0 : _memChecklists.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memChecklists.insert(0, c.copyWith(id: maxId + 1));
+      _persistOffline();
       return maxId + 1;
     }
     try {
@@ -548,7 +595,7 @@ class DatabaseService {
   static Future<int> updateChecklist(Checklist c) async {
     if (_offline) {
       for (int i = 0; i < _memChecklists.length; i++) {
-        if (_memChecklists[i].id == c.id) { _memChecklists[i] = c; return 1; }
+        if (_memChecklists[i].id == c.id) { _memChecklists[i] = c; _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -564,7 +611,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteChecklist(int id) async {
-    if (_offline) { _memChecklists.removeWhere((c) => c.id == id); return 1; }
+    if (_offline) { _memChecklists.removeWhere((c) => c.id == id); _persistOffline(); return 1; }
     try {
       await _db.from('checklists').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -630,6 +677,7 @@ class DatabaseService {
       final record = f.copyWith(id: maxId + 1);
       _memFuelRecords.insert(0, record);
       _calculateAndUpdateConsumptionRate(record, _memFuelRecords);
+      _persistOffline();
       return maxId + 1;
     }
     try {
@@ -645,7 +693,7 @@ class DatabaseService {
   static Future<int> updateFuelRecord(FuelRecord f) async {
     if (_offline) {
       for (int i = 0; i < _memFuelRecords.length; i++) {
-        if (_memFuelRecords[i].id == f.id) { _memFuelRecords[i] = f; return 1; }
+        if (_memFuelRecords[i].id == f.id) { _memFuelRecords[i] = f; _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -659,7 +707,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteFuelRecord(int id) async {
-    if (_offline) { _memFuelRecords.removeWhere((f) => f.id == id); return 1; }
+    if (_offline) { _memFuelRecords.removeWhere((f) => f.id == id); _persistOffline(); return 1; }
     try {
       await _db.from('fuel_records').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -777,6 +825,7 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memViolations.isEmpty ? 0 : _memViolations.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memViolations.insert(0, v.copyWith(id: maxId + 1));
+      _persistOffline();
       return maxId + 1;
     }
     try {
@@ -789,7 +838,7 @@ class DatabaseService {
   static Future<int> updateViolation(DriverViolation v) async {
     if (_offline) {
       for (int i = 0; i < _memViolations.length; i++) {
-        if (_memViolations[i].id == v.id) { _memViolations[i] = v; return 1; }
+        if (_memViolations[i].id == v.id) { _memViolations[i] = v; _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -800,7 +849,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteViolation(int id) async {
-    if (_offline) { _memViolations.removeWhere((v) => v.id == id); return 1; }
+    if (_offline) { _memViolations.removeWhere((v) => v.id == id); _persistOffline(); return 1; }
     try {
       await _db.from('driver_violations').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -849,6 +898,7 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memExpenses.isEmpty ? 0 : _memExpenses.map((x) => x.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memExpenses.insert(0, e.copyWith(id: maxId + 1));
+      _persistOffline();
       return maxId + 1;
     }
     try {
@@ -861,7 +911,7 @@ class DatabaseService {
   static Future<int> updateExpense(Expense e) async {
     if (_offline) {
       for (int i = 0; i < _memExpenses.length; i++) {
-        if (_memExpenses[i].id == e.id) { _memExpenses[i] = e; return 1; }
+        if (_memExpenses[i].id == e.id) { _memExpenses[i] = e; _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -872,7 +922,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteExpense(int id) async {
-    if (_offline) { _memExpenses.removeWhere((e) => e.id == id); return 1; }
+    if (_offline) { _memExpenses.removeWhere((e) => e.id == id); _persistOffline(); return 1; }
     try {
       await _db.from('expenses').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -915,6 +965,7 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memWorkOrders.isEmpty ? 0 : _memWorkOrders.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memWorkOrders.insert(0, o.copyWith(id: maxId + 1));
+      _persistOffline();
       return maxId + 1;
     }
     try {
@@ -927,7 +978,7 @@ class DatabaseService {
   static Future<int> updateWorkOrder(WorkOrder o) async {
     if (_offline) {
       for (int i = 0; i < _memWorkOrders.length; i++) {
-        if (_memWorkOrders[i].id == o.id) { _memWorkOrders[i] = o; return 1; }
+        if (_memWorkOrders[i].id == o.id) { _memWorkOrders[i] = o; _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -938,7 +989,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteWorkOrder(int id) async {
-    if (_offline) { _memWorkOrders.removeWhere((o) => o.id == id); return 1; }
+    if (_offline) { _memWorkOrders.removeWhere((o) => o.id == id); _persistOffline(); return 1; }
     try {
       await _db.from('work_orders').delete().eq('id', id).eq('user_id', _uid!);
       return 1;
@@ -972,6 +1023,7 @@ class DatabaseService {
     if (_offline) {
       final maxId = _memTrips.isEmpty ? 0 : _memTrips.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
       _memTrips.insert(0, t.copyWith(id: maxId + 1));
+      _persistOffline();
       return maxId + 1;
     }
     try {
@@ -989,7 +1041,7 @@ class DatabaseService {
   static Future<int> updateTrip(TripTracking t) async {
     if (_offline) {
       for (int i = 0; i < _memTrips.length; i++) {
-        if (_memTrips[i].id == t.id) { _memTrips[i] = t; return 1; }
+        if (_memTrips[i].id == t.id) { _memTrips[i] = t; _persistOffline(); return 1; }
       }
       return 0;
     }
@@ -1005,7 +1057,7 @@ class DatabaseService {
   }
 
   static Future<int> deleteTrip(int id) async {
-    if (_offline) { _memTrips.removeWhere((t) => t.id == id); return 1; }
+    if (_offline) { _memTrips.removeWhere((t) => t.id == id); _persistOffline(); return 1; }
     try {
       await _db.from('trip_trackings').delete().eq('id', id).eq('user_id', _uid!);
       return 1;

@@ -39,6 +39,9 @@ dependencies:
   excel: ^4.0.6
   share_plus: ^10.1.4
 
+  # Connectivity monitoring
+  connectivity_plus: ^6.0.5
+
   # Security
   crypto: ^3.0.5
   flutter_secure_storage: ^9.2.4

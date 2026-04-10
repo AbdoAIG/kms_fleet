@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 import '../services/database_service.dart';
 import '../services/security_service.dart';
+import '../services/connectivity_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
@@ -124,6 +125,7 @@ class AuthProvider extends ChangeNotifier {
         _isLoading = false;
         await SecurityService.resetFailedAttempts();
         _remainingAttempts = SecurityService.maxAttempts;
+        ConnectivityService.onLogin();
         notifyListeners();
         return true;
       }
@@ -149,6 +151,7 @@ class AuthProvider extends ChangeNotifier {
       _lockoutRemaining = Duration.zero;
 
       _isLoading = false;
+      ConnectivityService.onLogin();
       notifyListeners();
       return true;
     } on AuthException catch (e) {
@@ -196,6 +199,7 @@ class AuthProvider extends ChangeNotifier {
     _remainingAttempts = SecurityService.maxAttempts;
     _isLockedOut = false;
     _lockoutRemaining = Duration.zero;
+    ConnectivityService.onLogout();
     notifyListeners();
   }
 
