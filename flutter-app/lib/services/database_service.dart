@@ -12,6 +12,7 @@ import '../models/trip_tracking.dart';
 import '../models/app_user.dart';
 import 'supabase_service.dart';
 import 'offline_storage_service.dart';
+import 'connectivity_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DatabaseService — Supabase-primary with offline memory fallback
@@ -46,17 +47,20 @@ class DatabaseService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   static Future<void> initialize() async {
+    // FIX: ALWAYS load offline cache first — this preserves locally-added
+    // items that haven't been synced to Supabase yet (survives restart).
+    await initializeOffline();
+
     try {
       if (supabaseReady && currentUserId != null) {
         _offline = false;
-        debugPrint('DB: Using Supabase as primary database');
+        debugPrint('DB: Using Supabase as primary database (offline cache loaded too)');
         return;
       }
     } catch (e) {
       debugPrint('DB: Supabase not available, using offline mode: $e');
     }
     _offline = true;
-    await initializeOffline();
   }
 
   /// Initialize offline data: try loading from cache first, fall back to seed data.
@@ -101,13 +105,27 @@ class DatabaseService {
     }
   }
 
+  /// Try to sync a locally-added item to Supabase in the background.
+  /// Delegates to ConnectivityService which handles cooldown and retry logic.
+  static void _trySyncPendingInsert(String entity, int localId) {
+    if (!supabaseReady || _uid == null) return;
+    debugPrint('DB: Triggering background sync for $entity (local id=$localId)');
+    ConnectivityService.onWriteOperation(entity);
+  }
+
+  /// Public method for providers to trigger sync after a write operation.
+  static void triggerSync(String entity) {
+    ConnectivityService.onWriteOperation(entity);
+  }
+
   /// Call after sign-in to switch from offline to Supabase.
   static Future<void> goOnline() async {
     try {
       if (supabaseReady && currentUserId != null) {
         _offline = false;
         debugPrint('DB: Switched to Supabase online mode');
-        // Check if the user has any data, if not seed from memory
+        // FIX: Only seed if both Supabase AND local memory are empty
+        // (prevents overwriting locally-added data with seed data)
         await _seedIfEmpty();
       }
     } catch (e) {
@@ -197,10 +215,14 @@ class DatabaseService {
   }
 
   /// Call after sign-out to switch back to offline mode.
+  /// FIX: Don't overwrite memory — keep existing cached data.
   static void goOffline() {
     _offline = true;
-    _seedMemory();
-    debugPrint('DB: Switched to offline mode');
+    // Only seed if memory is empty (e.g., first launch without ever going online)
+    if (_memVehicles.isEmpty) {
+      _seedMemory();
+    }
+    debugPrint('DB: Switched to offline mode (kept ${_memVehicles.length} cached vehicles)');
   }
 
   static void _seedMemory() {
@@ -368,15 +390,32 @@ class DatabaseService {
   //  SUPABASE HELPERS — convert between Supabase rows and model maps
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /// Columns that have CHECK constraints in Supabase.
+  /// Empty strings violate these constraints — treat as null.
+  static const _checkConstraintColumns = {
+    'status',           // vehicles, maintenance_records, etc.
+    'driver_status',    // vehicles
+    'type',             // maintenance_records, checklists, fuel_records, etc.
+    'priority',         // maintenance_records, work_orders
+    'fuel_type',        // vehicles, fuel_records
+    'vehicle_type',     // vehicles (no CHECK but can cause issues)
+  };
+
   /// Convert a model's toMap() output to a Supabase-compatible row (adds user_id).
-  /// FIX: Also removes null values to avoid Supabase column issues.
+  /// FIX: Also removes null values AND empty strings from CHECK-constrained columns
+  /// to avoid PostgreSQL constraint violations.
   static Map<String, dynamic> _toSupabaseRow(Map<String, dynamic> map) {
     final row = Map<String, dynamic>.from(map);
     row['user_id'] = _uid;
     // Don't send null id for inserts — let Postgres auto-generate BIGSERIAL
     if (row['id'] == null) row.remove('id');
     // Remove null values to avoid Supabase column issues
-    row.removeWhere((key, value) => value == null);
+    row.removeWhere((key, value) {
+      if (value == null) return true;
+      // Remove empty strings from CHECK-constrained columns
+      if (value is String && value.isEmpty && _checkConstraintColumns.contains(key)) return true;
+      return false;
+    });
     return row;
   }
 
@@ -459,6 +498,7 @@ class DatabaseService {
   }
 
   /// FIX: Always generate a local ID first. On Supabase failure, fall back to offline storage.
+  /// Also triggers a background sync attempt for locally-added items.
   static Future<int> insertVehicle(Vehicle v) async {
     // Always generate a local ID first
     final maxId = _memVehicles.isEmpty ? 0 : _memVehicles.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b);
@@ -467,6 +507,8 @@ class DatabaseService {
     if (_offline) {
       _memVehicles.insert(0, v.copyWith(id: localId));
       await _persistOffline();
+      // Try to sync to Supabase in background even if offline
+      _trySyncPendingInsert('vehicles', localId);
       return localId;
     }
 
@@ -479,13 +521,17 @@ class DatabaseService {
       final supabaseId = (response['id'] as int?) ?? localId;
       _memVehicles.insert(0, v.copyWith(id: supabaseId));
       await _persistOffline();
+      debugPrint('DB: Vehicle inserted to Supabase with id=$supabaseId');
       return supabaseId;
     } catch (e) {
-      debugPrint('DB: Supabase insert failed, using offline fallback: $e');
+      debugPrint('DB: ⚠️ Supabase insert FAILED for vehicle, using offline fallback');
+      debugPrint('DB: Error: $e');
       debugPrint('DB: Vehicle data: plate=${v.plateNumber}, type=${v.vehicleType}, user=$_uid');
       // Fallback: save locally
       _memVehicles.insert(0, v.copyWith(id: localId));
       await _persistOffline();
+      // Trigger background sync attempt
+      _trySyncPendingInsert('vehicles', localId);
       return localId;
     }
   }
@@ -568,6 +614,7 @@ class DatabaseService {
     if (_offline) {
       _memRecords.insert(0, r.copyWith(id: localId));
       await _persistOffline();
+      _trySyncPendingInsert('maintenance', localId);
       return localId;
     }
 
@@ -579,12 +626,15 @@ class DatabaseService {
       final supabaseId = (response['id'] as int?) ?? localId;
       _memRecords.insert(0, r.copyWith(id: supabaseId));
       await _persistOffline();
+      debugPrint('DB: Maintenance record inserted to Supabase with id=$supabaseId');
       return supabaseId;
     } catch (e) {
-      debugPrint('DB: Supabase insert failed, using offline fallback: $e');
+      debugPrint('DB: ⚠️ Supabase insert FAILED for maintenance record, using offline fallback');
+      debugPrint('DB: Error: $e');
       debugPrint('DB: Maintenance data: vehicleId=${r.vehicleId}, type=${r.type}');
       _memRecords.insert(0, r.copyWith(id: localId));
       await _persistOffline();
+      _trySyncPendingInsert('maintenance', localId);
       return localId;
     }
   }
