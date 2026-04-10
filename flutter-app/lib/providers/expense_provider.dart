@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/expense.dart';
 import '../services/database_service.dart';
-import '../services/supabase_sync_service.dart';
+import '../services/connectivity_service.dart';
 
 class ExpenseProvider extends ChangeNotifier {
   List<Expense> _expenses = [];
@@ -91,21 +91,21 @@ class ExpenseProvider extends ChangeNotifier {
   Future<int> addExpense(Expense expense) async {
     final id = await DatabaseService.insertExpense(expense);
     await loadExpenses();
-    SupabaseSyncService.syncNow();
+    ConnectivityService.onWriteOperation('expense');
     return id;
   }
 
   Future<int> updateExpense(Expense expense) async {
     final result = await DatabaseService.updateExpense(expense);
     if (result > 0) await loadExpenses();
-    SupabaseSyncService.syncNow();
+    ConnectivityService.onWriteOperation('expense');
     return result;
   }
 
   Future<int> deleteExpense(int id) async {
     final result = await DatabaseService.deleteExpense(id);
     if (result > 0) await loadExpenses();
-    SupabaseSyncService.syncNow();
+    ConnectivityService.onWriteOperation('expense');
     return result;
   }
 }

@@ -168,15 +168,11 @@ class OfflineStorageService {
     }
   }
 
-  /// Synchronous prefs getter for use in non-async contexts.
-  /// Returns null if SharedPreferences is not yet initialized.
+  /// Cached prefs instance for synchronous reads.
   static SharedPreferences? _prefsInstance;
 
-  static SharedPreferences? _getPrefsSync() {
-    _prefsInstance ??= SharedPreferences.getInstance() as SharedPreferences?;
-    // This is a best-effort approach; returns null if not yet ready.
-    return null; // We'll use async loading instead in practice
-  }
+  /// Synchronous prefs getter — returns cached instance (initialized in initialize()).
+  static SharedPreferences? _getPrefsSync() => _prefsInstance;
 
   /// Initialize the sync prefs instance (call once on app start).
   static Future<void> initialize() async {

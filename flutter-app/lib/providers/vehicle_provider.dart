@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/vehicle.dart';
 import '../services/database_service.dart';
-import '../services/supabase_sync_service.dart';
+import '../services/connectivity_service.dart';
 
 class VehicleProvider extends ChangeNotifier {
   List<Vehicle> _vehicles = [];
@@ -87,21 +87,21 @@ class VehicleProvider extends ChangeNotifier {
   Future<int> addVehicle(Vehicle vehicle) async {
     final id = await DatabaseService.insertVehicle(vehicle);
     await loadVehicles();
-    SupabaseSyncService.syncNow();
+    ConnectivityService.onWriteOperation('vehicle');
     return id;
   }
 
   Future<bool> updateVehicle(Vehicle vehicle) async {
     final rows = await DatabaseService.updateVehicle(vehicle);
     await loadVehicles();
-    SupabaseSyncService.syncNow();
+    ConnectivityService.onWriteOperation('vehicle');
     return rows > 0;
   }
 
   Future<bool> deleteVehicle(int id) async {
     final rows = await DatabaseService.deleteVehicle(id);
     await loadVehicles();
-    SupabaseSyncService.syncNow();
+    ConnectivityService.onWriteOperation('vehicle');
     return rows > 0;
   }
 }
