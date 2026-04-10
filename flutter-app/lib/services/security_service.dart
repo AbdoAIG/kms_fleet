@@ -1,23 +1,35 @@
 import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:crypto/crypto.dart';
+import 'package:encrypt/encrypt.dart';
+import 'package:bcrypt/bcrypt.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SecurityService — Handles authentication security, rate limiting,
 // offline credential validation, and local data encryption.
+//
+// SECURITY UPGRADE:
+//   • Encryption: AES-256-GCM (replaces old XOR cipher)
+//   • Password hashing: bcrypt with 12 rounds (replaces plain SHA-256)
+//   • Key generation: cryptographically secure random (replaces timestamp-based)
+//   • Integrity: GCM authentication tag (replaces SHA-256 HMAC)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class SecurityService {
   // ── SharedPreferences keys ───────────────────────────────────────────────
   static const _keyStoredEmail = 'sec_stored_email';
   static const _keyStoredPasswordHash = 'sec_stored_pwd_hash';
-  static const _keySalt = 'sec_salt';
   static const _keyFailedAttempts = 'sec_failed_attempts';
   static const _keyFirstFailTime = 'sec_first_fail_time';
   static const _keyLockUntil = 'sec_lock_until';
   static const _keyHasOnlineSession = 'sec_has_online_session';
   static const _keyEncryptionKey = 'sec_enc_key';
+  // Legacy key — no longer used with bcrypt, cleared on migration
+  static const _keySalt = 'sec_salt';
+  // Migration flag — ensures old credentials are invalidated on first run
+  static const _keySecurityMigrated = 'sec_migrated_v2';
 
   // ── Rate limit configuration ─────────────────────────────────────────────
   static const int maxAttempts = 5;
@@ -25,10 +37,43 @@ class SecurityService {
   // Progressive lockout: each round doubles the lock time
   static const int maxLockoutRounds = 4; // 5min → 10min → 20min → 40min
 
-  // ── Encryption key ───────────────────────────────────────────────────────
+  // ── Encryption state ─────────────────────────────────────────────────────
+  static final _secureRandom = Random.secure();
   static String? _cachedEncryptionKey;
+  static Encrypter? _cachedEncrypter;
 
   SecurityService._();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  INITIALIZATION & MIGRATION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Run once on app startup to migrate from old (insecure) security format.
+  /// Invalidates old SHA-256 hashed credentials — user must re-login online.
+  static Future<void> initialize() async {
+    final prefs = await SharedPreferences.getInstance();
+    final migrated = prefs.getBool(_keySecurityMigrated) ?? false;
+
+    if (!migrated) {
+      debugPrint('Security: Migrating to v2 (AES-256-GCM + bcrypt)');
+
+      // Clear old insecure credentials (SHA-256 hashes are no longer valid)
+      await prefs.remove(_keyStoredEmail);
+      await prefs.remove(_keyStoredPasswordHash);
+      await prefs.remove(_keySalt);
+
+      // Regenerate encryption key (old key was timestamp-based, weak)
+      await prefs.remove(_keyEncryptionKey);
+      _cachedEncryptionKey = null;
+      _cachedEncrypter = null;
+
+      // Mark migration complete
+      await prefs.setBool(_keySecurityMigrated, true);
+      await prefs.setBool(_keyHasOnlineSession, false);
+
+      debugPrint('Security: Migration complete — old credentials cleared');
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   //  OFFLINE CREDENTIAL VALIDATION
@@ -41,37 +86,37 @@ class SecurityService {
   }
 
   /// Store credentials hash after successful online login for offline use.
-  /// This allows the user to log in offline with their last known credentials.
+  /// Uses bcrypt with 12 rounds — industry standard for password hashing.
   static Future<void> storeOfflineCredentials(String email, String password) async {
     final prefs = await SharedPreferences.getInstance();
-    final salt = _generateSalt();
-    final hash = _hashPassword(password, salt);
+
+    // bcrypt: generates salt internally and embeds it in the hash ($2a$12$...)
+    final hash = BCrypt.hashpw(password, BCrypt.gensaltWithRounds(12));
 
     await prefs.setString(_keyStoredEmail, email.toLowerCase().trim());
     await prefs.setString(_keyStoredPasswordHash, hash);
-    await prefs.setString(_keySalt, salt);
     await prefs.setBool(_keyHasOnlineSession, true);
 
-    debugPrint('Security: Offline credentials stored securely');
+    debugPrint('Security: Offline credentials stored (bcrypt 12 rounds)');
   }
 
-  /// Validate credentials against stored hash for offline login.
+  /// Validate credentials against stored bcrypt hash for offline login.
   /// Returns true if credentials match.
   static Future<bool> validateOfflineCredentials(String email, String password) async {
     final prefs = await SharedPreferences.getInstance();
 
     final storedEmail = prefs.getString(_keyStoredEmail) ?? '';
     final storedHash = prefs.getString(_keyStoredPasswordHash) ?? '';
-    final salt = prefs.getString(_keySalt) ?? '';
 
-    if (storedEmail.isEmpty || storedHash.isEmpty || salt.isEmpty) {
+    if (storedEmail.isEmpty || storedHash.isEmpty) {
       return false;
     }
 
-    final inputHash = _hashPassword(password, salt);
+    // bcrypt: salt is embedded in the hash, no separate salt needed
     final emailMatch = email.toLowerCase().trim() == storedEmail;
+    final passwordMatch = BCrypt.checkpw(password, storedHash);
 
-    return emailMatch && inputHash == storedHash;
+    return emailMatch && passwordMatch;
   }
 
   /// Clear stored offline credentials (called on sign-out).
@@ -79,7 +124,7 @@ class SecurityService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyStoredEmail);
     await prefs.remove(_keyStoredPasswordHash);
-    await prefs.remove(_keySalt);
+    await prefs.remove(_keySalt); // cleanup legacy salt
     await prefs.setBool(_keyHasOnlineSession, false);
     debugPrint('Security: Offline credentials cleared');
   }
@@ -169,96 +214,104 @@ class SecurityService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  DATA ENCRYPTION
+  //  DATA ENCRYPTION — AES-256-GCM
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Get or generate the app-level encryption key.
-  /// Used for encrypting sensitive local data.
+  /// Generate a cryptographically secure 32-byte key (AES-256).
+  static String _generateSecureKey() {
+    final bytes = List<int>.generate(32, (_) => _secureRandom.nextInt(256));
+    return base64Encode(bytes);
+  }
+
+  /// Generate a cryptographically secure 12-byte nonce (GCM standard).
+  static Uint8List _generateNonce() {
+    return Uint8List.fromList(
+      List<int>.generate(12, (_) => _secureRandom.nextInt(256)),
+    );
+  }
+
+  /// Get or create the AES-256-GCM encrypter instance.
+  static Future<Encrypter> _getEncrypter() async {
+    if (_cachedEncrypter != null) return _cachedEncrypter!;
+
+    final prefs = await SharedPreferences.getInstance();
+    var keyBase64 = prefs.getString(_keyEncryptionKey);
+
+    if (keyBase64 == null || keyBase64.isEmpty) {
+      keyBase64 = _generateSecureKey();
+      await prefs.setString(_keyEncryptionKey, keyBase64);
+      debugPrint('Security: New AES-256 key generated');
+    }
+
+    _cachedEncryptionKey = keyBase64;
+    final key = Key.fromBase64(keyBase64);
+    _cachedEncrypter = Encrypter(AES(key, mode: AESMode.gcm));
+
+    return _cachedEncrypter!;
+  }
+
+  /// Get the encryption key (for diagnostics only).
   static Future<String> getEncryptionKey() async {
     if (_cachedEncryptionKey != null) return _cachedEncryptionKey!;
 
     final prefs = await SharedPreferences.getInstance();
-    var key = prefs.getString(_keyEncryptionKey);
-
-    if (key == null || key.isEmpty) {
-      // Generate a new random 32-byte key
-      final random = DateTime.now().microsecondsSinceEpoch.toString();
-      key = sha256.convert(utf8.encode(random + _generateSalt())).toString();
-      await prefs.setString(_keyEncryptionKey, key);
-    }
-
-    _cachedEncryptionKey = key;
-    return key;
+    final key = prefs.getString(_keyEncryptionKey);
+    if (key != null) _cachedEncryptionKey = key;
+    return key ?? '';
   }
 
-  /// Encrypt a string value using AES-256 inspired hashing.
-  /// Returns a base64 encoded encrypted string.
+  /// Encrypt a string using AES-256-GCM.
+  ///
+  /// Output format: `nonce_base64.ciphertext_base64`
+  /// The GCM mode provides both confidentiality AND integrity (authentication tag).
   static Future<String> encryptValue(String plainText) async {
     if (plainText.isEmpty) return '';
+
     try {
-      final key = await getEncryptionKey();
-      final salt = plainText.length.toString();
-      final combined = '$key:$salt:$plainText';
-      final hash = sha256.convert(utf8.encode(combined)).toString();
+      final encrypter = await _getEncrypter();
+      final nonce = _generateNonce();
+      final iv = IV(nonce);
 
-      // XOR cipher with key for basic encryption
-      final keyBytes = utf8.encode(key);
-      final textBytes = utf8.encode(plainText);
-      final encrypted = List<int>.generate(
-        textBytes.length,
-        (i) => textBytes[i] ^ keyBytes[i % keyBytes.length],
-      );
+      final encrypted = encrypter.encrypt(plainText, iv: iv);
 
-      // Return base64(encrypted) + . + hash for integrity check
-      final base64Encrypted = base64Encode(encrypted);
-      return '$base64Encrypted.$hash';
+      // Format: nonce.base64 + '.' + ciphertext.base64
+      return '${base64Encode(nonce)}.${encrypted.base64}';
     } catch (e) {
-      debugPrint('Security: Encryption error: $e');
-      return plainText;
-    }
-  }
-
-  /// Decrypt a string value.
-  static Future<String> decryptValue(String encryptedText) async {
-    if (encryptedText.isEmpty) return '';
-    try {
-      final parts = encryptedText.split('.');
-      if (parts.length != 2) return encryptedText;
-
-      final base64Encrypted = parts[0];
-      final storedHash = parts[1];
-
-      final encrypted = base64Decode(base64Encrypted);
-      final key = await getEncryptionKey();
-      final keyBytes = utf8.encode(key);
-
-      // XOR decrypt
-      final decrypted = List<int>.generate(
-        encrypted.length,
-        (i) => encrypted[i] ^ keyBytes[i % keyBytes.length],
-      );
-
-      final plainText = utf8.decode(decrypted);
-
-      // Verify integrity
-      final salt = plainText.length.toString();
-      final combined = '$key:$salt:$plainText';
-      final hash = sha256.convert(utf8.encode(combined)).toString();
-
-      return hash == storedHash ? plainText : '';
-    } catch (e) {
-      debugPrint('Security: Decryption error: $e');
+      debugPrint('Security: AES-256-GCM encryption error: $e');
       return '';
     }
   }
 
-  /// Encrypt a map (JSON) to a string.
+  /// Decrypt a string using AES-256-GCM.
+  ///
+  /// Expected format: `nonce_base64.ciphertext_base64`
+  /// If decryption or integrity check fails, returns empty string.
+  static Future<String> decryptValue(String encryptedText) async {
+    if (encryptedText.isEmpty) return '';
+
+    try {
+      final parts = encryptedText.split('.');
+      if (parts.length != 2) return '';
+
+      final nonce = base64Decode(parts[0]);
+      final iv = IV(nonce);
+      final encrypted = Encrypted.fromBase64(parts[1]);
+
+      final encrypter = await _getEncrypter();
+      return encrypter.decrypt(encrypted, iv: iv);
+    } catch (e) {
+      debugPrint('Security: AES-256-GCM decryption error: $e');
+      return '';
+    }
+  }
+
+  /// Encrypt a map (JSON) to a string using AES-256-GCM.
   static Future<String> encryptMap(Map<String, dynamic> data) async {
     final jsonStr = jsonEncode(data);
     return encryptValue(jsonStr);
   }
 
-  /// Decrypt a string back to a map (JSON).
+  /// Decrypt a string back to a map (JSON) using AES-256-GCM.
   static Future<Map<String, dynamic>> decryptMap(String encryptedText) async {
     final jsonStr = await decryptValue(encryptedText);
     if (jsonStr.isEmpty) return {};
@@ -267,25 +320,6 @@ class SecurityService {
     } catch (_) {
       return {};
     }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  //  PASSWORD HASHING UTILITIES
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /// Hash a password with salt using SHA-256.
-  static String _hashPassword(String password, String salt) {
-    final combined = '$salt:$password';
-    final bytes = utf8.encode(combined);
-    final hash = sha256.convert(bytes);
-    return hash.toString();
-  }
-
-  /// Generate a random salt.
-  static String _generateSalt() {
-    final random = DateTime.now().microsecondsSinceEpoch;
-    final salt = sha256.convert(utf8.encode('kms_fleet_salt_$random')).toString();
-    return salt.substring(0, 32); // Use first 32 chars
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -299,8 +333,15 @@ class SecurityService {
     final hasCredentials = (prefs.getString(_keyStoredEmail) ?? '').isNotEmpty;
     final failedAttempts = prefs.getInt(_keyFailedAttempts) ?? 0;
     final lockout = await getRemainingLockout();
+    final migrated = prefs.getBool(_keySecurityMigrated) ?? false;
+    final storedHash = prefs.getString(_keyStoredPasswordHash) ?? '';
+    final usesBcrypt = storedHash.startsWith(r'$2');
 
     return {
+      'securityVersion': 'v2',
+      'encryption': 'AES-256-GCM',
+      'passwordHashing': usesBcrypt ? 'bcrypt' : 'legacy',
+      'migrated': migrated,
       'hasOnlineSession': hasSession,
       'hasStoredCredentials': hasCredentials,
       'failedAttempts': failedAttempts,
